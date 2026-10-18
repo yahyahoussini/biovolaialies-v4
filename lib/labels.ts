@@ -17,6 +17,7 @@ export const ROLE_LABEL: Record<Role, string> = {
   FARM_MANAGER: "Responsable ferme",
   TECHNICIAN: "Technicien",
   AUDITOR: "Auditeur",
+  QUALITY_MANAGER: "Responsable qualité",
 };
 
 export const SCOPE_TYPE_LABEL: Record<ScopeType, string> = {
@@ -125,6 +126,7 @@ export const RELATION_TYPE_LABEL: Record<RelationType, string> = {
   ASSOCIE_A: "associé à",
   DOCUMENTE_PAR: "documenté par",
   CERTIFIE_PAR: "certifié par",
+  EXPEDIE_DEPUIS: "expédié depuis",
 };
 
 /**

@@ -48,6 +48,8 @@ export const RELATION_TYPE = [
   "ASSOCIE_A",
   "DOCUMENTE_PAR",
   "CERTIFIE_PAR",
+  /** Commercial shipment of a packaged product (SHIPMENT -EXPEDIE_DEPUIS-> PRODUCT). */
+  "EXPEDIE_DEPUIS",
 ] as const;
 export type RelationType = (typeof RELATION_TYPE)[number];
 
@@ -62,6 +64,8 @@ export const ROLE = [
   "FARM_MANAGER",
   "TECHNICIAN",
   "AUDITOR",
+  /** Holds the RELEASE decision on quality holds (client spec R10 / RELEASE_ROLES). */
+  "QUALITY_MANAGER",
 ] as const;
 export type Role = (typeof ROLE)[number];
 
@@ -125,3 +129,69 @@ export type DestinationType = (typeof DESTINATION_TYPE)[number];
 
 export const VALIDATION_STATUS = ["EN_ATTENTE", "VALIDE", "REJETE"] as const;
 export type ValidationStatus = (typeof VALIDATION_STATUS)[number];
+
+// ---------------------------------------------------------------------------
+// BVU Tech extensions — public site leads, quality holds, hatchery chain, ledger, API.
+// ---------------------------------------------------------------------------
+
+/** Activity choices on the public contact form — same list as the client's original site. */
+export const LEAD_ACTIVITY = [
+  "COUVOIR",
+  "ELEVAGE",
+  "ALIMENT",
+  "ABATTAGE",
+  "DECOUPE_TRANSFORMATION",
+  "OPERATEUR_INTEGRE",
+  "AUTRE",
+] as const;
+export type LeadActivity = (typeof LEAD_ACTIVITY)[number];
+
+/** B2B qualification pipeline for an inbound request. */
+export const LEAD_STATUS = ["NOUVEAU", "EN_QUALIFICATION", "RDV_PLANIFIE", "PROPOSITION", "GAGNE", "PERDU"] as const;
+export type LeadStatus = (typeof LEAD_STATUS)[number];
+
+/** Quality case lifecycle: a HOLD is opened, then either released or confirmed non-conforming. */
+export const QUALITY_CASE_STATUS = ["EN_BLOCAGE", "LIBERE", "NON_CONFORME"] as const;
+export type QualityCaseStatus = (typeof QUALITY_CASE_STATUS)[number];
+
+/** Whether a hold blocks only the named object, or also everything made from it (rule R09). */
+export const QUALITY_HOLD_SCOPE = ["OBJET_SEUL", "DESCENDANTS"] as const;
+export type QualityHoldScope = (typeof QUALITY_HOLD_SCOPE)[number];
+
+export const QUALITY_REASON = [
+  "SUSPICION_SANITAIRE",
+  "RESULTAT_LABORATOIRE",
+  "TEMPERATURE_HORS_LIMITE",
+  "ECART_TRACABILITE",
+  "ECART_QUANTITE",
+  "RECLAMATION_CLIENT",
+  "INSTRUMENT_HORS_VALIDITE",
+  "AUTRE",
+] as const;
+export type QualityReason = (typeof QUALITY_REASON)[number];
+
+export const HATCH_CYCLE_STATUS = ["EN_INCUBATION", "MIRE", "ECLOS"] as const;
+export type HatchCycleStatus = (typeof HATCH_CYCLE_STATUS)[number];
+
+export const CHICK_GRADE = ["A", "B"] as const;
+export type ChickGrade = (typeof CHICK_GRADE)[number];
+
+/** Who wrote a ledger event — a signed-in person, a machine API client, or the platform itself. */
+export const LEDGER_ACTOR_KIND = ["USER", "API_CLIENT", "SYSTEM"] as const;
+export type LedgerActorKind = (typeof LEDGER_ACTOR_KIND)[number];
+
+/** Scopes an API client can be granted (client spec API-01..API-10). Release is deliberately absent: a human decides. */
+export const API_SCOPE = [
+  "lots:read",
+  "lots:write",
+  "events:write",
+  "lineage:read",
+  "quality:hold",
+  "measurements:write",
+  "ingest:write",
+  "recall:export",
+] as const;
+export type ApiScope = (typeof API_SCOPE)[number];
+
+export const COMMISSIONING_RESULT = ["A_FAIRE", "CONFORME", "NON_CONFORME"] as const;
+export type CommissioningResult = (typeof COMMISSIONING_RESULT)[number];

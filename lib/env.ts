@@ -103,6 +103,16 @@ const envSchema = z
       .default(vercelOrigin() ?? "http://localhost:3000")
       .transform((value) => value.replace(/\/+$/, "")),
     DEMO_MODE: z.enum(["true", "false"]).optional(),
+    /**
+     * Optional new-lead e-mail notification through Resend's HTTP API. All three must be set
+     * for a notification to be sent; with any missing, leads are only stored (the default).
+     * This is the application's only outbound call, and only when explicitly configured.
+     */
+    RESEND_API_KEY: z.string().min(1).optional(),
+    LEADS_NOTIFY_TO: z.email().optional(),
+    LEADS_NOTIFY_FROM: z.string().min(3).optional(),
+    /** Optional HMAC key for signing ledger anchors; falls back to SESSION_SECRET. */
+    LEDGER_ANCHOR_KEY: z.string().min(32).optional(),
   })
   .transform((raw) => ({
     ...raw,

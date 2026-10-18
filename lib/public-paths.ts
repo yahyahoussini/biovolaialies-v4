@@ -3,7 +3,7 @@
  * which requests skip the session check. Keep this list in sync with app/(public)
  * and app/(auth) route groups as they're built out in later phases.
  */
-const PUBLIC_PREFIXES = ["/login", "/tracabilite"];
+const PUBLIC_PREFIXES = ["/login", "/tracabilite", "/mentions-legales", "/confidentialite"];
 
 export function isPublicPath(pathname: string): boolean {
   if (pathname === "/") return true;

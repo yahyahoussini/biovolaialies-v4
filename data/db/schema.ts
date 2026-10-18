@@ -2,6 +2,15 @@ import { integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import {
   ALERT_SEVERITY,
   ALERT_STATUS,
+  CHICK_GRADE,
+  COMMISSIONING_RESULT,
+  HATCH_CYCLE_STATUS,
+  LEAD_ACTIVITY,
+  LEAD_STATUS,
+  LEDGER_ACTOR_KIND,
+  QUALITY_CASE_STATUS,
+  QUALITY_HOLD_SCOPE,
+  QUALITY_REASON,
   ANOMALY_STATUS,
   BUILDING_ZONE_TYPE,
   DATA_STATUS,
@@ -454,6 +463,9 @@ export const products = sqliteTable("products", {
     .references(() => transformationBatches.id),
   packagingDate: text("packaging_date").notNull(),
   expiryDate: text("expiry_date"),
+  /** Packaged quantity — what a recall has to account for. Nullable: rows from before it existed carry none. */
+  quantity: real("quantity"),
+  unit: text("unit"),
   ...provenanceColumns(),
   createdAt: createdAt(),
 });
@@ -496,4 +508,244 @@ export const auditLog = sqliteTable("audit_log", {
   relatedLotId: text("related_lot_id").references(() => lots.id),
   relatedEventId: text("related_event_id").references(() => lotEvents.id),
   createdAt: createdAt(),
+});
+
+// ---------------------------------------------------------------------------
+// Public site — inbound B2B requests from the BVU Tech contact form
+// ---------------------------------------------------------------------------
+
+export const leads = sqliteTable("leads", {
+  id: id(),
+  company: text("company").notNull(),
+  contactName: text("contact_name").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone"),
+  activity: text("activity", { enum: LEAD_ACTIVITY }).notNull(),
+  capacity: text("capacity"),
+  need: text("need").notNull(),
+  /** Consent is required to submit, so always true — kept with the wording version it was given against. */
+  consent: integer("consent", { mode: "boolean" }).notNull(),
+  consentVersion: text("consent_version").notNull(),
+  status: text("status", { enum: LEAD_STATUS }).notNull().default("NOUVEAU"),
+  notes: text("notes"),
+  createdAt: createdAt(),
+  updatedAt: text("updated_at"),
+});
+
+// ---------------------------------------------------------------------------
+// Upstream chain — genetics, parent flocks, eggs, hatchery, chicks (client spec A03–A07)
+// ---------------------------------------------------------------------------
+
+export const parentFlocks = sqliteTable("parent_flocks", {
+  id: id(),
+  code: text("code").notNull().unique(),
+  buildingId: text("building_id")
+    .notNull()
+    .references(() => buildings.id),
+  strain: text("strain").notNull(),
+  /** Genetic origin (A03) — set once at creation and never updated: "origine non écrasable". */
+  geneticSupplier: text("genetic_supplier").notNull(),
+  originCountry: text("origin_country").notNull(),
+  importReference: text("import_reference"),
+  placedAt: text("placed_at").notNull(),
+  femaleCount: integer("female_count").notNull(),
+  maleCount: integer("male_count").notNull(),
+  ...provenanceColumns(),
+  createdAt: createdAt(),
+});
+
+export const eggLots = sqliteTable("egg_lots", {
+  id: id(),
+  code: text("code").notNull().unique(),
+  parentFlockId: text("parent_flock_id")
+    .notNull()
+    .references(() => parentFlocks.id),
+  collectedAt: text("collected_at").notNull(),
+  quantity: integer("quantity").notNull(),
+  storageBuildingId: text("storage_building_id").references(() => buildings.id),
+  ...provenanceColumns(),
+  createdAt: createdAt(),
+});
+
+/**
+ * One incubation cycle. Egg lots are loaded into it through `relations` edges
+ * (HATCH_CYCLE -PROVIENT_DE-> EGG_LOT, metadata.quantity), so a cycle can draw on several lots.
+ * Candling and hatch results are filled in as the cycle advances; the balance
+ * eggsSet = clearsRemoved + unhatched + chicksHatched is enforced once hatched.
+ */
+export const hatchCycles = sqliteTable("hatch_cycles", {
+  id: id(),
+  code: text("code").notNull().unique(),
+  buildingId: text("building_id")
+    .notNull()
+    .references(() => buildings.id),
+  incubatorRef: text("incubator_ref").notNull(),
+  setAt: text("set_at").notNull(),
+  eggsSet: integer("eggs_set").notNull(),
+  status: text("status", { enum: HATCH_CYCLE_STATUS }).notNull(),
+  candledAt: text("candled_at"),
+  clearsRemoved: integer("clears_removed"),
+  hatchedAt: text("hatched_at"),
+  chicksHatched: integer("chicks_hatched"),
+  unhatched: integer("unhatched"),
+  culls: integer("culls"),
+  ...provenanceColumns(),
+  createdAt: createdAt(),
+});
+
+export const chickLots = sqliteTable("chick_lots", {
+  id: id(),
+  code: text("code").notNull().unique(),
+  hatchCycleId: text("hatch_cycle_id")
+    .notNull()
+    .references(() => hatchCycles.id),
+  quantity: integer("quantity").notNull(),
+  grade: text("grade", { enum: CHICK_GRADE }).notNull(),
+  dispatchedAt: text("dispatched_at").notNull(),
+  ...provenanceColumns(),
+  createdAt: createdAt(),
+});
+
+// ---------------------------------------------------------------------------
+// Downstream — commercial shipments of packaged products (client spec phase 13)
+// ---------------------------------------------------------------------------
+
+export const shipments = sqliteTable("shipments", {
+  id: id(),
+  code: text("code").notNull().unique(),
+  productId: text("product_id")
+    .notNull()
+    .references(() => products.id),
+  destinationId: text("destination_id")
+    .notNull()
+    .references(() => destinations.id),
+  quantity: real("quantity").notNull(),
+  unit: text("unit").notNull(),
+  shippedAt: text("shipped_at").notNull(),
+  ...provenanceColumns(),
+  createdAt: createdAt(),
+});
+
+// ---------------------------------------------------------------------------
+// Quality — HOLD / RELEASE cases and the objects each one blocks (rules R09/R10)
+// ---------------------------------------------------------------------------
+
+export const qualityCases = sqliteTable("quality_cases", {
+  id: id(),
+  code: text("code").notNull().unique(),
+  rootType: text("root_type").notNull(),
+  rootId: text("root_id").notNull(),
+  reason: text("reason", { enum: QUALITY_REASON }).notNull(),
+  description: text("description").notNull(),
+  scope: text("scope", { enum: QUALITY_HOLD_SCOPE }).notNull(),
+  status: text("status", { enum: QUALITY_CASE_STATUS }).notNull(),
+  evidenceRefs: text("evidence_refs", { mode: "json" }).$type<string[]>().notNull(),
+  openedBy: text("opened_by")
+    .notNull()
+    .references(() => users.id),
+  openedAt: text("opened_at").notNull(),
+  decidedBy: text("decided_by").references(() => users.id),
+  decisionJustification: text("decision_justification"),
+  decisionEvidenceRefs: text("decision_evidence_refs", { mode: "json" }).$type<string[]>(),
+  decidedAt: text("decided_at"),
+});
+
+export const qualityHoldItems = sqliteTable("quality_hold_items", {
+  id: id(),
+  caseId: text("case_id")
+    .notNull()
+    .references(() => qualityCases.id),
+  objectType: text("object_type").notNull(),
+  objectId: text("object_id").notNull(),
+  /** Distance from the case's root object along the genealogy (0 = the root itself). */
+  depth: integer("depth").notNull(),
+  active: integer("active", { mode: "boolean" }).notNull(),
+  createdAt: createdAt(),
+});
+
+// ---------------------------------------------------------------------------
+// Ledger — append-only, hash-chained event journal (rules R07/R08, test T08)
+// ---------------------------------------------------------------------------
+
+/**
+ * Every row carries `hash = sha256(prevHash + canonical(row))`, so altering, deleting or
+ * reordering any past row breaks every hash after it. `seq` is unique, which also serialises
+ * concurrent appends: the loser of a race hits the constraint and retries on the new head.
+ * The repository exposes no update or delete — a correction is a new event naming the one it
+ * corrects (`correctsEventId`).
+ */
+export const ledgerEvents = sqliteTable("ledger_events", {
+  id: id(),
+  seq: integer("seq").notNull().unique(),
+  eventType: text("event_type").notNull(),
+  objectType: text("object_type").notNull(),
+  objectId: text("object_id").notNull(),
+  actorKind: text("actor_kind", { enum: LEDGER_ACTOR_KIND }).notNull(),
+  actorId: text("actor_id"),
+  source: text("source").notNull(),
+  occurredAt: text("occurred_at").notNull(),
+  recordedAt: text("recorded_at").notNull(),
+  payload: text("payload", { mode: "json" }).$type<Record<string, unknown>>().notNull(),
+  schemaVersion: integer("schema_version").notNull(),
+  /** Client-supplied replay key (offline sync): the same key with the same payload is a no-op. */
+  idempotencyKey: text("idempotency_key").unique(),
+  payloadHash: text("payload_hash").notNull(),
+  correctsEventId: text("corrects_event_id"),
+  prevHash: text("prev_hash").notNull(),
+  hash: text("hash").notNull(),
+});
+
+// ---------------------------------------------------------------------------
+// Machine identities for the /api/v1 integration surface
+// ---------------------------------------------------------------------------
+
+export const apiClients = sqliteTable("api_clients", {
+  id: id(),
+  name: text("name").notNull(),
+  /** First characters of the key, shown in the admin list so a key can be recognised without being stored. */
+  keyPrefix: text("key_prefix").notNull(),
+  keyHash: text("key_hash").notNull().unique(),
+  scopes: text("scopes", { mode: "json" }).$type<string[]>().notNull(),
+  active: integer("active", { mode: "boolean" }).notNull().default(true),
+  createdBy: text("created_by")
+    .notNull()
+    .references(() => users.id),
+  createdAt: createdAt(),
+  lastUsedAt: text("last_used_at"),
+  revokedAt: text("revoked_at"),
+});
+
+// ---------------------------------------------------------------------------
+// Equipment register per reference unit + commissioning checklist (client xlsx / spec)
+// ---------------------------------------------------------------------------
+
+export const equipmentItems = sqliteTable("equipment_items", {
+  id: id(),
+  unitCode: text("unit_code").notNull(),
+  unitLabel: text("unit_label").notNull(),
+  category: text("category").notNull(),
+  reference: text("reference"),
+  name: text("name").notNull(),
+  quantityRef: real("quantity_ref"),
+  quantityMax: real("quantity_max"),
+  status: text("status"),
+  function: text("function"),
+  characteristics: text("characteristics"),
+  decisionRule: text("decision_rule"),
+  candidates: text("candidates"),
+  sortOrder: integer("sort_order").notNull(),
+  updatedAt: text("updated_at"),
+  updatedBy: text("updated_by").references(() => users.id),
+});
+
+export const commissioningTests = sqliteTable("commissioning_tests", {
+  id: id(),
+  code: text("code").notNull().unique(),
+  equipment: text("equipment").notNull(),
+  procedure: text("procedure").notNull(),
+  result: text("result", { enum: COMMISSIONING_RESULT }).notNull(),
+  executedBy: text("executed_by").references(() => users.id),
+  executedAt: text("executed_at"),
+  evidence: text("evidence"),
+  notes: text("notes"),
 });

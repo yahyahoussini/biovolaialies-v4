@@ -3,7 +3,7 @@ import { repositories } from "../../repositories";
 
 export const DEMO_PASSWORD = "Demo1234!";
 
-/** Fixed, well-known emails for the 6 seeded demo accounts — the single source of truth the demo Role Switcher (services/auth/demo-switch.ts) looks up by role. */
+/** Fixed, well-known emails for the 7 seeded demo accounts — the single source of truth the demo Role Switcher (services/auth/demo-switch.ts) looks up by role. */
 export const DEMO_ACCOUNT_EMAIL: Record<Role, string> = {
   SUPER_ADMIN: "admin@biovolailles.demo",
   COOP_MANAGER: "coop.manager@biovolailles.demo",
@@ -11,6 +11,7 @@ export const DEMO_ACCOUNT_EMAIL: Record<Role, string> = {
   FARM_MANAGER: "ferme.manager@biovolailles.demo",
   TECHNICIAN: "technicien@biovolailles.demo",
   AUDITOR: "auditeur@biovolailles.demo",
+  QUALITY_MANAGER: "qualite@biovolailles.demo",
 };
 
 export interface DemoUserSpec {
@@ -295,5 +296,12 @@ export function buildDemoUserSpecs(hierarchy: SeededHierarchy): DemoUserSpec[] {
       scopeId: hierarchy.heroFarmId,
     },
     { email: DEMO_ACCOUNT_EMAIL.AUDITOR, fullName: "Omar Tazi", role: "AUDITOR", scopeType: "GLOBAL", scopeId: null },
+    {
+      email: DEMO_ACCOUNT_EMAIL.QUALITY_MANAGER,
+      fullName: "Nadia Berrada",
+      role: "QUALITY_MANAGER",
+      scopeType: "GLOBAL",
+      scopeId: null,
+    },
   ];
 }

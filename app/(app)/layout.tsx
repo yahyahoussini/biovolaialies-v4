@@ -34,6 +34,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           canAccessModule(session, "COOPERATIVES") && { label: "Coopératives", href: "/cooperatives", icon: "cooperatives" },
           canAccessModule(session, "PRODUCERS") && { label: "Producteurs", href: "/producteurs", icon: "producers" },
           canAccessModule(session, "FARMS") && { label: "Fermes", href: "/fermes", icon: "farms" },
+          canAccessModule(session, "HATCHERY") && { label: "Couvoir & amont", href: "/couvoir", icon: "hatchery" },
           canAccessModule(session, "LOTS") && { label: "Lots", href: "/lots", icon: "lots" },
           canAccessModule(session, "IOT") && { label: "IoT", href: "/iot", icon: "iot" },
         ] as (NavSection["items"][number] | false)[]
@@ -45,6 +46,18 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         [
           canAccessModule(session, "ANOMALIES") && { label: "Anomalies", href: "/anomalies", icon: "anomalies" },
           canAccessModule(session, "ALERTS") && { label: "Alertes", href: "/alertes", icon: "alerts" },
+          canAccessModule(session, "QUALITY") && { label: "Qualité & rappels", href: "/qualite", icon: "quality" },
+        ] as (NavSection["items"][number] | false)[]
+      ).filter((item): item is NavSection["items"][number] => Boolean(item)),
+    },
+    {
+      label: "Projet & terrain",
+      items: (
+        [
+          canAccessModule(session, "EQUIPMENT") && { label: "Équipements", href: "/equipements", icon: "equipment" },
+          canAccessModule(session, "EQUIPMENT") && { label: "Mise en service", href: "/equipements/recette", icon: "commissioning" },
+          canAccessModule(session, "LEADS") && { label: "Prospects", href: "/prospects", icon: "leads" },
+          canAccessModule(session, "SETTINGS") && { label: "Programme", href: "/programme", icon: "programme" },
         ] as (NavSection["items"][number] | false)[]
       ).filter((item): item is NavSection["items"][number] => Boolean(item)),
     },
@@ -60,11 +73,16 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           canAccessModule(session, "USERS") && { label: "Utilisateurs", href: "/utilisateurs", icon: "users" },
           canAccessModule(session, "AUDIT") && { label: "Audit", href: "/audit", icon: "audit" },
           canAccessModule(session, "INTEGRITY") && { label: "Intégrité", href: "/integrite", icon: "integrity" },
+          canAccessModule(session, "INTEGRITY") && { label: "Journal chaîné", href: "/journal", icon: "ledger" },
+          canAccessModule(session, "API_CLIENTS") && { label: "Accès API", href: "/acces-api", icon: "apiClients" },
           canAccessModule(session, "SETTINGS") && { label: "Paramètres", href: "/parametres", icon: "settings" },
         ] as (NavSection["items"][number] | false)[]
       ).filter((item): item is NavSection["items"][number] => Boolean(item)),
     },
   ];
+
+  // A role with no module in a section (a producer has nothing under "Projet & terrain") gets no empty heading.
+  const visibleSections = sections.filter((section) => section.items.length > 0);
 
   const scope = await resolveScopeDescriptor(session);
 
@@ -78,7 +96,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         Aller au contenu principal
       </a>
 
-      <Sidebar sections={sections} demoMode={env.DEMO_MODE} />
+      <Sidebar sections={visibleSections} demoMode={env.DEMO_MODE} />
 
       {/* min-w-0 stops a wide table or chart from forcing the whole shell to scroll sideways. */}
       <div className="flex min-w-0 flex-1 flex-col">
@@ -89,7 +107,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           isDemoSwitch={session.isDemoSwitch}
           demoMode={env.DEMO_MODE}
           scope={scope}
-          sections={sections}
+          sections={visibleSections}
         />
         <main id="contenu-principal" className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
           {children}

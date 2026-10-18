@@ -43,6 +43,13 @@
       "when": 1786923846541,
       "tag": "0005_curvy_sumo",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1792345870876,
+      "tag": "0006_bvu_extensions",
+      "breakpoints": true
     }
   ]
 }

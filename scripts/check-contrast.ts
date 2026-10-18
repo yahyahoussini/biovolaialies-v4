@@ -73,6 +73,19 @@ const cases: Case[] = [
   { name: "white on deep-forest (passport header)", fg: SURFACE, bg: "#12372a", min: AA_TEXT },
   { name: "white on critical-strong (destructive button)", fg: SURFACE, bg: "#a83232", min: AA_TEXT },
 
+  // BVU Tech public site (app/(site)) — its own brand palette.
+  { name: "bvu ink on paper", fg: "#142b25", bg: "#f7f8f3", min: AA_TEXT },
+  { name: "bvu muted on paper", fg: "#5d6b64", bg: "#f7f8f3", min: AA_TEXT },
+  { name: "bvu muted on white card", fg: "#5d6b64", bg: SURFACE, min: AA_TEXT },
+  { name: "bvu muted on mist", fg: "#5d6b64", bg: "#eef2eb", min: AA_TEXT },
+  { name: "bvu green on paper (eyebrow/link)", fg: "#176b4d", bg: "#f7f8f3", min: AA_TEXT },
+  { name: "white on bvu green (primary button)", fg: SURFACE, bg: "#176b4d", min: AA_TEXT },
+  { name: "bvu dark on lime (lime button)", fg: "#102a24", bg: "#c8e66b", min: AA_TEXT },
+  { name: "lime on bvu dark (eyebrow)", fg: "#c8e66b", bg: "#102a24", min: AA_TEXT },
+  { name: "on-dark text on bvu dark", fg: "#c3d0c9", bg: "#102a24", min: AA_TEXT },
+  { name: "on-dark text on dark card", fg: "#c3d0c9", bg: "#18372f", min: AA_TEXT },
+  { name: "on-dark text on footer", fg: "#c3d0c9", bg: "#0b201b", min: AA_TEXT },
+
   // Sidebar active item + links.
   { name: "bio-green on surface (active nav)", fg: "#2f7d4a", bg: SURFACE, min: AA_TEXT },
   { name: "deep-forest on gold tint (demo badge)", fg: "#12372a", bg: "#fbf4e1", min: AA_TEXT },

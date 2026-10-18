@@ -28,6 +28,23 @@
   --color-gold: #e8c66a;
 
   /*
+   * BVU Tech brand — used ONLY by the public marketing site (app/(site)). Taken from the
+   * client's own site so the commercial front keeps their identity; the control center keeps
+   * the palette above. Muted text #5d6b64 clears AA on both paper and white.
+   */
+  --color-bvu-ink: #142b25;
+  --color-bvu-green: #176b4d;
+  --color-bvu-lime: #c8e66b;
+  --color-bvu-paper: #f7f8f3;
+  --color-bvu-mist: #eef2eb;
+  --color-bvu-dark: #102a24;
+  --color-bvu-darker: #0b201b;
+  --color-bvu-card-dark: #18372f;
+  --color-bvu-line: #e0e7df;
+  --color-bvu-muted: #5d6b64;
+  --color-bvu-on-dark: #c3d0c9;
+
+  /*
    * AA text variants of the four semantic colors above. Not a second palette — each is the
    * SAME hue, darkened until it clears WCAG AA (4.5:1) as text on both --color-surface and
    * --color-background. The base tones measure 2.4:1 (warning), 4.2:1 (success) and 4.3:1

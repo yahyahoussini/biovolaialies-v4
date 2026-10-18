@@ -10,6 +10,7 @@ import { DrizzleDeviceRepository } from "./device.repository";
 import { DrizzleEnvironmentMeasurementRepository } from "./environment-measurement.repository";
 import { DrizzleFarmRepository } from "./farm.repository";
 import { DrizzleFeedUsageRepository } from "./feed-usage.repository";
+import { DrizzleLeadRepository } from "./lead.repository";
 import { DrizzleKpiDefinitionRepository } from "./kpi-definition.repository";
 import { DrizzleKpiValueRepository } from "./kpi-value.repository";
 import { DrizzleLotEventRepository } from "./lot-event.repository";
@@ -67,4 +68,5 @@ export const repositories = {
   destinations: new DrizzleDestinationRepository(),
   relations: new DrizzleRelationRepository(),
   qrTokens: new DrizzleQrTokenRepository(),
+  leads: new DrizzleLeadRepository(),
 };

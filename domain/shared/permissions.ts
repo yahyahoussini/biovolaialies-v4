@@ -19,6 +19,16 @@ export const MODULE = [
   "INTEGRITY",
   "USERS",
   "SETTINGS",
+  /** Inbound requests from the public BVU Tech site. */
+  "LEADS",
+  /** HOLD / RELEASE cases and recall exports. VALIDATE = the release decision. */
+  "QUALITY",
+  /** Upstream chain: parent flocks, egg lots, incubation cycles, chick lots. */
+  "HATCHERY",
+  /** Equipment register per unit and commissioning checklist. */
+  "EQUIPMENT",
+  /** Machine API clients (keys and scopes) for /api/v1. */
+  "API_CLIENTS",
 ] as const;
 export type Module = (typeof MODULE)[number];
 
@@ -60,6 +70,9 @@ const PERMISSIONS: Record<Role, Partial<Record<Module, readonly Action[]>>> = {
     PRODUCTS: READ_ONLY,
     SANITARY: READ_ONLY,
     TRACEABILITY: ["VIEW", "CREATE", "EDIT"],
+    QUALITY: ["VIEW", "CREATE", "EXPORT"],
+    HATCHERY: ["VIEW", "CREATE", "EDIT"],
+    EQUIPMENT: READ_ONLY,
   },
 
   PRODUCER: {
@@ -74,6 +87,8 @@ const PERMISSIONS: Record<Role, Partial<Record<Module, readonly Action[]>>> = {
     PRODUCTS: READ_ONLY,
     SANITARY: READ_ONLY,
     TRACEABILITY: ["VIEW", "CREATE", "EDIT"],
+    QUALITY: READ_ONLY,
+    HATCHERY: READ_ONLY,
   },
 
   FARM_MANAGER: {
@@ -87,6 +102,9 @@ const PERMISSIONS: Record<Role, Partial<Record<Module, readonly Action[]>>> = {
     EVENTS: ["VIEW", "CREATE"],
     SANITARY: ["VIEW", "CREATE"],
     TRACEABILITY: ["VIEW", "CREATE", "EDIT"],
+    QUALITY: ["VIEW", "CREATE"],
+    HATCHERY: ["VIEW", "CREATE", "EDIT"],
+    EQUIPMENT: READ_ONLY,
   },
 
   TECHNICIAN: {
@@ -99,6 +117,9 @@ const PERMISSIONS: Record<Role, Partial<Record<Module, readonly Action[]>>> = {
     EVENTS: ["VIEW", "CREATE"],
     SANITARY: ["VIEW", "CREATE", "VALIDATE"],
     TRACEABILITY: READ_ONLY,
+    QUALITY: ["VIEW", "CREATE"],
+    HATCHERY: ["VIEW", "CREATE"],
+    EQUIPMENT: ["VIEW", "EDIT"],
   },
 
   AUDITOR: {
@@ -118,6 +139,36 @@ const PERMISSIONS: Record<Role, Partial<Record<Module, readonly Action[]>>> = {
     TRACEABILITY: READ_ONLY,
     AUDIT: ["VIEW", "EXPORT"],
     INTEGRITY: ["VIEW", "EXPORT"],
+    QUALITY: ["VIEW", "EXPORT"],
+    HATCHERY: READ_ONLY,
+    EQUIPMENT: READ_ONLY,
+  },
+
+  /**
+   * Responsable qualité — global read across the chain, and the only role besides SUPER_ADMIN
+   * that may decide a RELEASE (QUALITY:VALIDATE). Opening a hold is open to field roles; lifting
+   * one is not, by design (client spec R10, RELEASE_ROLES).
+   */
+  QUALITY_MANAGER: {
+    ORGANIZATIONS: READ_ONLY,
+    COOPERATIVES: READ_ONLY,
+    PRODUCERS: READ_ONLY,
+    FARMS: READ_ONLY,
+    BUILDINGS: READ_ONLY,
+    LOTS: READ_ONLY,
+    IOT: READ_ONLY,
+    ANOMALIES: READ_ONLY,
+    ALERTS: READ_ONLY,
+    ACTIONS: READ_ONLY,
+    EVENTS: READ_ONLY,
+    PRODUCTS: READ_ONLY,
+    SANITARY: READ_ONLY,
+    TRACEABILITY: READ_ONLY,
+    AUDIT: READ_ONLY,
+    INTEGRITY: READ_ONLY,
+    QUALITY: ["VIEW", "CREATE", "VALIDATE", "EXPORT"],
+    HATCHERY: READ_ONLY,
+    EQUIPMENT: READ_ONLY,
   },
 };
 

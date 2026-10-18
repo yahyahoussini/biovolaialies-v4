@@ -45,6 +45,7 @@ const SECTION_ORDER: Record<Role, SectionKey[]> = {
   FARM_MANAGER: ["alerts", "chart", "performance", "iot", "attention", "quality", "activity"],
   TECHNICIAN: ["alerts", "iot", "performance", "attention", "chart", "quality", "activity"],
   AUDITOR: ["alerts", "quality", "attention", "chart", "performance", "iot", "activity"],
+  QUALITY_MANAGER: ["alerts", "quality", "attention", "chart", "performance", "iot", "activity"],
 };
 
 export function DashboardClient({ overview }: { overview: DashboardOverview }) {
