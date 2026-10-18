@@ -478,6 +478,7 @@ const EXPECTED_SCOPE_TYPE: Partial<Record<Role, ScopeType>> = {
   PRODUCER: "PRODUCER",
   FARM_MANAGER: "FARM",
   TECHNICIAN: "FARM",
+  QUALITY_MANAGER: "GLOBAL",
 };
 
 async function checkUserScopeValidity(users: User[], now: string): Promise<Accumulator> {

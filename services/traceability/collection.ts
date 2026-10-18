@@ -9,6 +9,7 @@ import { recordAudit } from "../audit/record";
 import type { Session } from "../auth/session";
 import { assertInScope, resolveLotHierarchy } from "../identity/scope-check";
 import { getLotOrThrow } from "../production/lot";
+import { assertNotOnHold } from "../quality/holds";
 import { createRelation } from "./relations";
 
 /** Units that mean "a count of birds" — compared directly against the lot's population. Anything else is treated as a mass unit. */
@@ -65,6 +66,8 @@ export async function createCollection(input: unknown, session: Session): Promis
 
   const lot = await getLotOrThrow(data.lotId);
   assertInScope(session, await resolveLotHierarchy(data.lotId));
+
+  await assertNotOnHold("LOT", lot.id);
 
   const existingCode = await repositories.collections.findByCode(data.code);
   if (existingCode) throw new ConflictError(`Le code de collecte "${data.code}" est déjà utilisé.`);

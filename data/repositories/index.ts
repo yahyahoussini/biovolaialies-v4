@@ -11,6 +11,15 @@ import { DrizzleEnvironmentMeasurementRepository } from "./environment-measureme
 import { DrizzleFarmRepository } from "./farm.repository";
 import { DrizzleFeedUsageRepository } from "./feed-usage.repository";
 import { DrizzleLeadRepository } from "./lead.repository";
+import { DrizzleLedgerRepository } from "./ledger.repository";
+import { DrizzleQualityCaseRepository } from "./quality-case.repository";
+import {
+  DrizzleChickLotRepository,
+  DrizzleEggLotRepository,
+  DrizzleHatchCycleRepository,
+  DrizzleParentFlockRepository,
+} from "./hatchery.repository";
+import { DrizzleShipmentRepository } from "./shipment.repository";
 import { DrizzleKpiDefinitionRepository } from "./kpi-definition.repository";
 import { DrizzleKpiValueRepository } from "./kpi-value.repository";
 import { DrizzleLotEventRepository } from "./lot-event.repository";
@@ -69,4 +78,11 @@ export const repositories = {
   relations: new DrizzleRelationRepository(),
   qrTokens: new DrizzleQrTokenRepository(),
   leads: new DrizzleLeadRepository(),
+  ledger: new DrizzleLedgerRepository(),
+  qualityCases: new DrizzleQualityCaseRepository(),
+  parentFlocks: new DrizzleParentFlockRepository(),
+  eggLots: new DrizzleEggLotRepository(),
+  hatchCycles: new DrizzleHatchCycleRepository(),
+  chickLots: new DrizzleChickLotRepository(),
+  shipments: new DrizzleShipmentRepository(),
 };

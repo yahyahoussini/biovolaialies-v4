@@ -9,6 +9,7 @@ import { recordAudit } from "../audit/record";
 import type { Session } from "../auth/session";
 import { assertInScope, resolveLotHierarchy } from "../identity/scope-check";
 import { getLotOrThrow } from "../production/lot";
+import { assertNotOnHold } from "../quality/holds";
 import { createRelation } from "./relations";
 
 /**
@@ -43,6 +44,9 @@ export async function createSlaughterBatch(input: unknown, session: Session): Pr
 
   const lot = await getLotOrThrow(data.sourceLotId);
   assertInScope(session, await resolveLotHierarchy(data.sourceLotId));
+
+  await assertNotOnHold("LOT", lot.id);
+  if (data.sourceCollectionId) await assertNotOnHold("COLLECTION", data.sourceCollectionId);
 
   const existingCode = await repositories.slaughterBatches.findByCode(data.code);
   if (existingCode) throw new ConflictError(`Le code de lot d'abattage "${data.code}" est déjà utilisé.`);

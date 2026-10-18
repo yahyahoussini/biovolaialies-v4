@@ -1,7 +1,10 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DataStatusBadge } from "@/components/domain/DataStatusBadge";
 import { LotStatusBadge } from "@/components/domain/LotStatusBadge";
 import { PageHeader } from "@/components/domain/PageHeader";
+import { OpenHoldDialog } from "@/app/(app)/qualite/OpenHoldDialog";
+import { describeActiveHolds } from "@/services/quality/holds";
 import { Stat, StatGrid } from "@/components/domain/StatGrid";
 import { repositories } from "@/data/repositories";
 import { canAccessModule, can } from "@/domain/shared/permissions";
@@ -69,6 +72,8 @@ export default async function LotDetailPage({ params }: PageProps<"/lots/[lotId]
     }),
   ]);
 
+  const activeHolds = await describeActiveHolds("LOT", lot.id);
+  const canOpenHold = can(session, "CREATE", "QUALITY");
   const canEdit = can(session, "EDIT", "LOTS");
   const canCreateEvent = can(session, "CREATE", "EVENTS");
   const canRunDetection = can(session, "VALIDATE", "ANOMALIES");
@@ -164,8 +169,30 @@ export default async function LotDetailPage({ params }: PageProps<"/lots/[lotId]
           </>
         }
         description={`${farm?.name ?? "—"} · ${building ? `${building.code} — ${building.name}` : "—"} · ${lot.species} (${lot.breed})`}
-        actions={canEdit ? <LotEditDialog lot={lot} /> : null}
+        actions={
+          canEdit || canOpenHold ? (
+            <div className="flex flex-wrap gap-2">
+              {canOpenHold && activeHolds.length === 0 ? <OpenHoldDialog defaultType="LOT" defaultCode={lot.code} triggerLabel="Bloquer" /> : null}
+              {canEdit ? <LotEditDialog lot={lot} /> : null}
+            </div>
+          ) : null
+        }
       />
+
+      {activeHolds.length > 0 ? (
+        <p role="alert" className="rounded-lg border border-critical/40 bg-critical/10 px-4 py-3 text-sm text-critical-strong">
+          Lot sous blocage qualité :{" "}
+          {activeHolds.map((h, i) => (
+            <span key={h.caseId}>
+              {i > 0 ? ", " : null}
+              <Link href={`/qualite/${h.caseId}`} className="font-semibold underline">
+                {h.code}
+              </Link>
+            </span>
+          ))}
+          . Aucune collecte, abattage ou transformation ne peut en être tirée avant décision qualité.
+        </p>
+      ) : null}
 
       <StatGrid>
         <Stat

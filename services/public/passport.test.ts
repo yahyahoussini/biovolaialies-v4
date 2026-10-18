@@ -8,6 +8,7 @@ import { createProduct } from "../traceability/product";
 import { createLotQrToken, createProductQrToken, revokeQrToken } from "../traceability/qr-tokens";
 import { createSlaughterBatch } from "../traceability/slaughter";
 import { createTransformationBatch } from "../traceability/transformation";
+import { openHold } from "../quality/holds";
 import { resolvePublicPassport } from "./passport";
 
 type TestSession = Awaited<ReturnType<typeof createTestSession>>;
@@ -177,7 +178,9 @@ describe("resolvePublicPassport — public/private separation", () => {
     expect(Object.keys(passport!).sort()).toEqual(
       [
         "certifications",
+        "geneticOrigin",
         "isDemoData",
+        "qualityHold",
         "lineage",
         "originCity",
         "originFarmName",
@@ -322,5 +325,19 @@ describe("resolvePublicPassport — product passport, lineage and data status", 
     expect((await repositories.auditLog.list(5000)).length).toBe(auditBefore);
     expect(JSON.stringify(await repositories.lots.findById(lot.id))).toBe(lotBefore);
     expect(JSON.stringify(await repositories.qrTokens.findById(token.id))).toBe(tokenBefore);
+  });
+
+  it("never reads as verified while a quality hold covers the product", async () => {
+    const admin = await createTestSession("SUPER_ADMIN", "GLOBAL", null, "PPHOLD");
+    const quality = await createTestSession("QUALITY_MANAGER", "GLOBAL", null, "PPHOLDQ");
+    const { lot } = await seedLot("PPHOLD", admin);
+    const { product } = await seedChain("PPHOLD", lot.id, admin);
+    const token = await createProductQrToken(product.id, lot.id, admin);
+
+    await openHold({ rootType: "PRODUCT", rootId: product.id, reason: "RECLAMATION_CLIENT", description: "Réclamation client sur l'odeur", scope: "OBJET_SEUL", evidence: "REC-1" }, quality);
+    const passport = await resolvePublicPassport(token.token);
+    expect(passport!.qualityHold).toBe(true);
+    expect(passport!.verified).toBe(false);
+    expect(passport!.publicStatus).toMatch(/contrôle qualité/);
   });
 });

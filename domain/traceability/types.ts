@@ -22,6 +22,9 @@ export interface Product extends ProvenanceFields {
   transformationBatchId: string;
   packagingDate: string;
   expiryDate: string | null;
+  /** Packaged quantity — null on rows recorded before quantities were captured. */
+  quantity: number | null;
+  unit: string | null;
   createdAt: string;
 }
 
@@ -80,6 +83,14 @@ export interface PublicPassport {
   lineage: PublicLineageStage[];
   /** True unless the underlying data is REEL/VALIDE — drives the "Données de démonstration" banner (phase-9 brief §15). */
   isDemoData: boolean;
+  /**
+   * True while a quality hold covers the scanned product (or lot). The passport then says so
+   * plainly and never reads as verified — the public must not be reassured about goods the
+   * operator itself has blocked.
+   */
+  qualityHold: boolean;
+  /** Public-safe upstream facts (strain, hatchery city) when the hatchery chain is recorded. */
+  geneticOrigin: string | null;
 }
 
 export type NewRelation = Omit<Relation, "id" | "createdAt">;

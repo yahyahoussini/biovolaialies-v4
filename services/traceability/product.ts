@@ -7,6 +7,7 @@ import { can } from "../../domain/shared/permissions";
 import { recordAudit } from "../audit/record";
 import type { Session } from "../auth/session";
 import { assertInScope, resolveLotHierarchy } from "../identity/scope-check";
+import { assertNotOnHold } from "../quality/holds";
 import { createRelation } from "./relations";
 
 /**
@@ -21,6 +22,8 @@ export const createProductInputSchema = z.object({
   transformationBatchId: z.string().min(1, "Un produit doit avoir une transformation source."),
   packagingDate: z.string().trim().min(1),
   expiryDate: z.string().trim().min(1).optional().nullable(),
+  quantity: z.number().positive().optional().nullable(),
+  unit: z.string().trim().min(1).max(20).optional().nullable(),
   destinationId: z.string().trim().min(1).optional().nullable(),
   dataStatus: z.enum(DATA_STATUS),
   sourceType: z.enum(MEASUREMENT_SOURCE_TYPE),
@@ -39,6 +42,8 @@ export async function createProduct(input: unknown, session: Session): Promise<P
 
   const transformationBatch = await repositories.transformationBatches.findById(data.transformationBatchId);
   if (!transformationBatch) throw new NotFoundError("TRANSFORMATION_BATCH", data.transformationBatchId);
+
+  await assertNotOnHold("TRANSFORMATION_BATCH", transformationBatch.id);
 
   const existingCode = await repositories.products.findByCode(data.code);
   if (existingCode) throw new ConflictError(`Le code produit "${data.code}" est déjà utilisé.`);
@@ -61,6 +66,8 @@ export async function createProduct(input: unknown, session: Session): Promise<P
     transformationBatchId: data.transformationBatchId,
     packagingDate: data.packagingDate,
     expiryDate: data.expiryDate ?? null,
+    quantity: data.quantity ?? null,
+    unit: data.quantity ? (data.unit ?? "kg") : null,
     sourceType: data.sourceType,
     sourceId: null,
     actorId: session.userId,

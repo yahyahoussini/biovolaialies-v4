@@ -60,6 +60,13 @@ export function PassportView({ passport }: { passport: PublicPassport }) {
           <p className="text-sm leading-relaxed text-secondary">{passport.publicStatus}</p>
         </section>
 
+        {passport.qualityHold ? (
+          <p role="alert" className="rounded-lg border border-critical/40 bg-critical/10 px-4 py-3 text-center text-sm font-semibold leading-relaxed text-critical-strong">
+            Ce produit fait l&apos;objet d&apos;une vérification qualité en cours par l&apos;opérateur. Renseignez-vous auprès
+            de votre point de vente avant consommation.
+          </p>
+        ) : null}
+
         {passport.isDemoData ? (
           <p className="rounded-lg border border-gold/45 bg-gold/10 px-4 py-3 text-center text-caption font-medium leading-relaxed text-deep-forest">
             Données de démonstration — cet environnement n&apos;est pas une chaîne de production réelle.
@@ -72,6 +79,7 @@ export function PassportView({ passport }: { passport: PublicPassport }) {
           <Fact label="Lot" value={passport.lotCode} />
           <Fact label="Ferme d'origine" value={passport.originFarmName} />
           <Fact label="Ville" value={passport.originCity} />
+          {passport.geneticOrigin ? <Fact label="Origine amont" value={passport.geneticOrigin} /> : null}
           <Fact label="Période de production" value={formatPeriod(passport.period)} last />
         </section>
 

@@ -1,4 +1,4 @@
-import { Box, Factory, MapPin, Package, Scissors, Truck, type LucideIcon } from "lucide-react";
+import { Bird, Box, Egg, Factory, Flame, MapPin, Package, Scissors, Send, Truck, Users, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { DataStatusBadge } from "@/components/domain/DataStatusBadge";
 import type { EntityType } from "@/domain/traceability/entity-types";
@@ -7,6 +7,11 @@ import type { ChainEdge } from "@/services/traceability/chain";
 import type { ChainNode } from "@/services/traceability/entity-resolver";
 
 const NODE_ICON: Record<EntityType, LucideIcon> = {
+  PARENT_FLOCK: Users,
+  EGG_LOT: Egg,
+  HATCH_CYCLE: Flame,
+  CHICK_LOT: Bird,
+  SHIPMENT: Send,
   LOT: Box,
   COLLECTION: Truck,
   SLAUGHTER_BATCH: Scissors,

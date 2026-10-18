@@ -8,6 +8,7 @@ import { can } from "../../domain/shared/permissions";
 import { recordAudit } from "../audit/record";
 import type { Session } from "../auth/session";
 import { assertInScope, resolveLotHierarchy } from "../identity/scope-check";
+import { assertNotOnHold } from "../quality/holds";
 import { createRelation } from "./relations";
 
 /**
@@ -40,6 +41,8 @@ export async function createTransformationBatch(input: unknown, session: Session
   const parsed = createTransformationBatchInputSchema.safeParse(input);
   if (!parsed.success) throw new ValidationError(parsed.error.issues.map((i) => i.message).join(" "));
   const data = parsed.data;
+
+  await assertNotOnHold(data.upstreamType, data.upstreamId);
 
   const existingCode = await repositories.transformationBatches.findByCode(data.code);
   if (existingCode) throw new ConflictError(`Le code de lot de transformation "${data.code}" est déjà utilisé.`);

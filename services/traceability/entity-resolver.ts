@@ -87,6 +87,31 @@ export async function resolveNode(type: EntityType, id: string): Promise<ChainNo
         href: null,
       };
     }
+    case "PARENT_FLOCK": {
+      const flock = await repositories.parentFlocks.findById(id);
+      if (!flock) return null;
+      return { type, id, code: flock.code, label: `Reproducteurs ${flock.code}`, dataStatus: flock.dataStatus, occurredAt: flock.placedAt, href: `/couvoir/reproducteurs/${flock.id}` };
+    }
+    case "EGG_LOT": {
+      const egg = await repositories.eggLots.findById(id);
+      if (!egg) return null;
+      return { type, id, code: egg.code, label: `Œufs ${egg.code}`, dataStatus: egg.dataStatus, occurredAt: egg.collectedAt, href: null };
+    }
+    case "HATCH_CYCLE": {
+      const cycle = await repositories.hatchCycles.findById(id);
+      if (!cycle) return null;
+      return { type, id, code: cycle.code, label: `Incubation ${cycle.code}`, dataStatus: cycle.dataStatus, occurredAt: cycle.setAt, href: `/couvoir/cycles/${cycle.id}` };
+    }
+    case "CHICK_LOT": {
+      const chicks = await repositories.chickLots.findById(id);
+      if (!chicks) return null;
+      return { type, id, code: chicks.code, label: `Poussins ${chicks.code}`, dataStatus: chicks.dataStatus, occurredAt: chicks.dispatchedAt, href: null };
+    }
+    case "SHIPMENT": {
+      const shipment = await repositories.shipments.findById(id);
+      if (!shipment) return null;
+      return { type, id, code: shipment.code, label: `Expédition ${shipment.code}`, dataStatus: shipment.dataStatus, occurredAt: shipment.shippedAt, href: null };
+    }
     case "DESTINATION": {
       const destination = await repositories.destinations.findById(id);
       if (!destination) return null;

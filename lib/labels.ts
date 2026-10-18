@@ -101,6 +101,11 @@ export const MEASUREMENT_TYPE_LABEL: Record<SensorType, string> = {
  * these give every node and edge a real domain word (§22).
  */
 export const ENTITY_TYPE_LABEL: Record<EntityType, string> = {
+  PARENT_FLOCK: "Troupeau reproducteur",
+  EGG_LOT: "Lot d'œufs",
+  HATCH_CYCLE: "Cycle d'incubation",
+  CHICK_LOT: "Lot de poussins",
+  SHIPMENT: "Expédition",
   LOT: "Lot d'élevage",
   COLLECTION: "Collecte",
   SLAUGHTER_BATCH: "Abattage",

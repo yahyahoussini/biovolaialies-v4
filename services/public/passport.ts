@@ -3,6 +3,7 @@ import { isEntityType, type EntityType } from "../../domain/traceability/entity-
 import type { PublicLineageStage, PublicPassport, PublicTimelineEntry, Product } from "../../domain/traceability/types";
 import type { Lot } from "../../domain/production/types";
 import type { DataStatus, LotStatus } from "../../domain/shared/enums";
+import { activeHoldsOn } from "../quality/holds";
 import { resolveNode, type ChainNode } from "../traceability/entity-resolver";
 
 /**
@@ -35,8 +36,14 @@ export async function resolvePublicPassport(token: string): Promise<PublicPasspo
   const downstream = await walkDownstream("LOT", lot.id);
   const { timeline, lineage } = buildTimelineAndLineage(lot, farm.name, farm.city, downstream, product);
 
-  const { label: publicStatus, verified } =
+  const statusResult =
     qrToken.scope === "PRODUCT" && product ? resolveProductStatus(product, lot) : resolveLotStatus(lot.status);
+  const qualityHold =
+    (product ? (await activeHoldsOn("PRODUCT", product.id)).length > 0 : false) || (await activeHoldsOn("LOT", lot.id)).length > 0;
+  const { label: publicStatus, verified } = qualityHold
+    ? { label: "Retenu par le contrôle qualité — vérification en cours.", verified: false }
+    : statusResult;
+  const geneticOrigin = await resolvePublicGeneticOrigin(lot.id);
 
   return {
     scope: qrToken.scope,
@@ -52,7 +59,29 @@ export async function resolvePublicPassport(token: string): Promise<PublicPasspo
     timeline,
     lineage,
     isDemoData: !isRealOrValidated(product?.dataStatus ?? lot.dataStatus),
+    qualityHold,
+    geneticOrigin,
   };
+}
+
+/**
+ * The upstream facts a consumer may see: the strain and the hatchery's city. Never supplier
+ * names, import references or internal codes (rule R11: only approved public fields).
+ */
+async function resolvePublicGeneticOrigin(lotId: string): Promise<string | null> {
+  const chickEdge = (await repositories.relations.listFrom("LOT", lotId)).find((r) => r.toType === "CHICK_LOT");
+  if (!chickEdge) return null;
+  const chicks = await repositories.chickLots.findById(chickEdge.toId);
+  if (!chicks) return null;
+  const cycle = await repositories.hatchCycles.findById(chicks.hatchCycleId);
+  if (!cycle) return null;
+  const hatcheryBuilding = await repositories.buildings.findById(cycle.buildingId);
+  const hatcheryFarm = hatcheryBuilding ? await repositories.farms.findById(hatcheryBuilding.farmId) : null;
+  const eggEdge = (await repositories.relations.listFrom("HATCH_CYCLE", cycle.id)).find((r) => r.toType === "EGG_LOT");
+  const egg = eggEdge ? await repositories.eggLots.findById(eggEdge.toId) : null;
+  const flock = egg ? await repositories.parentFlocks.findById(egg.parentFlockId) : null;
+  const parts = [flock ? `Souche ${flock.strain.replace(/\s+PS$/i, "")}` : null, hatcheryFarm ? `couvoir à ${hatcheryFarm.city}` : null].filter(Boolean);
+  return parts.length > 0 ? parts.join(", ") : null;
 }
 
 function isRealOrValidated(status: DataStatus): boolean {

@@ -15,6 +15,15 @@ export interface RelationRule {
  * without weakening what's already enforced.
  */
 export const ALLOWED_RELATIONS: Partial<Record<RelationType, RelationRule[]>> = {
+  // Upstream chain (client spec A03–A07): eggs from a parent flock, loaded into a cycle,
+  // hatched into a chick lot, placed as a farm lot. metadata.quantity carries the count moved.
+  PROVIENT_DE: [
+    { from: "EGG_LOT", to: "PARENT_FLOCK" },
+    { from: "HATCH_CYCLE", to: "EGG_LOT" },
+    { from: "CHICK_LOT", to: "HATCH_CYCLE" },
+    { from: "LOT", to: "CHICK_LOT" },
+  ],
+  EXPEDIE_DEPUIS: [{ from: "SHIPMENT", to: "PRODUCT" }],
   COLLECTE_DE: [{ from: "COLLECTION", to: "LOT" }],
   ABATTU_DEPUIS: [
     { from: "SLAUGHTER_BATCH", to: "COLLECTION" },
@@ -29,7 +38,10 @@ export const ALLOWED_RELATIONS: Partial<Record<RelationType, RelationRule[]>> = 
     { from: "TRANSFORMATION_BATCH", to: "TRANSFORMATION_BATCH" },
   ],
   CONDITIONNE_DEPUIS: [{ from: "PRODUCT", to: "TRANSFORMATION_BATCH" }],
-  DESTINE_A: [{ from: "PRODUCT", to: "DESTINATION" }],
+  DESTINE_A: [
+    { from: "PRODUCT", to: "DESTINATION" },
+    { from: "SHIPMENT", to: "DESTINATION" },
+  ],
 };
 
 export function isRelationAllowed(relationType: RelationType, from: EntityType, to: EntityType): boolean {
