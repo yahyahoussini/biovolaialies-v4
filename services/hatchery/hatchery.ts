@@ -370,3 +370,56 @@ export async function getHatcheryOverview(session: Session): Promise<HatcheryOve
     flockBuildings: buildings.filter((b) => b.zoneType !== "COUVOIR" && visibleBuilding(b.id)).map((b) => ({ id: b.id, label: buildingLabel.get(b.id)! })),
   };
 }
+
+// ---------------------------------------------------------------------------
+// Detail reads
+// ---------------------------------------------------------------------------
+
+export interface HatchCycleDetail {
+  cycle: HatchCycle;
+  buildingLabel: string;
+  loadedEggLots: { id: string; code: string; quantity: number; flockCode: string }[];
+  chickLots: ChickLot[];
+  dispatched: number;
+  available: number | null;
+}
+
+export async function getHatchCycleDetail(cycleId: string, session: Session): Promise<HatchCycleDetail> {
+  if (!can(session, "VIEW", "HATCHERY")) throw new AuthorizationError();
+  const cycle = await getCycleInScope(cycleId, session);
+  const building = await repositories.buildings.findById(cycle.buildingId);
+  const farm = building ? await repositories.farms.findById(building.farmId) : null;
+  const edges = (await repositories.relations.listFrom("HATCH_CYCLE", cycle.id)).filter((e) => e.toType === "EGG_LOT");
+  const loadedEggLots = [];
+  for (const edge of edges) {
+    const egg = await repositories.eggLots.findById(edge.toId);
+    if (!egg) continue;
+    const flock = await repositories.parentFlocks.findById(egg.parentFlockId);
+    loadedEggLots.push({ id: egg.id, code: egg.code, quantity: Number((edge.metadata as { quantity?: number }).quantity ?? 0), flockCode: flock?.code ?? "—" });
+  }
+  const chickLots = await repositories.chickLots.listByCycle(cycle.id);
+  const dispatched = chickLots.reduce((s, c) => s + c.quantity, 0);
+  return {
+    cycle,
+    buildingLabel: `${farm?.name ?? "—"} — ${building?.code ?? "—"}`,
+    loadedEggLots,
+    chickLots,
+    dispatched,
+    available: cycle.status === "ECLOS" ? chicksAvailable(cycle.chicksHatched ?? 0, cycle.culls ?? 0, dispatched) : null,
+  };
+}
+
+export async function getParentFlockDetail(flockId: string, session: Session): Promise<{ flock: ParentFlock; buildingLabel: string; eggLots: (EggLot & { allocated: number })[] }> {
+  if (!can(session, "VIEW", "HATCHERY")) throw new AuthorizationError();
+  const flock = await repositories.parentFlocks.findById(flockId);
+  if (!flock) throw new NotFoundError("Troupeau reproducteur", flockId);
+  assertInScope(session, await resolveBuildingHierarchy(flock.buildingId));
+  const building = await repositories.buildings.findById(flock.buildingId);
+  const farm = building ? await repositories.farms.findById(building.farmId) : null;
+  const eggs = await repositories.eggLots.listByParentFlock(flock.id);
+  return {
+    flock,
+    buildingLabel: `${farm?.name ?? "—"} — ${building?.code ?? "—"}`,
+    eggLots: await Promise.all(eggs.map(async (e) => ({ ...e, allocated: await eggsAllocated(e.id) }))),
+  };
+}

@@ -86,3 +86,46 @@ export async function createShipment(input: unknown, session: Session): Promise<
   });
   return shipment;
 }
+
+export interface ShipmentOverview {
+  products: { id: string; code: string; name: string; quantity: number | null; unit: string | null; shipped: number; onHold: boolean }[];
+  shipments: (Shipment & { productCode: string; destinationLabel: string })[];
+  destinations: { id: string; label: string }[];
+}
+
+export async function getShipmentOverview(session: Session): Promise<ShipmentOverview> {
+  if (!can(session, "VIEW", "PRODUCTS")) throw new AuthorizationError();
+  const [products, shipments, destinations] = await Promise.all([
+    repositories.products.list(),
+    repositories.shipments.list(),
+    repositories.destinations.list(),
+  ]);
+  const visible = [];
+  for (const product of products) {
+    if (!isGlobalScope(session)) {
+      const path = await resolveEntityHierarchy("PRODUCT", product.id);
+      if (!path || !isWithinScope(session, path)) continue;
+    }
+    visible.push(product);
+  }
+  const visibleIds = new Set(visible.map((p) => p.id));
+  const destinationLabel = new Map(destinations.map((d) => [d.id, `${d.name} — ${d.city}`]));
+  const productCode = new Map(visible.map((p) => [p.id, p.code]));
+  return {
+    products: await Promise.all(
+      visible.map(async (p) => ({
+        id: p.id,
+        code: p.code,
+        name: p.name,
+        quantity: p.quantity,
+        unit: p.unit,
+        shipped: shipments.filter((s) => s.productId === p.id).reduce((sum, s) => sum + s.quantity, 0),
+        onHold: (await repositories.qualityCases.listActiveItemsFor("PRODUCT", p.id)).length > 0,
+      }))
+    ),
+    shipments: shipments
+      .filter((s) => visibleIds.has(s.productId))
+      .map((s) => ({ ...s, productCode: productCode.get(s.productId) ?? "—", destinationLabel: destinationLabel.get(s.destinationId) ?? "—" })),
+    destinations: destinations.map((d) => ({ id: d.id, label: `${d.name} — ${d.city}` })),
+  };
+}

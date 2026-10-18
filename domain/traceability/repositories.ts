@@ -14,6 +14,7 @@ export interface ProductRepository {
   findByCode(code: string): Promise<Product | null>;
   listByTransformationBatch(transformationBatchId: string): Promise<Product[]>;
   create(input: NewProduct): Promise<Product>;
+  list(): Promise<Product[]>;
 }
 
 export interface DestinationRepository {

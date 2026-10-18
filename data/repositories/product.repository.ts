@@ -20,6 +20,10 @@ export class DrizzleProductRepository implements ProductRepository {
     return rows as Product[];
   }
 
+  async list(): Promise<Product[]> {
+    return (await db.query.products.findMany({ orderBy: (t, { desc }) => desc(t.packagingDate) })) as Product[];
+  }
+
   async create(input: NewProduct): Promise<Product> {
     const [row] = await db.insert(products).values(input).returning();
     return row as Product;

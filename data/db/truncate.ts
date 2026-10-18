@@ -7,17 +7,32 @@ import * as schema from "./schema";
  * throughout, so a mistake here fails loudly on a constraint error rather than silently
  * leaving dangling references behind (which is exactly what the integrity engine exists to
  * catch — the demo reset must not be able to manufacture that state).
+ *
+ * `leads` is deliberately absent: inbound requests from the public site are real prospects,
+ * not demo content, and a presenter resetting the scenario must never erase them.
  */
 const DELETION_ORDER = [
   // Audit references users, lots and lot_events, so it goes first.
   schema.auditLog,
+  // The ledger is reset with the scenario it records; a reset is itself the documented break.
+  schema.ledgerEvents,
+  schema.qualityHoldItems,
+  schema.qualityCases,
+  schema.apiClients,
+  schema.commissioningTests,
+  schema.equipmentItems,
   schema.qrTokens,
   schema.relations,
+  schema.shipments,
   schema.products,
   schema.transformationBatches,
   schema.slaughterBatches,
   schema.collections,
   schema.destinations,
+  schema.chickLots,
+  schema.hatchCycles,
+  schema.eggLots,
+  schema.parentFlocks,
   schema.sanitaryObservations,
   schema.actionRecords,
   schema.alerts,

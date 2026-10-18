@@ -111,6 +111,8 @@ export async function seedVerifiedTraceabilityChain(
       category: "Volaille fraîche découpée",
       transformationBatchId: transformationBatch.id,
       packagingDate: "2026-01-15T17:00:00.000Z",
+      quantity: 15120,
+      unit: "kg",
       destinationId: destination.id,
       dataStatus: "VALIDE",
       sourceType: "MANUEL",

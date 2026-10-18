@@ -114,6 +114,8 @@ export async function seedHeroTraceabilityChain(
       category: "Volaille fraîche découpée",
       transformationBatchId: transformationBatch.id,
       packagingDate: "2026-08-16T16:00:00.000Z",
+      quantity: 8636,
+      unit: "kg",
       destinationId: destination.id,
       dataStatus: "SIMULATION",
       sourceType: "MANUEL",

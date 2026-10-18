@@ -64,6 +64,24 @@ describe("full chain: genetics → QR, hold propagation, recall", () => {
     }
   });
 
+  it("does not leak a sibling lot hatched from the same flock into a lot's chain", async () => {
+    const c = await buildFullChain("sib");
+    const eggs2 = await createEggLot({ code: "OAC-sib-2", parentFlockId: c.flock.id, collectedAt: "2026-06-10", quantity: 1000, ...SIM }, c.admin);
+    const cycle2 = await createHatchCycle({ code: "INC-sib-2", buildingId: c.couvoir.id, incubatorRef: "Inc 5", setAt: "2026-06-12", allocations: [{ eggLotId: eggs2.id, quantity: 1000 }], ...SIM }, c.admin);
+    await recordCandling({ cycleId: cycle2.id, candledAt: "2026-06-22", clearsRemoved: 100 }, c.admin);
+    await recordHatch({ cycleId: cycle2.id, hatchedAt: "2026-07-03", chicksHatched: 850, unhatched: 50, culls: 0 }, c.admin);
+    const chicks2 = await createChickLot({ code: "PSS-sib-2", hatchCycleId: cycle2.id, quantity: 800, grade: "A", dispatchedAt: "2026-07-03", ...SIM }, c.admin);
+    const elevage = (await repositories.buildings.list()).find((b) => b.code === "ELV-sib")!;
+    const sibling = await createLot({ code: "BU-sib-2", buildingId: elevage.id, species: "Poulet de chair", breed: "Ross 308", initialPopulation: 800, plannedStartAt: null, dataStatus: "SIMULATION" }, c.admin);
+    await placeChicksIntoLot({ lotId: sibling.id, chickLotId: chicks2.id, quantity: 800 }, c.admin);
+
+    const chain = await buildLotTraceabilityChain(sibling.id, c.admin);
+    const codes = chain.nodes.map((n) => n.code);
+    expect(codes).toContain("PF-sib");
+    expect(codes).not.toContain("BU-sib");
+    expect(codes).not.toContain("PRD-sib");
+  });
+
   it("enforces hatchery balances (T31)", async () => {
     const c = await buildFullChain("g2");
     // 6000 eggs, 5000 already set → only 1000 left.

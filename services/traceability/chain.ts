@@ -43,20 +43,26 @@ function key(type: string, id: string): string {
 }
 
 /**
- * Walks the generic `relations` table both ways from a starting node (§2's `listFrom`/
- * `listTo`) — "incoming" relations are things that point TO this node (its downstream
- * dependents, since edges point "child → what it came from"), "outgoing" are things this
- * node itself points to (its own source, or — for a Product — its Destination). One
- * traversal naturally discovers the whole connected chain in both directions; nothing here
- * is hardcoded to a specific stage sequence.
+ * Walks the generic `relations` table from a starting node. "Incoming" relations point TO a
+ * node (its downstream dependents, since edges point "child → what it came from"); "outgoing"
+ * ones are the node's own sources (or, for a product/shipment, its Destination).
+ *
+ * The walk is directional once it leaves the start: ancestors are followed only further up,
+ * descendants only further down. Without that, two lots sharing an ancestor (two farm lots
+ * hatched from the same parent flock) would leak into each other's chain — up to the flock,
+ * then back down into the sibling's products. Destinations are collected from descendants but
+ * never walked through.
  */
+type Direction = "both" | "up" | "down";
+
 async function walk(
   type: EntityType,
   id: string,
   nodesByKey: Map<string, ChainNode>,
   edges: ChainEdge[],
   visitedNodes: Set<string>,
-  visitedEdges: Set<string>
+  visitedEdges: Set<string>,
+  direction: Direction = "both"
 ): Promise<void> {
   const nodeKey = key(type, id);
   if (visitedNodes.has(nodeKey) || nodesByKey.size > MAX_NODES) return;
@@ -65,7 +71,10 @@ async function walk(
   const currentNode = nodesByKey.get(nodeKey);
   if (!currentNode) return;
 
-  const [incoming, outgoing] = await Promise.all([repositories.relations.listTo(type, id), repositories.relations.listFrom(type, id)]);
+  const [incoming, outgoing] = await Promise.all([
+    direction === "up" ? Promise.resolve([]) : repositories.relations.listTo(type, id),
+    repositories.relations.listFrom(type, id),
+  ]);
 
   for (const rel of incoming) {
     if (!isEntityType(rel.fromType)) continue;
@@ -82,11 +91,13 @@ async function walk(
       visitedEdges.add(edgeKey);
       edges.push({ from: childNode, to: currentNode, relationType: rel.relationType });
     }
-    await walk(rel.fromType, rel.fromId, nodesByKey, edges, visitedNodes, visitedEdges);
+    await walk(rel.fromType, rel.fromId, nodesByKey, edges, visitedNodes, visitedEdges, "down");
   }
 
   for (const rel of outgoing) {
     if (!isEntityType(rel.toType)) continue;
+    // Going down, the only outgoing edge worth following is where the goods went.
+    if (direction === "down" && rel.relationType !== "DESTINE_A") continue;
     const targetKey = key(rel.toType, rel.toId);
     let targetNode = nodesByKey.get(targetKey);
     if (!targetNode) {
@@ -100,7 +111,9 @@ async function walk(
       visitedEdges.add(edgeKey);
       edges.push({ from: currentNode, to: targetNode, relationType: rel.relationType });
     }
-    await walk(rel.toType, rel.toId, nodesByKey, edges, visitedNodes, visitedEdges);
+    if (rel.relationType !== "DESTINE_A") {
+      await walk(rel.toType, rel.toId, nodesByKey, edges, visitedNodes, visitedEdges, "up");
+    }
   }
 }
 

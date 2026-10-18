@@ -18,6 +18,7 @@ import {
   History,
   LayoutDashboard,
   Radio,
+  Send,
   Settings,
   ShieldCheck,
   UserCog,
@@ -59,6 +60,7 @@ const ICONS: Record<string, LucideIcon> = {
   programme: Map,
   ledger: Link2,
   apiClients: KeyRound,
+  shipments: Send,
 };
 export type NavIconName = keyof typeof ICONS;
 

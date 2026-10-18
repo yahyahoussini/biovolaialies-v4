@@ -10,6 +10,7 @@ import { seedHeroTraceabilityChain } from "./generators/hero-traceability-chain"
 import { seedIntelligenceDefinitions } from "./generators/intelligence-definitions";
 import { seedIot } from "./generators/iot";
 import { seedLots } from "./generators/lots";
+import { seedUpstreamChain } from "./generators/upstream-chain";
 import { seedVerifiedTraceabilityChain, VERIFIED_LOT_CODE } from "./generators/verified-traceability-chain";
 
 /** Fixed reference times for seed-time rule evaluation — deterministic and reproducible regardless of when the seed actually runs (same reasoning as phase-4's services/iot/hero-scenario.ts). */
@@ -106,6 +107,16 @@ export async function seedDatabase(options: SeedOptions = {}): Promise<SeedResul
   // change the documented anomaly/alert counts.
   logger.info("seed", `Seeding the validated traceability chain for ${VERIFIED_LOT_CODE} (reads "Traçabilité vérifiée")…`);
   const verified = await seedVerifiedTraceabilityChain(adminSession);
+
+  logger.info("seed", "Seeding the upstream chain (parent flock → eggs → hatchery → chicks), shipments and a closed quality case…");
+  await seedUpstreamChain({
+    heroProducerId: hierarchy.heroProducerId,
+    heroLotId,
+    verifiedLotId: verified.lotId,
+    heroProductId: productId,
+    verifiedProductId: verified.productId,
+    adminSession,
+  });
 
   logger.info("seed", "Generating the hero public QR passports (lot + product)…");
   // Pinned so a demo reset restores the exact same public URLs (phase-12 brief §5/§7) —

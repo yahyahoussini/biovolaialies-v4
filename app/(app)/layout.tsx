@@ -37,6 +37,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           canAccessModule(session, "HATCHERY") && { label: "Couvoir & amont", href: "/couvoir", icon: "hatchery" },
           canAccessModule(session, "LOTS") && { label: "Lots", href: "/lots", icon: "lots" },
           canAccessModule(session, "IOT") && { label: "IoT", href: "/iot", icon: "iot" },
+          canAccessModule(session, "PRODUCTS") && { label: "Produits & expéditions", href: "/expeditions", icon: "shipments" },
         ] as (NavSection["items"][number] | false)[]
       ).filter((item): item is NavSection["items"][number] => Boolean(item)),
     },
