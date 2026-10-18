@@ -1,0 +1,84 @@
+/**
+ * Where each rule (R01–R15) and acceptance test (T01–T40) of the client's specification stands
+ * in THIS codebase. Written by hand and kept honest: "Automatisé" means a test in this repository
+ * exercises it on every run; "Terrain" means it can only be proven on site, with real hardware
+ * and people — software cannot claim it.
+ */
+export type CoverageStatus = "AUTOMATISE" | "IMPLEMENTE" | "PARTIEL" | "TERRAIN" | "NON_COUVERT";
+
+export const COVERAGE_LABEL: Record<CoverageStatus, string> = {
+  AUTOMATISE: "Automatisé",
+  IMPLEMENTE: "Implémenté",
+  PARTIEL: "Partiel",
+  TERRAIN: "Terrain (FAT/SAT)",
+  NON_COUVERT: "Non couvert",
+};
+
+export const COVERAGE_TONE: Record<CoverageStatus, "success" | "info" | "warning" | "neutral" | "critical"> = {
+  AUTOMATISE: "success",
+  IMPLEMENTE: "info",
+  PARTIEL: "warning",
+  TERRAIN: "neutral",
+  NON_COUVERT: "critical",
+};
+
+export const RULE_COVERAGE: Record<string, { status: CoverageStatus; where: string }> = {
+  R01: { status: "AUTOMATISE", where: "Codes uniques par type d'objet, rejet explicite (lot, collecte, abattage, couvoir, expédition)." },
+  R02: { status: "IMPLEMENTE", where: "Tout lot a site (bâtiment) et événement de création ; tout dérivé a une source obligatoire." },
+  R03: { status: "AUTOMATISE", where: "Graphe de relations ; contrôles d'intégrité T04/T05 ; dérivé refusé sans source." },
+  R04: { status: "AUTOMATISE", where: "Bilans abattage/transformation, bilan œufs du couvoir, stock produit vs expéditions." },
+  R05: { status: "IMPLEMENTE", where: "Valeur + unité + source + horodatage + statut de donnée sur chaque mesure." },
+  R06: { status: "PARTIEL", where: "Motif de blocage « instrument hors validité » ; pas encore de registre d'étalonnage." },
+  R07: { status: "IMPLEMENTE", where: "Journal chaîné en ajout seul ; correction = nouvel événement lié (correctsEventId)." },
+  R08: { status: "AUTOMATISE", where: "Clé d'idempotence : rejeu identique sans doublon, rejeu différent refusé (409)." },
+  R09: { status: "AUTOMATISE", where: "Blocage propagé aux descendants ; toute dérivation depuis un objet bloqué est refusée." },
+  R10: { status: "AUTOMATISE", where: "Rôle Responsable qualité, quatre yeux, justification, preuve ; refus journalisés." },
+  R11: { status: "AUTOMATISE", where: "Passeport public : liste blanche de champs testée ; aucune donnée fournisseur ni client." },
+  R12: { status: "PARTIEL", where: "Périmètres organisation/coopérative/producteur/ferme testés ; isolation multi-clients à valider." },
+  R13: { status: "IMPLEMENTE", where: "Heure métier et heure de réception conservées ; horodatage futur refusé par l'API." },
+  R14: { status: "IMPLEMENTE", where: "Aucune identité individuelle : tout est suivi au niveau lot." },
+  R15: { status: "IMPLEMENTE", where: "Aucun chemin d'écriture vers un automate n'existe dans la plateforme." },
+};
+
+export const TEST_COVERAGE: Record<string, { status: CoverageStatus; where: string }> = {
+  T01: { status: "AUTOMATISE", where: "services/production/lot.test.ts" },
+  T02: { status: "AUTOMATISE", where: "services/production/lot.test.ts — code de lot dupliqué refusé" },
+  T03: { status: "AUTOMATISE", where: "services/quality/full-chain.test.ts — produit → troupeau reproducteur" },
+  T04: { status: "AUTOMATISE", where: "services/quality/full-chain.test.ts — lot d'œufs → produits, expéditions, destinations" },
+  T05: { status: "AUTOMATISE", where: "services/quality/full-chain.test.ts — propagation et refus d'expédition" },
+  T06: { status: "AUTOMATISE", where: "services/quality/full-chain.test.ts — levée par responsable qualité" },
+  T07: { status: "AUTOMATISE", where: "services/quality/full-chain.test.ts — refus + journal" },
+  T08: { status: "AUTOMATISE", where: "services/ledger/ledger.test.ts — altération en base détectée" },
+  T09: { status: "PARTIEL", where: "Serveur prêt (rejeu idempotent) ; application mobile hors ligne non développée" },
+  T10: { status: "AUTOMATISE", where: "services/api/api.test.ts — rejeu sans perte ni doublon (côté serveur)" },
+  T11: { status: "PARTIEL", where: "Même clé, contenu différent → 409 ; conflit entre deux clés distinctes non détecté" },
+  T12: { status: "TERRAIN", where: "Lecture QR sur équipement réel" },
+  T13: { status: "AUTOMATISE", where: "Durée de calcul mesurée et affichée ; à confirmer sur volume réel" },
+  T14: { status: "IMPLEMENTE", where: "Ingestion par lots de 500 ; temps sur 1 000 événements non mesuré" },
+  T15: { status: "TERRAIN", where: "Mesure de disponibilité sur l'infrastructure du pilote" },
+  T16: { status: "TERRAIN", where: "Comparaison capteur / référence étalonnée" },
+  T17: { status: "IMPLEMENTE", where: "Contrôle d'intégrité T21 : appareil hors ligne ou mesure obsolète signalés" },
+  T18: { status: "PARTIEL", where: "Horodatage futur refusé ; détection de dérive progressive non implémentée" },
+  T19: { status: "TERRAIN", where: "Aucun connecteur OPC UA/Modbus : dépend des machines réellement installées" },
+  T20: { status: "PARTIEL", where: "Politique d'erreur API (codes, Correlation-ID, quotas) ; pas de connecteur sortant à tester" },
+  T21: { status: "TERRAIN", where: "Masses étalons sur balance réelle" },
+  T22: { status: "AUTOMATISE", where: "domain/production/quantity-integrity.test.ts, reconciliation.test.ts" },
+  T23: { status: "TERRAIN", where: "Impression et relecture d'étiquette réelle" },
+  T24: { status: "PARTIEL", where: "Accès hors périmètre refusés (tests) ; isolation multi-clients complète à valider" },
+  T25: { status: "AUTOMATISE", where: "domain/shared/permissions.test.ts" },
+  T26: { status: "PARTIEL", where: "Clés API stockées en empreinte uniquement ; scan de secrets à intégrer à la CI" },
+  T27: { status: "TERRAIN", where: "Restauration de sauvegarde en environnement isolé" },
+  T28: { status: "TERRAIN", where: "Redémarrage d'une passerelle Edge réelle" },
+  T29: { status: "PARTIEL", where: "Point de santé /api/v1/health/ready ; supervision et alerting à brancher" },
+  T30: { status: "TERRAIN", where: "Procédure exécutée avec un opérateur" },
+  T31: { status: "AUTOMATISE", where: "domain/hatchery/balance.test.ts, services/quality/full-chain.test.ts" },
+  T32: { status: "AUTOMATISE", where: "domain/intelligence/kpi-calculations.test.ts" },
+  T33: { status: "AUTOMATISE", where: "services/traceability/slaughter.test.ts" },
+  T34: { status: "NON_COUVERT", where: "Une transformation n'a aujourd'hui qu'une seule source" },
+  T35: { status: "NON_COUVERT", where: "Pas de modèle de configuration multi-site versionné" },
+  T36: { status: "IMPLEMENTE", where: "Par conception : aucune écriture automate" },
+  T37: { status: "IMPLEMENTE", where: "Journal en ajout seul ; correction liée, original conservé" },
+  T38: { status: "TERRAIN", where: "Formation par rôle" },
+  T39: { status: "TERRAIN", where: "PV FAT signé" },
+  T40: { status: "TERRAIN", where: "PV SAT signé sur site pilote" },
+};

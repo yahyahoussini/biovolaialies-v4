@@ -18,11 +18,14 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { env } from "@/lib/env";
-import { resolvePublicPassport } from "@/services/public/passport";
 import { demoPublicToken } from "@/services/traceability/qr-tokens";
 import { ContactForm } from "./ContactForm";
 
-/** The seeded "Traçabilité vérifiée" product — only linked when this deployment actually holds it. */
+/**
+ * The seeded "Traçabilité vérifiée" product. Linked only on demo deployments (the bundled
+ * snapshot, or DEMO_MODE): a production database never holds the seed. Decided from
+ * configuration, not a query, so this page stays statically prerendered.
+ */
 const DEMO_PASSPORT_TOKEN = demoPublicToken("product:BU-2025-010");
 
 const CHAIN = [
@@ -94,8 +97,8 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   return <h2 className="mt-3 mb-4 text-3xl font-bold leading-tight tracking-tight sm:text-4xl">{children}</h2>;
 }
 
-export default async function HomePage() {
-  const demoPassportAvailable = (await resolvePublicPassport(DEMO_PASSPORT_TOKEN)) !== null;
+export default function HomePage() {
+  const demoPassportAvailable = env.DATABASE_SNAPSHOT || env.DEMO_MODE;
 
   return (
     <>

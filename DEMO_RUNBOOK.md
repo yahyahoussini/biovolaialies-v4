@@ -43,7 +43,7 @@ Tout autre résultat = ne pas présenter avant d'avoir réamorcé.
 
 ## 1. Comptes de démonstration
 
-Mot de passe **identique pour les six comptes** : `Demo1234!`
+Mot de passe **identique pour les sept comptes** : `Demo1234!`
 
 | Rôle | Email | Périmètre |
 |---|---|---|
@@ -53,8 +53,9 @@ Mot de passe **identique pour les six comptes** : `Demo1234!`
 | Responsable ferme | `ferme.manager@biovolailles.demo` | Ferme Al Baraka |
 | Technicien | `technicien@biovolailles.demo` | Ferme Al Baraka |
 | Auditeur | `auditeur@biovolailles.demo` | Global (lecture seule) |
+| Responsable qualité | `qualite@biovolailles.demo` | Global — seul rôle (avec l'administrateur) habilité à lever un blocage qualité |
 
-Les six comptes ont été testés : mot de passe correct accepté, mot de passe erroné refusé.
+Les comptes ont été testés : mot de passe correct accepté, mot de passe erroné refusé.
 
 ---
 

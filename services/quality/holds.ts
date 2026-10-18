@@ -12,6 +12,7 @@ import { can } from "../../domain/shared/permissions";
 import { isGlobalScope } from "../../domain/shared/scope";
 import { isEntityType, type EntityType } from "../../domain/traceability/entity-types";
 import { recordAudit } from "../audit/record";
+import { appendLedgerEvent } from "../ledger/ledger";
 import type { Session } from "../auth/session";
 import { isWithinScope, resolveBuildingHierarchy, resolveLotHierarchy, type HierarchyPath } from "../identity/scope-check";
 import { resolveNode, type ChainNode } from "../traceability/entity-resolver";
@@ -164,8 +165,29 @@ export const decideHoldInputSchema = z.object({
   evidence: z.string().max(2000),
 });
 
+/**
+ * Rule R10 / test T07: a refused release is itself evidence. Every refusal on an existing case
+ * (wrong role, same person as the opener, missing justification or evidence) is written to the
+ * chained ledger before the error goes back to the caller.
+ */
+async function journalRefusal(caseId: string, session: Session, reason: string): Promise<void> {
+  if (!(await repositories.qualityCases.findById(caseId))) return;
+  await appendLedgerEvent({
+    eventType: "QUALITY_DECISION_REFUSED",
+    objectType: "quality_case",
+    objectId: caseId,
+    actorKind: "USER",
+    actorId: session.userId,
+    source: "application",
+    occurredAt: new Date().toISOString(),
+    payload: { role: session.role, reason },
+  });
+}
+
 export async function decideHold(input: unknown, session: Session): Promise<QualityCase> {
+  const caseId = typeof input === "object" && input !== null && "caseId" in input ? String((input as { caseId: unknown }).caseId) : "";
   if (!can(session, "VALIDATE", "QUALITY")) {
+    await journalRefusal(caseId, session, "Rôle non habilité à décider.");
     throw new AuthorizationError("Seul un responsable qualité habilité peut lever ou confirmer un blocage.");
   }
   const parsed = decideHoldInputSchema.safeParse(input);
@@ -177,7 +199,10 @@ export async function decideHold(input: unknown, session: Session): Promise<Qual
 
   const evidenceRefs = parseEvidenceRefs(data.evidence);
   const check = validateDecision(existing, session.userId, data.justification, evidenceRefs);
-  if (!check.ok) throw new ValidationError(check.error);
+  if (!check.ok) {
+    await journalRefusal(existing.id, session, check.error);
+    throw new ValidationError(check.error);
+  }
 
   const decided = await repositories.qualityCases.decide(existing.id, {
     status: data.decision,

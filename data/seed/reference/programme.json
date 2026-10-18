@@ -1,0 +1,762 @@
+{
+ "PROOF_STATUS": [
+  [
+   "API et modèles de données",
+   "CONÇU / SPÉCIFICATION",
+   "Contrats proposés dans le dossier; à faire approuver par les parties",
+   "Pas une API publiée ou déployée"
+  ],
+  [
+   "Tests de schéma/payload et erreurs",
+   "À EXÉCUTER EN SIMULATION",
+   "Mocks, JSON synthétique, tests contractuels à développer/exécuter",
+   "Ne valide pas la compatibilité équipement"
+  ],
+  [
+   "Moteur logiciel de démo préexistant",
+   "TEST LOGICIEL EXÉCUTÉ",
+   "Les tests historiques du script sont exécutés sur base isolée; voir rapport généré",
+   "Ne couvre pas automatiquement les nouveaux contrats API"
+  ],
+  [
+   "Connecteurs ERP/MES/OEM/PLC",
+   "NON VALIDÉS",
+   "Dépendent modèle, firmware, documentation, licence et banc",
+   "Ne pas déclarer compatible avant essai documenté"
+  ],
+  [
+   "BOM matériel et quantités",
+   "ESTIMATION / CONDITIONNELLE",
+   "Quantités à figer par site survey, architecture et devis",
+   "Le catalogue de référence n’est pas un bon de commande"
+  ],
+  [
+   "FAT",
+   "À RÉALISER",
+   "Plan et critères fournis; PV avec preuves exigé",
+   "Pas de FAT complète exécutée dans ce travail"
+  ],
+  [
+   "SAT élevage/couvoir/abattoir",
+   "À RÉALISER SUR SITE",
+   "Procédures distinctes et données/équipements réels nécessaires",
+   "Aucune validation industrielle réelle affirmée"
+  ],
+  [
+   "Mise en production",
+   "NO-GO À CE STADE",
+   "Conditionnée à FAT/SAT, restauration, formation, défauts critiques clos et décision signée",
+   "Aucune autorisation de mise en production implicite"
+  ]
+ ],
+ "RULES": [
+  [
+   "R01",
+   "Unicité",
+   "ID objet unique dans le tenant",
+   "Rejet + journal"
+  ],
+  [
+   "R02",
+   "Origine",
+   "Tout lot a origine, site et événement de création",
+   "Rejet/HOLD selon criticité"
+  ],
+  [
+   "R03",
+   "Généalogie",
+   "Tout objet dérivé pointe vers ses parents",
+   "Bloquer libération si lien manquant"
+  ],
+  [
+   "R04",
+   "Bilan matière",
+   "Entrées/sorties/pertes/stocks réconciliables",
+   "Alerte sur écart"
+  ],
+  [
+   "R05",
+   "Mesure",
+   "Valeur + unité + source + timestamp obligatoires",
+   "Rejet ou qualité dégradée"
+  ],
+  [
+   "R06",
+   "Métrologie",
+   "Instrument critique hors validité identifié",
+   "Alerte/HOLD selon SOP"
+  ],
+  [
+   "R07",
+   "Correction",
+   "Ne pas écraser événement validé",
+   "Nouvel événement lié et motivé"
+  ],
+  [
+   "R08",
+   "Offline",
+   "Rejeu d’un même événement idempotent",
+   "Aucune duplication"
+  ],
+  [
+   "R09",
+   "HOLD",
+   "Propagation selon graphe de généalogie",
+   "Blocage + notifications"
+  ],
+  [
+   "R10",
+   "RELEASE",
+   "Rôle habilité, preuve et justification",
+   "Refus sinon"
+  ],
+  [
+   "R11",
+   "QR",
+   "Seulement champs publics approuvés",
+   "Test de divulgation"
+  ],
+  [
+   "R12",
+   "Tenant",
+   "Aucun accès entre clients",
+   "Tests négatifs systématiques"
+  ],
+  [
+   "R13",
+   "Horloge",
+   "Heure source et réception conservées",
+   "Alerte de dérive"
+  ],
+  [
+   "R14",
+   "Individu",
+   "Pas d’identité individuelle inférée d’un capteur collectif",
+   "Rester au niveau lot"
+  ],
+  [
+   "R15",
+   "Automate",
+   "Plateforme métier ne remplace pas la sécurité PLC",
+   "Lecture seule par défaut"
+  ]
+ ],
+ "TESTS": [
+  [
+   "T01",
+   "Logiciel",
+   "Création lot",
+   "Créer un lot valide",
+   "ID unique + audit"
+  ],
+  [
+   "T02",
+   "Logiciel",
+   "ID dupliqué",
+   "Recréer un ID existant",
+   "Rejet explicite"
+  ],
+  [
+   "T03",
+   "Traçabilité",
+   "Amont",
+   "Produit fini vers origine",
+   "Généalogie complète"
+  ],
+  [
+   "T04",
+   "Traçabilité",
+   "Aval",
+   "Lot suspect vers produits/expéditions",
+   "Périmètre exact"
+  ],
+  [
+   "T05",
+   "Qualité",
+   "Propagation HOLD",
+   "Bloquer lot source",
+   "Tous descendants critiques bloqués"
+  ],
+  [
+   "T06",
+   "Qualité",
+   "RELEASE autorisé",
+   "Rôle habilité + preuve",
+   "Décision auditée"
+  ],
+  [
+   "T07",
+   "Sécurité",
+   "RELEASE interdit",
+   "Rôle non habilité",
+   "Refus + journal"
+  ],
+  [
+   "T08",
+   "Intégrité",
+   "Hash chain",
+   "Altérer champ protégé en base test",
+   "Altération détectée"
+  ],
+  [
+   "T09",
+   "Offline",
+   "Coupure réseau",
+   "Saisir événement hors ligne",
+   "Queue persistante"
+  ],
+  [
+   "T10",
+   "Offline",
+   "Reconnexion",
+   "Synchroniser après coupure",
+   "Pas de perte/duplication"
+  ],
+  [
+   "T11",
+   "Offline",
+   "Conflit",
+   "Même objet modifié sur 2 terminaux",
+   "Conflit explicite"
+  ],
+  [
+   "T12",
+   "Performance",
+   "QR",
+   "100 lectures équipement réel",
+   "P95 cible <5s à confirmer"
+  ],
+  [
+   "T13",
+   "Performance",
+   "Recall",
+   "Rappel sur dataset étalon",
+   "Cible <60s à confirmer"
+  ],
+  [
+   "T14",
+   "Performance",
+   "Sync",
+   "File 1000 événements",
+   "Cible ≤5 min à confirmer"
+  ],
+  [
+   "T15",
+   "Disponibilité",
+   "PoC",
+   "Mesure sur fenêtre définie",
+   "Cible ≥99% à confirmer"
+  ],
+  [
+   "T16",
+   "IoT",
+   "Température",
+   "Comparer à référence",
+   "Tolérance approuvée"
+  ],
+  [
+   "T17",
+   "IoT",
+   "Capteur absent",
+   "Débrancher/simuler défaut",
+   "Mesure périmée signalée"
+  ],
+  [
+   "T18",
+   "IoT",
+   "Horloge",
+   "Introduire dérive contrôlée",
+   "Qualité dégradée/alerte"
+  ],
+  [
+   "T19",
+   "OT",
+   "OPC UA/Modbus",
+   "Lire tags approuvés",
+   "Mapping/unités validés"
+  ],
+  [
+   "T20",
+   "OT",
+   "Timeout API",
+   "Couper interface ou auth",
+   "Retry et logs maîtrisés"
+  ],
+  [
+   "T21",
+   "Métrologie",
+   "Balance",
+   "Comparer masses étalons",
+   "Critères métrologie validés"
+  ],
+  [
+   "T22",
+   "Process",
+   "Bilan matière",
+   "Entrées, produits, coproduits, pertes",
+   "Écart expliqué"
+  ],
+  [
+   "T23",
+   "Conditionnement",
+   "QR imprimé",
+   "Imprimer et relire",
+   "Données concordantes"
+  ],
+  [
+   "T24",
+   "Cyber",
+   "Isolation tenant",
+   "Client A tente lire B",
+   "Accès refusé"
+  ],
+  [
+   "T25",
+   "Cyber",
+   "RBAC",
+   "Tester chaque rôle/action",
+   "Permissions conformes"
+  ],
+  [
+   "T26",
+   "Cyber",
+   "Secrets",
+   "Scanner code et logs",
+   "Aucun secret exposé"
+  ],
+  [
+   "T27",
+   "Résilience",
+   "Restauration",
+   "Restaurer en environnement isolé",
+   "RPO/RTO approuvés"
+  ],
+  [
+   "T28",
+   "Résilience",
+   "Redémarrage Edge",
+   "Redémarrer passerelle test",
+   "Reprise contrôlée"
+  ],
+  [
+   "T29",
+   "Monitoring",
+   "Alerte",
+   "Injecter panne connue",
+   "Alerte et acquittement"
+  ],
+  [
+   "T30",
+   "Ergonomie",
+   "Terrain",
+   "Exécuter SOP avec opérateur",
+   "Temps/erreurs consignés"
+  ],
+  [
+   "T31",
+   "Couvoir",
+   "Bilan OAC",
+   "Réception→chargement→éclosion→sortie",
+   "Écarts expliqués"
+  ],
+  [
+   "T32",
+   "Élevage",
+   "FCR/mortalité",
+   "Calcul sur dataset étalon",
+   "Résultat conforme formule"
+  ],
+  [
+   "T33",
+   "Abattoir",
+   "Vif→carcasse",
+   "Rattacher production à lot vif",
+   "Pas de lien ambigu"
+  ],
+  [
+   "T34",
+   "Découpe",
+   "Multi-parents",
+   "Créer produit issu de plusieurs lots",
+   "Tous parents reliés"
+  ],
+  [
+   "T35",
+   "Multi-site",
+   "Configuration vierge",
+   "Déployer template versionné",
+   "Reproductible"
+  ],
+  [
+   "T36",
+   "OT sécurité",
+   "Écriture PLC",
+   "Tenter tag interdit",
+   "Aucune écriture non autorisée"
+  ],
+  [
+   "T37",
+   "Audit",
+   "Correction",
+   "Corriger événement validé",
+   "Original conservé"
+  ],
+  [
+   "T38",
+   "Formation",
+   "Par rôle",
+   "Opérateur/admin/qualité pratique",
+   "Résultat signé"
+  ],
+  [
+   "T39",
+   "FAT",
+   "Recette atelier",
+   "Tests et anomalies",
+   "PV FAT signé"
+  ],
+  [
+   "T40",
+   "SAT",
+   "Site pilote",
+   "Flux réel contrôlé",
+   "PV SAT signé"
+  ]
+ ],
+ "GATES": [
+  [
+   "G0",
+   "Cadrage",
+   "Processus, RACI, données, critères et sites",
+   "Périmètre approuvé"
+  ],
+  [
+   "G1",
+   "Design",
+   "HLD/LLD, risques, BOM, schémas IT/OT",
+   "Revue technique signée"
+  ],
+  [
+   "G2",
+   "PoC logiciel",
+   "Trace, offline, intégrité, HOLD/recall",
+   "Tests software passés"
+  ],
+  [
+   "G3",
+   "FAT",
+   "Interfaces simulées/réelles au banc",
+   "PV FAT et aucun défaut bloquant"
+  ],
+  [
+   "G4",
+   "Installation",
+   "Énergie, réseau, accès, sécurité et métrologie",
+   "Checklist signée"
+  ],
+  [
+   "G5",
+   "SAT",
+   "Flux contrôlé sur site pilote",
+   "PV SAT + formation + restore"
+  ],
+  [
+   "G6",
+   "Hypercare",
+   "Incidents, KPI, sauvegardes, support",
+   "KPI acceptés, défauts critiques clos"
+  ],
+  [
+   "G7",
+   "Généralisation",
+   "Templates, cyber, SLA, réversibilité",
+   "Comité Go/No-Go signé"
+  ]
+ ],
+ "ROADMAP": [
+  [
+   "RM-01",
+   "S0–S1",
+   "Cadrage industriel",
+   "Direction projet + référents client",
+   "Définir objectifs, limites, produits, sites, périmètre pilote, rôles, contraintes qualité/hygiène et critères de succès.",
+   "Décision de cadrage, RACI, registre hypothèses et exclusions",
+   "Périmètre signé; responsable nommé pour chaque flux; données synthétiques et réelles séparées",
+   "G0"
+  ],
+  [
+   "RM-02",
+   "S1–S2",
+   "Audit de site / relevés terrain",
+   "Ingénieur process + automatisme + IT/OT",
+   "Relever machines, marques, modèles, firmware, lignes, cadence, postes, distances, froid/lavage, énergie, terre, réseau, couverture, zones et accès maintenance.",
+   "Site survey par unité, plans annotés, photos autorisées, inventaire équipements",
+   "Tous les équipements critiques identifiés; inconnues documentées; mesures terrain horodatées",
+   "RM-01"
+  ],
+  [
+   "RM-03",
+   "S2–S3",
+   "Cartographie des processus",
+   "Responsables couvoir, élevage, abattoir, qualité",
+   "Décrire processus actuels, événements, documents, exceptions, responsabilités et points de rupture de traçabilité.",
+   "BPMN ou diagrammes de flux, SIPOC, matrice événements par poste",
+   "Chaque entrée/sortie et point de transfert possède un propriétaire et une preuve attendue",
+   "RM-02"
+  ],
+  [
+   "RM-04",
+   "S2–S4",
+   "Spécification traçabilité et données",
+   "Architecte métier + qualité + data lead",
+   "Geler identifiants, généalogie, granularité lot/individu, unités, timestamps, corrections, statuts, rétention et export.",
+   "SRS, dictionnaire de données, modèle événementiel et matrice de traçabilité",
+   "Aucun objet critique sans identifiant, origine, site, horodatage et source; revue qualité signée",
+   "RM-03"
+  ],
+  [
+   "RM-05",
+   "S3–S4",
+   "Architecture cible HLD",
+   "Architecte logiciel + ingénieur IT/OT",
+   "Définir couches terrain, lecteur/capteur, Edge, réseau, API, services, stockage, dashboard, identité et observabilité.",
+   "HLD, diagrammes de contexte/déploiement, frontières de confiance",
+   "Flux de données et flux réseau explicites; décisions ouvertes consignées; aucune écriture PLC implicite",
+   "RM-02; RM-04"
+  ],
+  [
+   "RM-06",
+   "S3–S5",
+   "Architecture détaillée LLD",
+   "Lead technique + intégrateur",
+   "Définir contrats API versionnés (OpenAPI 3.1/JSON), ressources, auth/scopes, idempotence, pagination, erreurs HTTP/métier, correlation-ID, versioning, files offline, mapping et règles de conflit.",
+   "LLD, contrats API, exemples payloads, politique erreurs, mapping tags, schémas de configuration et runbooks",
+   "Interfaces testables indépendamment; scénarios d’erreur et reprise décrits",
+   "RM-04; RM-05"
+  ],
+  [
+   "RM-07",
+   "S3–S5",
+   "Conception IT/OT et cybersécurité",
+   "Responsable IT/OT + RSSI ou référent sécurité",
+   "Définir VLAN/zones, ACL, firewall, VPN nominatif, MFA si disponible, comptes, secrets, patch, sauvegarde, RPO/RTO et accès fournisseur.",
+   "Plan réseau, matrice de flux, threat model, politique d’accès et sauvegarde",
+   "Flux minimaux approuvés; accès distants nominatifs; sauvegarde/restauration testable",
+   "RM-02; RM-05"
+  ],
+  [
+   "RM-08",
+   "S4–S6",
+   "BOM et consultation fournisseurs",
+   "Achats + ingénieur instrumentation + intégrateur",
+   "Dimensionner lecteurs 2D/RFID, imprimantes, balances, capteurs, Edge, API Gateway, certificats/IAM, réseau, UPS, câbles, licences OEM, consommables et pièces; séparer standard, spécifique et options.",
+   "BOM par site/poste + BOM API/connecteurs, BPU, options, quantités, fiches techniques, devis et statut de preuve",
+   "Chaque ligne a modèle ou performance requise, quantité justifiée, accessoires, install et test réception; devis distingués des estimations",
+   "RM-02; RM-05; RM-06"
+  ],
+  [
+   "RM-09",
+   "S4–S7",
+   "Étude automatisme et interfaces",
+   "Automaticien + constructeurs/OEM",
+   "Obtenir manuels et licences; confirmer protocoles, tags, unités, cadence, accès lecture, SDK, limites et comportement lors d’une perte réseau.",
+   "Matrice compatibilité, liste tags, protocole de banc, analyse risques OT",
+   "Compatibilité marquée confirmée/testée/inconnue; lecture seule par défaut; aucun contournement interverrouillage",
+   "RM-02; RM-06; RM-08"
+  ],
+  [
+   "RM-10",
+   "S5–S8",
+   "Prototype logiciel traçabilité",
+   "Équipe logiciel/data",
+   "Construire parcours lot, événements append-only, généalogie, HOLD/RELEASE, rappel, audit, QR et gestion des exceptions.",
+   "Version PoC, jeux de données étalons, tests unitaires et rapport de couverture",
+   "Tests critiques passent; résultats reproductibles; données de démonstration clairement étiquetées",
+   "RM-04; RM-06"
+  ],
+  [
+   "RM-11",
+   "S5–S8",
+   "Prototype Production Flow",
+   "Équipe logiciel + référents production",
+   "Implémenter stocks, planning, effectifs, aliment/eau, mortalité, poids, FCR, rendements, bilans matière et provenance des KPI.",
+   "Formules versionnées, jeux étalons calculés indépendamment, dashboard prototype",
+   "Chaque KPI expose formule, période, unités, sources et données manquantes; validation métier signée",
+   "RM-03; RM-04; RM-06"
+  ],
+  [
+   "RM-12",
+   "S6–S9",
+   "Banc d’intégration matériel",
+   "Automaticien + intégrateur + laboratoire/métrologie",
+   "Assembler Edge, API Gateway, lecteurs/capteurs et équipements représentatifs; exécuter tests contractuels, auth/scopes, timeout, idempotence, coupure WAN, bruit, perte capteur, rejeu et DLQ.",
+   "Banc de test, scripts API, fiches mesures, matrices par unité et rapport compatibilité avec statut conçu/simulé/banc/réel",
+   "Mesures comparées à références; aucun défaut critique ouvert; résultats par modèle/firmware",
+   "RM-08; RM-09"
+  ],
+  [
+   "RM-13",
+   "S7–S9",
+   "Connecteurs et acquisition",
+   "Intégrateur OT + développeur connecteurs",
+   "Développer connecteurs API/CSV/OPC UA/Modbus/MQTT/série uniquement selon interfaces confirmées; documenter contrat, mapping, droits lecture, erreurs, retries, version OEM et preuves.",
+   "Connecteurs versionnés, mappings, tests contractuels et journaux d’erreurs",
+   "Unités, timestamp, qualité, retries, idempotence et timeout vérifiés; erreurs visibles",
+   "RM-06; RM-09; RM-12"
+  ],
+  [
+   "RM-14",
+   "S8–S10",
+   "FAT — recette atelier",
+   "Chef validation + client + intégrateur",
+   "Exécuter les tests logiciels et API contractuels, erreurs/auth/idempotence, cybersécurité, offline, intégrité, généalogie, mesures, masses, QR et restauration; ajouter les cas par unité.",
+   "Plan FAT, preuves, registre anomalies, PV FAT",
+   "100% tests critiques passés; zéro anomalie bloquante; dérogations acceptées par écrit",
+   "RM-10; RM-11; RM-12; RM-13"
+  ],
+  [
+   "RM-15",
+   "S9–S11",
+   "Préparation du site pilote",
+   "Responsable site + IT/OT + maintenance",
+   "Installer réseau/énergie, supports, câblage, adressage, comptes, protections, zones de montage, signalétique et sauvegardes.",
+   "Plan d’installation, permis d’intervention, checklist prérequis et rollback",
+   "Site prêt signé; sécurité et hygiène approuvées; plan de retour arrière validé",
+   "RM-02; RM-07; RM-08; RM-14"
+  ],
+  [
+   "RM-16",
+   "S10–S12",
+   "Installation et configuration",
+   "Intégrateur + maintenance client",
+   "Installer équipements, configurer Edge, lecteurs, mapping, certificats, horloges, sauvegardes et supervision; étiqueter chaque actif.",
+   "Dossier as-built, inventaire final, configurations sauvegardées",
+   "Chaque actif passe test d’installation; configuration versionnée; aucune mise en production non autorisée",
+   "RM-15"
+  ],
+  [
+   "RM-17",
+   "S11–S13",
+   "SAT — validation sur site",
+   "Chef validation + opérateurs + qualité + client",
+   "Exécuter les recettes SAT séparées élevage/couvoir/abattoir uniquement pour les unités réellement instrumentées; vérifier valeurs contre sources OEM/instruments, mesurer latence/cadence et documenter chaque preuve.",
+   "PV SAT, preuves photo/log autorisées, mesures, anomalies et décision",
+   "Flux bout en bout exact; rappel et HOLD conformes; seuils mesurés approuvés; zéro défaut critique",
+   "RM-14; RM-16"
+  ],
+  [
+   "RM-18",
+   "S12–S14",
+   "Formation et procédures opérationnelles",
+   "Responsable formation + qualité + maintenance",
+   "Former opérateurs, qualité, superviseurs, admin et support; exercices scan, HOLD, incident, offline, nettoyage et remplacement matériel.",
+   "SOP par rôle, feuilles de présence, évaluation pratique, escalade incidents",
+   "Chaque rôle réussit les gestes critiques; suppléants et support identifiés",
+   "RM-16; RM-17"
+  ],
+  [
+   "RM-19",
+   "S13–S16",
+   "Pilote supervisé / hypercare",
+   "Chef de projet + support + référents site",
+   "Suivre incidents, files, dérive horloge, qualité de données, temps scan, faux rejets, KPIs, sauvegarde et disponibilité.",
+   "Rapport journalier/hebdomadaire, backlog, KPI de stabilité et causes racines",
+   "Fenêtre pilote convenue atteinte; tendances stables; défauts critiques clos; restore démontré",
+   "RM-17; RM-18"
+  ],
+  [
+   "RM-20",
+   "S15–S17",
+   "Go/No-Go et généralisation",
+   "Comité de pilotage + sécurité + opérations + BVU Tech",
+   "Revoir preuves, risques résiduels, SLA, coûts réels, support, réversibilité, standardisation et capacités de déploiement multi-sites.",
+   "Dossier de décision, template multi-sites, SLA, plan de déploiement et budget révisé",
+   "Décision signée par les parties; sites suivants soumis à survey et validation locale; pas de déploiement automatique",
+   "RM-19"
+  ],
+  [
+   "RM-21",
+   "Continu",
+   "Exploitation, maintenance et amélioration",
+   "Support BVU Tech + référents client",
+   "Gérer patchs, comptes, certificats, sauvegardes, pièces de rechange, métrologie, incidents, changements et revues périodiques.",
+   "Registre versions, tickets, PV de maintenance, rapports SLA et audit",
+   "Changements tracés/testés; restauration périodique réussie; équipements critiques sous suivi",
+   "RM-20"
+  ]
+ ],
+ "RISKS": [
+  [
+   "K01",
+   "Compatibilité constructeur inconnue",
+   "Élevé",
+   "Manuels, firmware, tags, licence et test banc avant chiffrage ferme."
+  ],
+  [
+   "K02",
+   "BOM sans relevé réel",
+   "Élevé",
+   "Site survey électrique, réseau, postes, cadence et distances."
+  ],
+  [
+   "K03",
+   "RFID inadapté au produit",
+   "Élevé",
+   "Comparer QR/2D/RFID/marquage sur supports et procédé réels."
+  ],
+  [
+   "K04",
+   "Identité individuelle non persistante",
+   "Élevé",
+   "Définir granularité lot/individu à chaque étape."
+  ],
+  [
+   "K05",
+   "Données sources incomplètes",
+   "Élevé",
+   "Référentiels, validations et revue d’écarts."
+  ],
+  [
+   "K06",
+   "Réseau/énergie/horloge",
+   "Élevé",
+   "Edge, UPS, buffer, NTP et tests coupure."
+  ],
+  [
+   "K07",
+   "Accès distant compromis",
+   "Élevé",
+   "VPN nominatif, moindre privilège, logs, patch, révocation."
+  ],
+  [
+   "K08",
+   "Dérive métrologique",
+   "Élevé",
+   "Registre, vérification et invalidation des mesures."
+  ],
+  [
+   "K09",
+   "Surcoût connecteurs",
+   "Élevé",
+   "Séparer standard, spécifique, licences et jours d’intégration."
+  ],
+  [
+   "K10",
+   "Confusion démo/production",
+   "Élevé",
+   "Données synthétiques, environnement DEMO, FAT/SAT requis."
+  ],
+  [
+   "K11",
+   "SOP client non validées",
+   "Élevé",
+   "Approbation qualité/opérations et responsabilité écrite."
+  ],
+  [
+   "K12",
+   "Dépendance fournisseur",
+   "Moyen",
+   "Protocoles ouverts, export, documentation et alternatives."
+  ]
+ ]
+}

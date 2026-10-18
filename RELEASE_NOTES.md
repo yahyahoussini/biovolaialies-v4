@@ -139,6 +139,7 @@ All six share the password `Demo1234!`. Internal document — do not distribute 
 | Responsable ferme | `ferme.manager@biovolailles.demo` | Ferme Al Baraka |
 | Technicien | `technicien@biovolailles.demo` | Ferme Al Baraka |
 | Auditeur | `auditeur@biovolailles.demo` | Global, read-only |
+| Responsable qualité | `qualite@biovolailles.demo` | Global — releases quality holds |
 
 Role switching from the top bar performs a **real re-authentication**, not a UI toggle.
 

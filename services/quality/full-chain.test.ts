@@ -9,7 +9,7 @@ import {
   recordCandling,
   recordHatch,
 } from "../hatchery/hatchery";
-import { verifyLedger } from "../ledger/ledger";
+import { listLedgerEventsForObject, verifyLedger } from "../ledger/ledger";
 import { createLot } from "../production/lot";
 import { createTestSession } from "../production/test-support";
 import { buildLotTraceabilityChain } from "../traceability/chain";
@@ -123,6 +123,8 @@ describe("full chain: genetics → QR, hold propagation, recall", () => {
     const released = await decideHold({ caseId: qc.id, decision: "LIBERE", justification: "Enregistreur relu : excursion de 12 min sous 4 °C, conforme.", evidence: "ENR-7; PV-QA-12" }, otherQuality);
     expect(released.status).toBe("LIBERE");
     expect(await activeHoldsOn("PRODUCT", c.product.id)).toHaveLength(0);
+    const journal = await listLedgerEventsForObject(c.admin, "quality_case", qc.id);
+    expect(journal.filter((e) => e.eventType === "QUALITY_DECISION_REFUSED")).toHaveLength(3);
 
     await createShipment({ code: "EXP-h2-b", productId: c.product.id, destinationId: c.destination.id, quantity: 100, unit: "kg", shippedAt: "2026-08-07", dataStatus: "SIMULATION" }, c.admin);
     expect((await verifyLedger(c.admin)).ok).toBe(true);

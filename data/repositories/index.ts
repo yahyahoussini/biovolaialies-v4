@@ -20,6 +20,8 @@ import {
   DrizzleParentFlockRepository,
 } from "./hatchery.repository";
 import { DrizzleShipmentRepository } from "./shipment.repository";
+import { DrizzleApiClientRepository } from "./api-client.repository";
+import { DrizzleEquipmentRepository } from "./equipment.repository";
 import { DrizzleKpiDefinitionRepository } from "./kpi-definition.repository";
 import { DrizzleKpiValueRepository } from "./kpi-value.repository";
 import { DrizzleLotEventRepository } from "./lot-event.repository";
@@ -85,4 +87,6 @@ export const repositories = {
   hatchCycles: new DrizzleHatchCycleRepository(),
   chickLots: new DrizzleChickLotRepository(),
   shipments: new DrizzleShipmentRepository(),
+  apiClients: new DrizzleApiClientRepository(),
+  equipment: new DrizzleEquipmentRepository(),
 };

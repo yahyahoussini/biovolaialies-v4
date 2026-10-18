@@ -8,6 +8,8 @@ libSQL/SQLite, Tailwind CSS v4, and `iron-session` cookie auth.
 
 - **[ARCHITECTURE.md](ARCHITECTURE.md)** — layering, data model, and the decisions behind them.
 - **[DEMO_RUNBOOK.md](DEMO_RUNBOOK.md)** — running the demo scenario end to end.
+- **[BVU_TECH.md](BVU_TECH.md)** — the BVU Tech extension: public site, hatchery chain, quality holds and
+  recall, hash-chained ledger, API v1, equipment register, and how each maps to the client's specification.
 
 ---
 
@@ -73,7 +75,7 @@ again after each deploy.
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
-Every visitor to the link gets the complete demo dataset — the six accounts in
+Every visitor to the link gets the complete demo dataset — the seven accounts in
 [DEMO_RUNBOOK.md](DEMO_RUNBOOK.md) §1, 12 lots, the IoT history, the anomaly scenario, the public QR
 passports — and can sign in.
 

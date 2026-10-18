@@ -10,6 +10,7 @@ import { seedHeroTraceabilityChain } from "./generators/hero-traceability-chain"
 import { seedIntelligenceDefinitions } from "./generators/intelligence-definitions";
 import { seedIot } from "./generators/iot";
 import { seedLots } from "./generators/lots";
+import { seedEquipmentReference } from "../../services/equipment/equipment";
 import { seedUpstreamChain } from "./generators/upstream-chain";
 import { seedVerifiedTraceabilityChain, VERIFIED_LOT_CODE } from "./generators/verified-traceability-chain";
 
@@ -140,6 +141,9 @@ export async function seedDatabase(options: SeedOptions = {}): Promise<SeedResul
     null,
     demoPublicToken(`product:${VERIFIED_LOT_CODE}`)
   );
+
+  logger.info("seed", "Loading the client's equipment register (87 lines) and commissioning checklist (20 tests)…");
+  await seedEquipmentReference();
 
   logger.info("seed", "Seed complete.");
   return {
