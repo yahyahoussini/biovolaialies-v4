@@ -44,7 +44,7 @@ export class DrizzleLedgerRepository implements LedgerRepository {
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
       if (idempotencyKey) {
         const existing = await this.findByIdempotencyKey(idempotencyKey);
-        if (existing) return this.replayResult(existing, payloadHash);
+        if (existing) return this.replayResult(existing, input, payloadHash);
       }
 
       const head = await this.head();
@@ -80,8 +80,22 @@ export class DrizzleLedgerRepository implements LedgerRepository {
     throw new Error("Ledger append failed after retries.");
   }
 
-  private replayResult(existing: LedgerEvent, payloadHash: string): LedgerAppendResult {
-    if (existing.payloadHash !== payloadHash) {
+  /**
+   * A replay is the SAME event sent again: every field the caller controls must match, not
+   * just the payload. The same key on a different event is a client bug and gets a 409 instead
+   * of being silently swallowed as a duplicate.
+   */
+  private replayResult(existing: LedgerEvent, input: LedgerAppendInput, payloadHash: string): LedgerAppendResult {
+    const same =
+      existing.payloadHash === payloadHash &&
+      existing.eventType === input.eventType &&
+      existing.objectType === input.objectType &&
+      existing.objectId === input.objectId &&
+      existing.actorId === input.actorId &&
+      Date.parse(existing.occurredAt) === Date.parse(input.occurredAt) &&
+      existing.schemaVersion === (input.schemaVersion ?? 1) &&
+      existing.correctsEventId === (input.correctsEventId ?? null);
+    if (!same) {
       throw new ConflictError("Cette clé d'idempotence a déjà été utilisée pour un événement différent.");
     }
     return { event: existing, duplicate: true };

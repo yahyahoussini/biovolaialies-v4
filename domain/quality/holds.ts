@@ -47,8 +47,13 @@ export interface QualityCaseRepository {
   listItems(caseId: string): Promise<QualityHoldItem[]>;
   /** Active hold items on one object — a non-empty result means the object is blocked. */
   listActiveItemsFor(objectType: string, objectId: string): Promise<QualityHoldItem[]>;
-  /** Records the decision and, for a release, deactivates every item of the case — atomically. */
-  decide(caseId: string, decision: QualityCaseDecision): Promise<QualityCase>;
+  /** Adds items found after creation (derivations recorded while the hold was being opened). */
+  addItems(caseId: string, items: { objectType: string; objectId: string; depth: number }[]): Promise<void>;
+  /**
+   * Records the decision only if the case is still EN_BLOCAGE (compare-and-set) and, for a
+   * release, deactivates every item of the case — atomically. Null if another decision won.
+   */
+  decide(caseId: string, decision: QualityCaseDecision): Promise<QualityCase | null>;
 }
 
 export const MIN_JUSTIFICATION_LENGTH = 20;

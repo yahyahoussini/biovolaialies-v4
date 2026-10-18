@@ -18,8 +18,17 @@ export async function appendLedgerEvent(input: LedgerAppendInput): Promise<Ledge
   return repositories.ledger.append(input);
 }
 
+/**
+ * Anchors outlive sessions, so in production they need their own long-lived key: falling back to
+ * SESSION_SECRET there would silently invalidate every anchor on the next secret rotation.
+ * The fallback is kept only for local development and the demo snapshot.
+ */
 function anchorKey(): string {
-  return env.LEDGER_ANCHOR_KEY ?? env.SESSION_SECRET;
+  if (env.LEDGER_ANCHOR_KEY) return env.LEDGER_ANCHOR_KEY;
+  if (env.NODE_ENV === "production" && !env.DATABASE_SNAPSHOT && !env.DEMO_MODE) {
+    throw new ValidationError("LEDGER_ANCHOR_KEY n'est pas configurée : les ancres ne peuvent pas être signées en production.");
+  }
+  return env.SESSION_SECRET;
 }
 
 export async function verifyLedger(session: Session): Promise<ChainVerification> {
@@ -87,4 +96,53 @@ export async function verifyAgainstAnchor(session: Session, rawAnchor: unknown):
     message: `Conforme : les ${anchor.headSeq} événements ancrés le ${new Date(anchor.issuedAt).toLocaleString("fr-FR")} sont intacts (${chain.headSeq - anchor.headSeq} ajoutés depuis).`,
     chain,
   };
+}
+
+export interface AuditMirrorCheck {
+  ok: boolean;
+  auditRows: number;
+  /** Audit rows with no ledger entry (the append failed, or the row was inserted by hand). */
+  missing: string[];
+  /** Audit rows whose content no longer matches what the ledger recorded (edited afterwards). */
+  altered: string[];
+  /** Rows written before the ledger existed (a database upgraded to this version): not provable, not an error. */
+  preLedger: number;
+}
+
+/**
+ * The chain proves the ledger itself is intact; this proves the readable audit trail still says
+ * what the ledger recorded. Together they catch an audit row edited, deleted from the ledger's
+ * view, or inserted without proof. Business tables (quantities, statuses) are not hashed — see
+ * /programme T08.
+ */
+export async function verifyAuditMirror(session: Session): Promise<AuditMirrorCheck> {
+  if (!can(session, "VIEW", "INTEGRITY")) throw new AuthorizationError();
+  const [rows, events] = await Promise.all([repositories.auditLog.list(1_000_000), repositories.ledger.listAll()]);
+  const byAuditId = new Map<string, Record<string, unknown>>();
+  for (const e of events) {
+    if (e.eventType.startsWith("AUDIT:") && typeof e.payload.auditLogId === "string") byAuditId.set(e.payload.auditLogId, e.payload);
+  }
+  const missing: string[] = [];
+  const altered: string[] = [];
+  const ledgerStart = events[0]?.recordedAt ?? null;
+  let preLedger = 0;
+  for (const row of rows) {
+    const recorded = byAuditId.get(row.id);
+    if (!recorded && (ledgerStart === null || row.createdAt < ledgerStart)) {
+      preLedger += 1;
+      continue;
+    }
+    if (!recorded) {
+      missing.push(row.id);
+      continue;
+    }
+    const same =
+      recorded.field === row.field &&
+      recorded.oldValue === row.oldValue &&
+      recorded.newValue === row.newValue &&
+      recorded.reason === row.reason &&
+      recorded.relatedLotId === row.relatedLotId;
+    if (!same) altered.push(row.id);
+  }
+  return { ok: missing.length === 0 && altered.length === 0, auditRows: rows.length, missing, altered, preLedger };
 }

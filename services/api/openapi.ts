@@ -39,12 +39,27 @@ export function buildOpenApiDocument(serverUrl: string) {
       version: API_VERSION,
       description:
         "Contrats API-01 à API-10 du dossier BVU Tech. Authentification par clé Bearer émise dans l'application (Gouvernance → Accès API). " +
-        "Chaque réponse porte un en-tête X-Correlation-ID. Quota : 120 requêtes/minute/client (par instance serveur). " +
+        "Chaque réponse de l'API porte un en-tête X-Correlation-ID. Quota : 120 requêtes/minute/client (par instance serveur). " +
+        "Erreurs de forme (JSON, types, champs requis, énumérations, dates ISO 8601 avec fuseau) : 400 avec détails par champ ; incohérences métier : 422. " +
+        "Une clé ne fonctionne que tant que l'administrateur qui l'a émise conserve ce rôle. " +
         "La levée d'un blocage qualité (API-06) est volontairement réservée à une décision humaine dans l'application.",
     },
     servers: [{ url: `${serverUrl}/api/v1` }],
     security: [{ bearer: [] }],
     components: {
+      parameters: {
+        IdempotencyKeyRequired: {
+          name: "Idempotency-Key",
+          in: "header",
+          required: true,
+          schema: { type: "string", minLength: 8, maxLength: 200 },
+          description: "Obligatoire. Même clé + même corps : résultat d'origine (200). Même clé + autre corps : 409.",
+        },
+      },
+      headers: {
+        "X-Correlation-ID": { description: "Identifiant de corrélation (repris de la requête s'il est fourni).", schema: { type: "string" } },
+        "Retry-After": { description: "Secondes avant nouvel essai (429).", schema: { type: "integer" } },
+      },
       securitySchemes: { bearer: { type: "http", scheme: "bearer", description: `Clé « bvu_… ». Droits possibles : ${API_SCOPE.join(", ")}.` } },
       schemas: {
         Error: {
@@ -76,6 +91,7 @@ export function buildOpenApiDocument(serverUrl: string) {
           operationId: "createLot",
           summary: "API-01 — Créer un lot (œufs, poussins ou élevage)",
           "x-scope": "lots:write",
+          parameters: [{ $ref: "#/components/parameters/IdempotencyKeyRequired" }],
           requestBody: {
             required: true,
             content: {
@@ -90,7 +106,7 @@ export function buildOpenApiDocument(serverUrl: string) {
               },
             },
           },
-          responses: { "201": { description: "Lot créé : { lotType, lotId, code }" }, ...errors([400, 401, 403, 409, 422, 429, 500]) },
+          responses: { "201": { description: "Lot créé : { lotType, lotId, code, replayed:false }" }, "200": { description: "Rejeu de la même requête : résultat d'origine, replayed:true" }, ...errors([400, 401, 403, 409, 413, 422, 429, 500]) },
         },
       },
       "/lots/{id}": {
@@ -114,6 +130,7 @@ export function buildOpenApiDocument(serverUrl: string) {
             { name: "id", in: "path", required: true, schema: { type: "string" } },
             { name: "type", in: "query", schema: { type: "string", enum: [...ENTITY_TYPE] } },
             { name: "direction", in: "query", schema: { type: "string", enum: ["up", "down", "both"], default: "both" } },
+            { name: "depth", in: "query", schema: { type: "integer", minimum: 1, maximum: 50 }, description: "Profondeur maximale renvoyée." },
           ],
           responses: { "200": { description: "Lignée { ancestors, descendants, destinations, truncated, computedAt }" }, ...errors([400, 401, 403, 404, 429, 500]) },
         },
@@ -123,7 +140,7 @@ export function buildOpenApiDocument(serverUrl: string) {
           operationId: "appendEvent",
           summary: "API-03 — Événement de traçabilité en ajout seul (journal chaîné)",
           "x-scope": "events:write",
-          parameters: [{ name: "Idempotency-Key", in: "header", schema: { type: "string" } }],
+          parameters: [{ name: "Idempotency-Key", in: "header", schema: { type: "string", minLength: 8, maxLength: 200 } }],
           requestBody: { required: true, content: { "application/json": { schema: { $ref: "#/components/schemas/Event" } } } },
           responses: { "201": { description: "Accepté : { eventId, seq, hash, duplicate:false }" }, "200": { description: "Rejeu idempotent : événement original, duplicate:true" }, ...errors([400, 401, 403, 404, 409, 422, 429, 500]) },
         },
@@ -145,11 +162,12 @@ export function buildOpenApiDocument(serverUrl: string) {
           operationId: "openHold",
           summary: "API-05 — Placer un objet en HOLD (propagé aux descendants par défaut)",
           "x-scope": "quality:hold",
+          parameters: [{ $ref: "#/components/parameters/IdempotencyKeyRequired" }],
           requestBody: {
             required: true,
             content: { "application/json": { schema: { type: "object", required: ["objectType", "reason", "description"], properties: { ...objectRef, reason: { type: "string", enum: [...QUALITY_REASON] }, description: { type: "string", minLength: 10 }, scope: { type: "string", enum: ["OBJET_SEUL", "DESCENDANTS"] }, evidenceRefs: { type: "array", items: { type: "string" } } } } } },
           },
-          responses: { "201": { description: "{ caseId, code, holdStatus, affectedObjects }" }, ...errors([400, 401, 403, 404, 422, 429, 500]) },
+          responses: { "201": { description: "{ caseId, code, holdStatus, affectedObjects, replayed:false }" }, "200": { description: "Rejeu : résultat d'origine, replayed:true" }, ...errors([400, 401, 403, 404, 409, 413, 422, 429, 500]) },
         },
       },
       "/quality/releases": {
@@ -174,6 +192,14 @@ export function buildOpenApiDocument(serverUrl: string) {
             { name: "format", in: "query", schema: { type: "string", enum: ["json", "csv"] } },
           ],
           responses: { "200": { description: "Rapport : amont, aval, produits, expéditions, totaux, limites" }, ...errors([401, 403, 404, 429, 500]) },
+        },
+      },
+      "/sites": {
+        get: {
+          operationId: "listSites",
+          summary: "Découverte — bâtiments et capteurs (identifiants pour POST /lots et POST /measurements)",
+          "x-scope": "lots:read",
+          responses: { "200": { description: "{ buildings[], sensors[] }" }, ...errors([401, 403, 429, 500]) },
         },
       },
       "/health/ready": {

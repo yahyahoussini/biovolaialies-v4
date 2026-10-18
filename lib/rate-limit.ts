@@ -19,8 +19,11 @@ export interface RateLimitResult {
 }
 
 export function rateLimit(key: string, limit: number, windowMs: number, now: number = Date.now()): RateLimitResult {
-  if (buckets.size > MAX_KEYS) {
+  if (buckets.size >= MAX_KEYS) {
     for (const [k, w] of buckets) if (w.resetAt <= now) buckets.delete(k);
+    // Still full of live windows (e.g. rotating fake addresses): drop the oldest — Maps keep
+    // insertion order — so memory stays bounded whatever the traffic.
+    while (buckets.size >= MAX_KEYS) buckets.delete(buckets.keys().next().value as string);
   }
   let window = buckets.get(key);
   if (!window || window.resetAt <= now) {

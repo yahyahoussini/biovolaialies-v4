@@ -47,6 +47,7 @@ export interface LedgerRepository {
   listRecent(limit: number): Promise<LedgerEvent[]>;
   listByObject(objectType: string, objectId: string): Promise<LedgerEvent[]>;
   findById(id: string): Promise<LedgerEvent | null>;
+  findByIdempotencyKey(key: string): Promise<LedgerEvent | null>;
   findBySeq(seq: number): Promise<LedgerEvent | null>;
   head(): Promise<LedgerEvent | null>;
 }

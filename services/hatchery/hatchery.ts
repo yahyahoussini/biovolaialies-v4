@@ -12,6 +12,7 @@ import { CHICK_GRADE, DATA_STATUS, MEASUREMENT_SOURCE_TYPE } from "../../domain/
 import { AuthorizationError, ConflictError, NotFoundError, ValidationError } from "../../domain/shared/errors";
 import { can } from "../../domain/shared/permissions";
 import { isGlobalScope } from "../../domain/shared/scope";
+import { businessDate, orderError } from "../../domain/shared/dates";
 import { recordAudit } from "../audit/record";
 import type { Session } from "../auth/session";
 import {
@@ -23,6 +24,13 @@ import {
 } from "../identity/scope-check";
 import { assertNotOnHold } from "../quality/holds";
 import { createRelation } from "../traceability/relations";
+import { withLock } from "../../lib/keyed-lock";
+
+/**
+ * Every write that draws on hatchery stock (eggs left in a lot, chicks left in a cycle or a
+ * chick lot) runs under one lock, so concurrent submissions see each other's consumption.
+ */
+const HATCHERY_STOCK_LOCK = "hatchery-stock";
 
 /**
  * Upstream chain (client spec A03–A07): parent flock → egg lot → incubation cycle → chick lot →
@@ -80,7 +88,7 @@ export const createParentFlockSchema = z.object({
   geneticSupplier: z.string().trim().min(1).max(200),
   originCountry: z.string().trim().min(2).max(100),
   importReference: z.string().trim().max(200).optional().nullable(),
-  placedAt: z.string().trim().min(1),
+  placedAt: businessDate("Mise en place"),
   femaleCount: z.number().int().positive(),
   maleCount: z.number().int().nonnegative(),
   ...provenance,
@@ -115,7 +123,7 @@ export async function createParentFlock(input: unknown, session: Session): Promi
 export const createEggLotSchema = z.object({
   code: z.string().trim().min(3).max(50),
   parentFlockId: z.string().min(1),
-  collectedAt: z.string().trim().min(1),
+  collectedAt: businessDate("Collecte"),
   quantity: z.number().int().positive(),
   storageBuildingId: z.string().trim().min(1).optional().nullable(),
   ...provenance,
@@ -129,6 +137,8 @@ export async function createEggLot(input: unknown, session: Session): Promise<Eg
   assertInScope(session, await resolveBuildingHierarchy(flock.buildingId));
   if (data.storageBuildingId) assertInScope(session, await resolveBuildingHierarchy(data.storageBuildingId));
   await assertNotOnHold("PARENT_FLOCK", flock.id);
+  const eggOrder = orderError("Mise en place du troupeau", flock.placedAt, "La collecte", data.collectedAt);
+  if (eggOrder) throw new ValidationError(eggOrder);
   await assertUniqueCode("de lot d'œufs", await repositories.eggLots.findByCode(data.code), data.code);
 
   const egg = await repositories.eggLots.create({
@@ -158,14 +168,14 @@ export const createHatchCycleSchema = z.object({
   code: z.string().trim().min(3).max(50),
   buildingId: z.string().min(1),
   incubatorRef: z.string().trim().min(1).max(100),
-  setAt: z.string().trim().min(1),
+  setAt: businessDate("Mise en incubation"),
   allocations: z
     .array(z.object({ eggLotId: z.string().min(1), quantity: z.number().int().positive() }))
     .min(1, "Chargez au moins un lot d'œufs."),
   ...provenance,
 });
 
-export async function createHatchCycle(input: unknown, session: Session): Promise<HatchCycle> {
+async function createHatchCycleUnlocked(input: unknown, session: Session): Promise<HatchCycle> {
   requireHatchery(session, "CREATE");
   const data = parseOrThrow(createHatchCycleSchema, input);
   const building = await repositories.buildings.findById(data.buildingId);
@@ -180,7 +190,12 @@ export async function createHatchCycle(input: unknown, session: Session): Promis
     seen.add(allocation.eggLotId);
     const egg = await repositories.eggLots.findById(allocation.eggLotId);
     if (!egg) throw new NotFoundError("Lot d'œufs", allocation.eggLotId);
+    // The eggs must belong to the caller's perimeter too, not only the incubator.
+    const eggFlock = await repositories.parentFlocks.findById(egg.parentFlockId);
+    assertInScope(session, await resolveBuildingHierarchy(egg.storageBuildingId ?? eggFlock?.buildingId ?? ""));
     await assertNotOnHold("EGG_LOT", egg.id);
+    const setOrder = orderError(`La collecte de ${egg.code}`, egg.collectedAt, "La mise en incubation", data.setAt);
+    if (setOrder) throw new ValidationError(setOrder);
     const check = validateEggAllocation(egg.quantity, await eggsAllocated(egg.id), allocation.quantity);
     if (!check.ok) throw new ValidationError(`${egg.code} : ${check.error}`);
   }
@@ -217,7 +232,7 @@ async function getCycleInScope(cycleId: string, session: Session): Promise<Hatch
 
 export const recordCandlingSchema = z.object({
   cycleId: z.string().min(1),
-  candledAt: z.string().trim().min(1),
+  candledAt: businessDate("Mirage"),
   clearsRemoved: z.number().int().nonnegative(),
 });
 
@@ -226,6 +241,8 @@ export async function recordCandling(input: unknown, session: Session): Promise<
   const data = parseOrThrow(recordCandlingSchema, input);
   const cycle = await getCycleInScope(data.cycleId, session);
   if (cycle.status !== "EN_INCUBATION") throw new ConflictError("Le mirage a déjà été enregistré pour ce cycle.");
+  const candleOrder = orderError("La mise en incubation", cycle.setAt, "Le mirage", data.candledAt);
+  if (candleOrder) throw new ValidationError(candleOrder);
   const check = validateCandling(cycle.eggsSet, data.clearsRemoved);
   if (!check.ok) throw new ValidationError(check.error);
 
@@ -236,7 +253,7 @@ export async function recordCandling(input: unknown, session: Session): Promise<
 
 export const recordHatchSchema = z.object({
   cycleId: z.string().min(1),
-  hatchedAt: z.string().trim().min(1),
+  hatchedAt: businessDate("Éclosion"),
   chicksHatched: z.number().int().nonnegative(),
   unhatched: z.number().int().nonnegative(),
   culls: z.number().int().nonnegative(),
@@ -247,6 +264,8 @@ export async function recordHatch(input: unknown, session: Session): Promise<Hat
   const data = parseOrThrow(recordHatchSchema, input);
   const cycle = await getCycleInScope(data.cycleId, session);
   if (cycle.status !== "MIRE") throw new ConflictError("L'éclosion s'enregistre après le mirage, une seule fois.");
+  const hatchOrder = orderError("Le mirage", cycle.candledAt ?? cycle.setAt, "L'éclosion", data.hatchedAt);
+  if (hatchOrder) throw new ValidationError(hatchOrder);
   const check = validateHatchBalance({ eggsSet: cycle.eggsSet, clearsRemoved: cycle.clearsRemoved ?? 0, unhatched: data.unhatched, chicksHatched: data.chicksHatched, culls: data.culls });
   if (!check.ok) throw new ValidationError(check.error);
 
@@ -265,16 +284,18 @@ export const createChickLotSchema = z.object({
   hatchCycleId: z.string().min(1),
   quantity: z.number().int().positive(),
   grade: z.enum(CHICK_GRADE),
-  dispatchedAt: z.string().trim().min(1),
+  dispatchedAt: businessDate("Sortie"),
   ...provenance,
 });
 
-export async function createChickLot(input: unknown, session: Session): Promise<ChickLot> {
+async function createChickLotUnlocked(input: unknown, session: Session): Promise<ChickLot> {
   requireHatchery(session, "CREATE");
   const data = parseOrThrow(createChickLotSchema, input);
   const cycle = await getCycleInScope(data.hatchCycleId, session);
   if (cycle.status !== "ECLOS") throw new ConflictError("Un lot de poussins ne peut sortir que d'un cycle éclos.");
   await assertNotOnHold("HATCH_CYCLE", cycle.id);
+  const dispatchOrder = orderError("L'éclosion", cycle.hatchedAt ?? cycle.setAt, "La sortie", data.dispatchedAt);
+  if (dispatchOrder) throw new ValidationError(dispatchOrder);
   await assertUniqueCode("de lot de poussins", await repositories.chickLots.findByCode(data.code), data.code);
 
   const dispatched = (await repositories.chickLots.listByCycle(cycle.id)).reduce((sum, c) => sum + c.quantity, 0);
@@ -307,7 +328,7 @@ export const placeChicksSchema = z.object({
 });
 
 /** Links a farm lot to the chick lot it was placed from — the join between hatchery and farm. */
-export async function placeChicksIntoLot(input: unknown, session: Session): Promise<void> {
+async function placeChicksIntoLotUnlocked(input: unknown, session: Session): Promise<void> {
   if (!can(session, "EDIT", "LOTS") && !can(session, "CREATE", "HATCHERY")) throw new AuthorizationError();
   const data = parseOrThrow(placeChicksSchema, input);
   const lot = await repositories.lots.findById(data.lotId);
@@ -315,13 +336,23 @@ export async function placeChicksIntoLot(input: unknown, session: Session): Prom
   assertInScope(session, await resolveLotHierarchy(lot.id));
   const chicks = await repositories.chickLots.findById(data.chickLotId);
   if (!chicks) throw new NotFoundError("Lot de poussins", data.chickLotId);
+  // The chicks must come from a hatchery in the caller's perimeter, not only go to one of its lots.
+  const sourceCycle = await repositories.hatchCycles.findById(chicks.hatchCycleId);
+  assertInScope(session, await resolveBuildingHierarchy(sourceCycle?.buildingId ?? ""));
   await assertNotOnHold("CHICK_LOT", chicks.id);
 
   const existing = await repositories.relations.findExact("LOT", lot.id, "PROVIENT_DE", "CHICK_LOT", chicks.id);
   if (existing) throw new ConflictError("Ce lot est déjà relié à ce lot de poussins.");
   const remaining = chicks.quantity - (await chicksPlaced(chicks.id));
   if (data.quantity > remaining) throw new ValidationError(`Seulement ${remaining} poussins de ${chicks.code} restent à placer.`);
-  if (data.quantity > lot.initialPopulation) throw new ValidationError("Plus de poussins placés que l'effectif initial du lot.");
+  // Total across every chick lot already placed into this farm lot, not this placement alone.
+  const alreadyInLot = (await repositories.relations.listFrom("LOT", lot.id))
+    .filter((e) => e.toType === "CHICK_LOT")
+    .reduce((sum, e) => sum + Number((e.metadata as { quantity?: number }).quantity ?? 0), 0);
+  if (alreadyInLot + data.quantity > lot.initialPopulation) {
+    throw new ValidationError(`Le lot compte ${lot.initialPopulation} sujets au départ ; ${alreadyInLot} y sont déjà placés.`);
+  }
+
 
   await createRelation({ fromType: "LOT", fromId: lot.id, relationType: "PROVIENT_DE", toType: "CHICK_LOT", toId: chicks.id, metadata: { quantity: data.quantity }, actorId: session.userId });
 }
@@ -422,4 +453,16 @@ export async function getParentFlockDetail(flockId: string, session: Session): P
     buildingLabel: `${farm?.name ?? "—"} — ${building?.code ?? "—"}`,
     eggLots: await Promise.all(eggs.map(async (e) => ({ ...e, allocated: await eggsAllocated(e.id) }))),
   };
+}
+
+export function createHatchCycle(input: unknown, session: Session): Promise<HatchCycle> {
+  return withLock(HATCHERY_STOCK_LOCK, () => createHatchCycleUnlocked(input, session));
+}
+
+export function createChickLot(input: unknown, session: Session): Promise<ChickLot> {
+  return withLock(HATCHERY_STOCK_LOCK, () => createChickLotUnlocked(input, session));
+}
+
+export function placeChicksIntoLot(input: unknown, session: Session): Promise<void> {
+  return withLock(HATCHERY_STOCK_LOCK, () => placeChicksIntoLotUnlocked(input, session));
 }

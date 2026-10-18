@@ -5,10 +5,12 @@ import { DATA_STATUS, MEASUREMENT_SOURCE_TYPE } from "../../domain/shared/enums"
 import { AuthorizationError, ConflictError, NotFoundError, ValidationError } from "../../domain/shared/errors";
 import { can } from "../../domain/shared/permissions";
 import { isGlobalScope } from "../../domain/shared/scope";
+import { businessDate } from "../../domain/shared/dates";
 import { recordAudit } from "../audit/record";
 import type { Session } from "../auth/session";
 import { isWithinScope } from "../identity/scope-check";
 import { assertNotOnHold, resolveEntityHierarchy } from "../quality/holds";
+import { withLock } from "../../lib/keyed-lock";
 import { createRelation } from "./relations";
 
 export const createShipmentSchema = z.object({
@@ -17,7 +19,7 @@ export const createShipmentSchema = z.object({
   destinationId: z.string().min(1),
   quantity: z.number().positive(),
   unit: z.string().trim().min(1).max(20).default("kg"),
-  shippedAt: z.string().trim().min(1),
+  shippedAt: businessDate("Expédition"),
   dataStatus: z.enum(DATA_STATUS),
   sourceType: z.enum(MEASUREMENT_SOURCE_TYPE).default("MANUEL"),
   documentId: z.string().trim().max(200).optional().nullable(),
@@ -33,6 +35,12 @@ export async function quantityShipped(productId: string): Promise<number> {
  * when the packaged quantity is known — for more than what is left in stock.
  */
 export async function createShipment(input: unknown, session: Session): Promise<Shipment> {
+  // Serialised per product so two simultaneous shipments cannot both pass the stock check.
+  const productId = typeof input === "object" && input && "productId" in input ? String((input as { productId: unknown }).productId) : "";
+  return withLock(`shipment:${productId}`, () => createShipmentUnlocked(input, session));
+}
+
+async function createShipmentUnlocked(input: unknown, session: Session): Promise<Shipment> {
   if (!can(session, "CREATE", "EVENTS")) throw new AuthorizationError("Vous n'avez pas les droits pour enregistrer une expédition.");
   const parsed = createShipmentSchema.safeParse(input);
   if (!parsed.success) throw new ValidationError(parsed.error.issues.map((i) => i.message).join(" "));
@@ -49,8 +57,10 @@ export async function createShipment(input: unknown, session: Session): Promise<
   await assertNotOnHold("PRODUCT", product.id);
   if (await repositories.shipments.findByCode(data.code)) throw new ConflictError(`Le code d'expédition "${data.code}" est déjà utilisé.`);
 
+  // One unit per product, always: the recall adds shipped quantities together.
+  const expectedUnit = product.unit ?? (await repositories.shipments.listByProduct(product.id))[0]?.unit ?? null;
+  if (expectedUnit && expectedUnit !== data.unit) throw new ValidationError(`L'unité doit être celle du produit (${expectedUnit}).`);
   if (product.quantity !== null) {
-    if (product.unit && product.unit !== data.unit) throw new ValidationError(`L'unité doit être celle du produit (${product.unit}).`);
     const remaining = product.quantity - (await quantityShipped(product.id));
     if (data.quantity > remaining + 1e-9) throw new ValidationError(`Seulement ${remaining} ${product.unit ?? ""} restent en stock pour ce produit.`);
   }

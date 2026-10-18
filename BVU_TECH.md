@@ -18,7 +18,7 @@ The `/programme` screen shows, test by test, what is automated, partial, or can 
 | Quality & recall | `/qualite` | A21–A22, R09–R10, T03–T07 | HOLD on any object, spread to its descendants; every derivation from a held object is refused. Release needs the **Responsable qualité** role, a different person from the opener, a justification and evidence; refusals are logged. Recall report: upstream, downstream, packaged / shipped / on-hand quantities, destinations, CSV. |
 | Products & shipments | `/expeditions` | Phase 13 | Stock per packaged product; a held product cannot ship, nor more than remains. |
 | Hash-chained ledger | `/journal` | A23–A24, R07–R08, T08 | Every audited mutation is mirrored into an append-only journal where each entry hashes the previous one. Signed anchors, kept outside the platform, expose a full rewrite. |
-| API v1 | `/api/v1/*`, `/acces-api` | API-01…API-10 | Bearer keys stored as hashes, per-key scopes, error policy 400/401/403/404/409/413/422/429/5xx, `X-Correlation-ID`, `Idempotency-Key` replay. OpenAPI 3.1 at `/api/v1/openapi.json`. **API-06 (release) is deliberately refused**: a release is a human decision. |
+| API v1 | `/api/v1/*`, `/acces-api` | API-01…API-10 | Bearer keys stored as hashes, per-key scopes, error policy 400/401/403/404/409/413/422/429/5xx, `X-Correlation-ID`, `Idempotency-Key` replay. OpenAPI 3.1 at `/api/v1/openapi.json`. **API-06 (release) is deliberately refused**: a release is a human decision. A key works only while the administrator who issued it still holds that role. Creating calls (API-01, API-05) require `Idempotency-Key`. `GET /api/v1/sites` lists building and sensor ids. |
 | Equipment register | `/equipements` | xlsx | The 87 lines of the client's workbook, live summary per unit (same indicators as its "Synthese" sheet), post-audit edits audited, CSV export. |
 | Commissioning | `/equipements/recette` | Commissioning table | 20 procedures; a result exists only once recorded with evidence. |
 | Programme | `/programme` | Roadmap, gates, risks, R01–R15, T01–T40 | Client's tables plus an honest coverage status for each rule and test. |
@@ -32,7 +32,12 @@ verified while a quality hold applies to the product or its lot.
 - No PLC / Modbus / OPC UA connectors: they depend on the machines actually installed (K01).
 - A transformation has a single source; multi-parent products (T34) are not modelled.
 - No calibration register (R06), no versioned multi-site template (T35).
-- Rate limits are per server instance, not global.
+- Rate limits, and the locks that serialise stock-consuming writes (eggs, chicks, shipments),
+  hold per server instance. On a single instance (and on the demo) they are exact; a
+  multi-instance deployment should move those balance checks into conditional SQL.
+- Business tables (quantities, statuses) are not themselves hashed: the ledger proves the audit
+  trail, and `/journal` reconciles the audit trail against it, but a direct database edit of a
+  quantity is not detected (T08 partial).
 - Strict multi-client (tenant) isolation beyond the organisation scope is not proven (R12, T24).
 
 ## Configuration

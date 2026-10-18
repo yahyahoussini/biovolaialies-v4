@@ -111,9 +111,16 @@ export async function buildRecallReport(type: EntityType, id: string, session: S
 
   const missingQty = products.filter((p) => p.quantity === null).length;
   if (missingQty > 0) limits.push(`${missingQty} produit(s) sans quantité conditionnée enregistrée : le stock restant n'est pas chiffrable pour eux.`);
-  const destinationOnly = products.filter((p) => p.shipped === 0).length;
-  if (destinationOnly > 0 && down.destinations.length > 0) {
-    limits.push("Certaines destinations sont connues sans expédition chiffrée (lien produit → destination sans quantité).");
+  // Only a product that points at a destination itself, with no shipment recording how much
+  // went there, leaves a quantity gap. Destinations reached through shipments are quantified.
+  let unquantifiedLinks = 0;
+  for (const p of products) {
+    if (p.shipped > 0) continue;
+    const direct = (await repositories.relations.listFrom("PRODUCT", p.id)).some((r) => r.relationType === "DESTINE_A");
+    if (direct) unquantifiedLinks += 1;
+  }
+  if (unquantifiedLinks > 0) {
+    limits.push(`${unquantifiedLinks} produit(s) ont une destination connue sans expédition chiffrée : quantité livrée inconnue.`);
   }
   if (productIds.length === 0 && type !== "PRODUCT") limits.push("Aucun produit fini n'est encore issu de cet objet.");
 

@@ -2,7 +2,8 @@ import { z } from "zod";
 import { repositories } from "../../data/repositories";
 import type { ApiPrincipal } from "../../domain/api/types";
 import { DATA_STATUS, MEASUREMENT_SOURCE_TYPE } from "../../domain/shared/enums";
-import { NotFoundError, ValidationError } from "../../domain/shared/errors";
+import { AppError, NotFoundError, ValidationError } from "../../domain/shared/errors";
+import { QUALITY_REASON } from "../../domain/shared/enums";
 import { ENTITY_TYPE, isEntityType, type EntityType } from "../../domain/traceability/entity-types";
 import type { Session } from "../auth/session";
 import { createChickLot, createEggLot } from "../hatchery/hatchery";
@@ -32,10 +33,19 @@ export async function locateObject(idOrCode: string, type?: string | null): Prom
 }
 
 // API-01 -----------------------------------------------------------------------------------
+/** ISO 8601 date-time with offset (e.g. 2026-10-18T06:00:00Z), from 2000 on — the contract's `format: date-time`. */
+export const apiDateTime = z.iso
+  .datetime({ offset: true, message: "Date-heure ISO 8601 avec fuseau attendue (ex. 2026-10-18T06:00:00Z)." })
+  .refine((v) => Date.parse(v) >= Date.parse("2000-01-01T00:00:00Z"), "Date antérieure à 2000.");
+
+const code = z.string().trim().min(3).max(50);
+const count = z.number().int().positive();
+
+// Shape errors here are 400s with per-field details; business errors from the services are 422s.
 export const createLotBodySchema = z.discriminatedUnion("lotType", [
-  z.object({ lotType: z.literal("EGG_LOT"), code: z.string(), parentFlockCode: z.string(), collectedAt: z.string(), quantity: z.number(), storageBuildingId: z.string().optional().nullable(), dataStatus: z.enum(DATA_STATUS).default("A_CONFIRMER") }),
-  z.object({ lotType: z.literal("CHICK_LOT"), code: z.string(), hatchCycleCode: z.string(), quantity: z.number(), grade: z.enum(["A", "B"]).default("A"), dispatchedAt: z.string(), dataStatus: z.enum(DATA_STATUS).default("A_CONFIRMER") }),
-  z.object({ lotType: z.literal("LOT"), code: z.string(), buildingId: z.string(), species: z.string(), breed: z.string(), initialPopulation: z.number(), plannedStartAt: z.string().optional().nullable(), dataStatus: z.enum(DATA_STATUS).default("A_CONFIRMER") }),
+  z.object({ lotType: z.literal("EGG_LOT"), code, parentFlockCode: z.string().min(1), collectedAt: apiDateTime, quantity: count, storageBuildingId: z.string().optional().nullable(), dataStatus: z.enum(DATA_STATUS).default("A_CONFIRMER") }),
+  z.object({ lotType: z.literal("CHICK_LOT"), code, hatchCycleCode: z.string().min(1), quantity: count, grade: z.enum(["A", "B"]).default("A"), dispatchedAt: apiDateTime, dataStatus: z.enum(DATA_STATUS).default("A_CONFIRMER") }),
+  z.object({ lotType: z.literal("LOT"), code, buildingId: z.string().min(1), species: z.string().trim().min(1), breed: z.string().trim().min(1), initialPopulation: count, plannedStartAt: apiDateTime.optional().nullable(), dataStatus: z.enum(DATA_STATUS).default("A_CONFIRMER") }),
 ]);
 
 export async function apiCreateLot(body: z.infer<typeof createLotBodySchema>, session: Session) {
@@ -53,6 +63,7 @@ export async function apiCreateLot(body: z.infer<typeof createLotBodySchema>, se
       return { lotType: body.lotType, lotId: chicks.id, code: chicks.code };
     }
     case "LOT": {
+      if (!(await repositories.buildings.findById(body.buildingId))) throw new ValidationError("buildingId ne désigne aucun bâtiment (voir GET /sites).");
       const lot = await createLot({ ...body, plannedStartAt: body.plannedStartAt ?? null }, session);
       return { lotType: body.lotType, lotId: lot.id, code: lot.code };
     }
@@ -78,10 +89,10 @@ export async function apiGetObject(idOrCode: string, type: string | null) {
   };
 }
 
-export async function apiGetLineage(idOrCode: string, type: string | null, direction: "up" | "down" | "both") {
+export async function apiGetLineage(idOrCode: string, type: string | null, direction: "up" | "down" | "both", maxDepth: number | null = null) {
   const target = await locateObject(idOrCode, type);
   const describe = async (nodes: { type: EntityType; id: string; depth: number }[]) =>
-    (await Promise.all(nodes.filter((n) => n.depth > 0).map(async (n) => {
+    (await Promise.all(nodes.filter((n) => n.depth > 0 && (maxDepth === null || n.depth <= maxDepth)).map(async (n) => {
       const node = await resolveNode(n.type, n.id);
       return node ? { type: n.type, id: n.id, code: node.code, depth: n.depth, occurredAt: node.occurredAt || null, dataStatus: node.dataStatus } : null;
     }))).filter(Boolean);
@@ -104,10 +115,10 @@ export const eventBodySchema = z.object({
   objectType: z.string(),
   objectId: z.string().optional(),
   objectCode: z.string().optional(),
-  occurredAt: z.string().refine((v) => !Number.isNaN(Date.parse(v)), "occurredAt doit être une date ISO 8601."),
+  occurredAt: apiDateTime,
   payload: z.record(z.string(), z.unknown()).default({}),
   idempotencyKey: z.string().trim().min(8).max(200).optional(),
-  schemaVersion: z.number().int().positive().default(1),
+  schemaVersion: z.number().int().positive().optional(),
   correctsEventId: z.string().optional(),
 });
 export type EventBody = z.infer<typeof eventBodySchema>;
@@ -116,8 +127,13 @@ export async function apiAppendEvent(body: EventBody, principal: ApiPrincipal, s
   if (!isEntityType(body.objectType)) throw new ValidationError(`objectType inconnu : ${body.objectType}.`);
   if (!body.objectId && !body.objectCode) throw new ValidationError("objectId ou objectCode est requis.");
   const target = await locateObject(body.objectId ?? body.objectCode!, body.objectType);
-  if (body.correctsEventId && !(await repositories.ledger.findById(body.correctsEventId))) {
-    throw new ValidationError("correctsEventId ne désigne aucun événement existant.");
+  if (body.correctsEventId) {
+    const corrected = await repositories.ledger.findById(body.correctsEventId);
+    if (!corrected) throw new ValidationError("correctsEventId ne désigne aucun événement existant.");
+    // A correction amends an event about the same object; it cannot rewrite another object's history.
+    if (corrected.objectType !== target.type || corrected.objectId !== target.id) {
+      throw new ValidationError("correctsEventId désigne un événement d'un autre objet.");
+    }
   }
   if (Date.parse(body.occurredAt) > Date.now() + 5 * 60_000) {
     throw new ValidationError("occurredAt est dans le futur (dérive d'horloge du terminal ?).");
@@ -131,7 +147,7 @@ export async function apiAppendEvent(body: EventBody, principal: ApiPrincipal, s
     source: `${sourceSystem}:${principal.name}`,
     occurredAt: new Date(body.occurredAt).toISOString(),
     payload: body.payload,
-    schemaVersion: body.schemaVersion,
+    schemaVersion: body.schemaVersion ?? 1,
     idempotencyKey: body.idempotencyKey ? `${principal.clientId}:${body.idempotencyKey}` : null,
     correctsEventId: body.correctsEventId ?? null,
   });
@@ -149,7 +165,11 @@ export const ingestBodySchema = z.object({
 export async function apiIngest(body: z.infer<typeof ingestBodySchema>, principal: ApiPrincipal) {
   const results: { index: number; status: "accepted" | "duplicate" | "rejected"; eventId?: string; error?: string }[] = [];
   for (const [index, raw] of body.records.entries()) {
-    const parsed = eventBodySchema.safeParse(raw);
+    // A record without its own key is keyed by its batch position, so replaying the same batch
+    // (same batchId) never writes it twice (API-08 "replay protection").
+    const withKey =
+      raw && typeof raw === "object" && !("idempotencyKey" in raw) ? { ...(raw as object), idempotencyKey: `batch:${body.batchId}#${index}` } : raw;
+    const parsed = eventBodySchema.safeParse(withKey);
     if (!parsed.success) {
       results.push({ index, status: "rejected", error: parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ") });
       continue;
@@ -158,7 +178,9 @@ export async function apiIngest(body: z.infer<typeof ingestBodySchema>, principa
       const r = await apiAppendEvent({ ...parsed.data, schemaVersion: parsed.data.schemaVersion ?? body.schemaVersion }, principal, body.sourceSystem);
       results.push({ index, status: r.duplicate ? "duplicate" : "accepted", eventId: r.eventId });
     } catch (error) {
-      results.push({ index, status: "rejected", error: error instanceof Error ? error.message : "Erreur" });
+      // Same neutrality as a 404 elsewhere: a batch must not reveal which objects exist.
+      const message = error instanceof AppError && error.kind === "NOT_FOUND" ? "Ressource introuvable." : error instanceof AppError ? error.message : "Erreur interne.";
+      results.push({ index, status: "rejected", error: message });
     }
   }
   return {
@@ -172,11 +194,11 @@ export async function apiIngest(body: z.infer<typeof ingestBodySchema>, principa
 
 // API-05 -------------------------------------------------------------------------------------
 export const holdBodySchema = z.object({
-  objectType: z.string(),
+  objectType: z.enum(ENTITY_TYPE),
   objectId: z.string().optional(),
   objectCode: z.string().optional(),
-  reason: z.string(),
-  description: z.string(),
+  reason: z.enum(QUALITY_REASON),
+  description: z.string().trim().min(10).max(2000),
   scope: z.enum(["OBJET_SEUL", "DESCENDANTS"]).default("DESCENDANTS"),
   evidenceRefs: z.array(z.string()).default([]),
 });
@@ -194,9 +216,9 @@ export async function apiOpenHold(body: z.infer<typeof holdBodySchema>, session:
 
 // API-07 -------------------------------------------------------------------------------------
 export const measurementBodySchema = z.object({
-  sensorId: z.string(),
+  sensorId: z.string().min(1),
   value: z.number(),
-  capturedAt: z.string(),
+  capturedAt: apiDateTime,
   lotId: z.string().optional().nullable(),
   dataStatus: z.enum(DATA_STATUS).default("A_CONFIRMER"),
   sourceType: z.enum(MEASUREMENT_SOURCE_TYPE).default("CAPTEUR"),
@@ -204,13 +226,32 @@ export const measurementBodySchema = z.object({
 });
 
 export async function apiRecordMeasurement(body: z.infer<typeof measurementBodySchema>, session: Session) {
+  if (!(await repositories.sensors.findById(body.sensorId))) throw new ValidationError("sensorId ne désigne aucun capteur (voir GET /sites).");
   const { record, quality } = await recordMeasurement(body, session);
   return { measurementId: record.id, accepted: true, quality };
 }
 
 // API-10 -------------------------------------------------------------------------------------
-export async function apiRecallExport(caseId: string, session: Session) {
-  const qualityCase = await repositories.qualityCases.findById(caseId);
+export async function apiRecallExport(caseIdOrCode: string, session: Session) {
+  const qualityCase =
+    (await repositories.qualityCases.findById(caseIdOrCode)) ??
+    (await repositories.qualityCases.list()).find((c) => c.code === caseIdOrCode) ??
+    null;
+  const caseId = qualityCase?.id ?? caseIdOrCode;
   if (!qualityCase) throw new NotFoundError("Dossier qualité", caseId);
   return { caseCode: qualityCase.code, status: qualityCase.status, report: await buildRecallReportForCase(caseId, session) };
+}
+
+// Discovery ----------------------------------------------------------------------------------
+/** Buildings and sensors an integrator needs ids for (POST /lots LOT, POST /measurements). */
+export async function apiListSites() {
+  const [farms, buildings, devices] = await Promise.all([repositories.farms.list(), repositories.buildings.list(), repositories.devices.list()]);
+  const farmName = new Map(farms.map((f) => [f.id, f.name]));
+  const sensorsByDevice = await Promise.all(devices.map(async (d) => ({ device: d, sensors: await repositories.sensors.listByDevice(d.id) })));
+  return {
+    buildings: buildings.map((b) => ({ id: b.id, code: b.code, name: b.name, zoneType: b.zoneType, farm: farmName.get(b.farmId) ?? null })),
+    sensors: sensorsByDevice.flatMap(({ device, sensors }) =>
+      sensors.map((s) => ({ id: s.id, type: s.sensorType, unit: s.unit, deviceCode: device.code, buildingId: device.buildingId }))
+    ),
+  };
 }

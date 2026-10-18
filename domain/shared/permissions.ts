@@ -119,7 +119,7 @@ const PERMISSIONS: Record<Role, Partial<Record<Module, readonly Action[]>>> = {
     TRACEABILITY: READ_ONLY,
     QUALITY: ["VIEW", "CREATE"],
     HATCHERY: ["VIEW", "CREATE"],
-    EQUIPMENT: ["VIEW", "EDIT"],
+    EQUIPMENT: READ_ONLY,
   },
 
   AUDITOR: {

@@ -4,11 +4,22 @@ import { EQUIPMENT_STATUS_LABEL, type CommissioningTest, type EquipmentItem } fr
 import { COMMISSIONING_RESULT } from "../../domain/shared/enums";
 import { AuthorizationError, NotFoundError, ValidationError } from "../../domain/shared/errors";
 import { can } from "../../domain/shared/permissions";
+import { isGlobalScope } from "../../domain/shared/scope";
 import { recordAudit } from "../audit/record";
 import type { Session } from "../auth/session";
 import { csvField } from "../leads/leads";
 import equipmentReference from "../../data/seed/reference/equipment.json";
 import { COMMISSIONING_REFERENCE } from "../../data/seed/reference/commissioning";
+
+/**
+ * The register and the commissioning checklist are company-wide, not tied to one farm, so a
+ * farm-scoped role may read them but only a global-scope role may change them.
+ */
+function assertCanEditRegister(session: Session): void {
+  if (!can(session, "EDIT", "EQUIPMENT") || !isGlobalScope(session)) {
+    throw new AuthorizationError("Le registre des équipements est commun à tous les sites : modification réservée à un rôle à périmètre global.");
+  }
+}
 
 /** Loads the client's equipment register and commissioning checklist. Idempotent: does nothing if already loaded. */
 export async function seedEquipmentReference(): Promise<void> {
@@ -71,7 +82,7 @@ export const updateEquipmentSchema = z
 
 /** Post-audit edit of the columns the client marked as editable: Qté réf., Qté max, Statut, Remarque. */
 export async function updateEquipment(input: unknown, session: Session): Promise<EquipmentItem> {
-  if (!can(session, "EDIT", "EQUIPMENT")) throw new AuthorizationError();
+  assertCanEditRegister(session);
   const parsed = updateEquipmentSchema.safeParse(input);
   if (!parsed.success) throw new ValidationError(parsed.error.issues.map((i) => i.message).join(" "));
   const existing = await repositories.equipment.findById(parsed.data.id);
@@ -117,7 +128,7 @@ export const recordCommissioningSchema = z.object({
 
 /** Records a commissioning result with its evidence. A re-test is a new recorded result, audited, never a silent edit. */
 export async function recordCommissioningResult(input: unknown, session: Session): Promise<CommissioningTest> {
-  if (!can(session, "EDIT", "EQUIPMENT")) throw new AuthorizationError();
+  assertCanEditRegister(session);
   const parsed = recordCommissioningSchema.safeParse(input);
   if (!parsed.success) throw new ValidationError(parsed.error.issues.map((i) => i.message).join(" "));
   const existing = await repositories.equipment.findTestById(parsed.data.id);

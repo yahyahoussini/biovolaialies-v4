@@ -16,6 +16,7 @@ import { sendInternalNotification } from "../notify/email";
 const IP_LIMIT = 5;
 const IP_WINDOW_MS = 10 * 60 * 1000;
 const EMAIL_DAILY_LIMIT = 3;
+const GLOBAL_HOURLY_LIMIT = 60;
 
 export interface SubmissionMeta {
   clientKey: string;
@@ -36,7 +37,9 @@ export async function submitLead(input: unknown, meta: SubmissionMeta): Promise<
   if (meta.honeypot.trim() !== "") return ok({ stored: false });
 
   const limit = rateLimit(`lead:${meta.clientKey}`, IP_LIMIT, IP_WINDOW_MS);
-  if (!limit.allowed) {
+  // Site-wide ceiling, whatever the address: no B2B form legitimately gets more than this.
+  const global = rateLimit("lead:*", GLOBAL_HOURLY_LIMIT, 60 * 60 * 1000);
+  if (!limit.allowed || !global.allowed) {
     return err({ kind: "RATE_LIMITED", message: "Trop de demandes en peu de temps. Merci de réessayer dans quelques minutes." });
   }
 

@@ -1,4 +1,4 @@
-import { and, count, eq } from "drizzle-orm";
+import { and, count, eq, exists, sql } from "drizzle-orm";
 import type {
   NewQualityCase,
   QualityCase,
@@ -14,14 +14,23 @@ export class DrizzleQualityCaseRepository implements QualityCaseRepository {
     input: NewQualityCase,
     items: { objectType: string; objectId: string; depth: number }[]
   ): Promise<QualityCase> {
-    // One transaction: a case must never exist without the items it blocks, or vice versa.
-    return db.transaction(async (tx) => {
-      const [created] = await tx.insert(qualityCases).values(input).returning();
-      if (items.length > 0) {
-        await tx.insert(qualityHoldItems).values(items.map((item) => ({ ...item, caseId: created.id, active: true })));
-      }
+    // One atomic batch (see data/repositories/transactions.ts for why not db.transaction):
+    // a case must never exist without the items it blocks, or vice versa.
+    const caseId = crypto.randomUUID();
+    const insertCase = db.insert(qualityCases).values({ ...input, id: caseId }).returning();
+    if (items.length === 0) {
+      const [created] = await insertCase;
       return created as QualityCase;
-    });
+    }
+    const [[created]] = await db.batch([
+      insertCase,
+      db.insert(qualityHoldItems).values(items.map((item) => ({ ...item, caseId, active: true }))),
+    ]);
+    return created as QualityCase;
+  }
+
+  async addItems(caseId: string, items: { objectType: string; objectId: string; depth: number }[]): Promise<void> {
+    if (items.length > 0) await db.insert(qualityHoldItems).values(items.map((item) => ({ ...item, caseId, active: true })));
   }
 
   async findById(id: string): Promise<QualityCase | null> {
@@ -55,13 +64,39 @@ export class DrizzleQualityCaseRepository implements QualityCaseRepository {
     });
   }
 
-  async decide(caseId: string, decision: QualityCaseDecision): Promise<QualityCase> {
-    return db.transaction(async (tx) => {
-      const [updated] = await tx.update(qualityCases).set(decision).where(eq(qualityCases.id, caseId)).returning();
-      if (decision.status === "LIBERE") {
-        await tx.update(qualityHoldItems).set({ active: false }).where(eq(qualityHoldItems.caseId, caseId));
-      }
-      return updated as QualityCase;
-    });
+  /**
+   * Compare-and-set: only a case still EN_BLOCAGE can be decided, so two simultaneous
+   * decisions cannot both apply. Returns null when another decision got there first. For a
+   * release, the hold items are deactivated in the same batch — and only if the case row now
+   * carries THIS decision, so a losing concurrent release cannot unblock anything.
+   */
+  async decide(caseId: string, decision: QualityCaseDecision): Promise<QualityCase | null> {
+    const updateCase = db
+      .update(qualityCases)
+      .set(decision)
+      .where(and(eq(qualityCases.id, caseId), eq(qualityCases.status, "EN_BLOCAGE")))
+      .returning();
+    if (decision.status !== "LIBERE") {
+      const [updated] = await updateCase;
+      return (updated as QualityCase | undefined) ?? null;
+    }
+    const [[updated]] = await db.batch([
+      updateCase,
+      db
+        .update(qualityHoldItems)
+        .set({ active: false })
+        .where(
+          and(
+            eq(qualityHoldItems.caseId, caseId),
+            exists(
+              db
+                .select({ one: sql`1` })
+                .from(qualityCases)
+                .where(and(eq(qualityCases.id, caseId), eq(qualityCases.status, "LIBERE"), eq(qualityCases.decidedAt, decision.decidedAt), eq(qualityCases.decidedBy, decision.decidedBy)))
+            )
+          )
+        ),
+    ]);
+    return (updated as QualityCase | undefined) ?? null;
   }
 }

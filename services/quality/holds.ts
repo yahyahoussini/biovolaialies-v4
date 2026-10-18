@@ -13,6 +13,7 @@ import { isGlobalScope } from "../../domain/shared/scope";
 import { isEntityType, type EntityType } from "../../domain/traceability/entity-types";
 import { recordAudit } from "../audit/record";
 import { appendLedgerEvent } from "../ledger/ledger";
+import { rateLimit } from "../../lib/rate-limit";
 import type { Session } from "../auth/session";
 import { isWithinScope, resolveBuildingHierarchy, resolveLotHierarchy, type HierarchyPath } from "../identity/scope-check";
 import { resolveNode, type ChainNode } from "../traceability/entity-resolver";
@@ -101,10 +102,21 @@ export const openHoldInputSchema = z.object({
   evidence: z.string().max(2000).default(""),
 });
 
-async function nextCaseCode(): Promise<string> {
+async function nextCaseCode(offset: number): Promise<string> {
   const year = new Date().getFullYear();
-  const n = (await repositories.qualityCases.count()) + 1;
+  const n = (await repositories.qualityCases.count()) + 1 + offset;
   return `QC-${year}-${String(n).padStart(3, "0")}`;
+}
+
+function isUniqueViolation(error: unknown): boolean {
+  const text = `${(error as { message?: string })?.message ?? ""} ${String((error as { cause?: unknown })?.cause ?? "")}`;
+  return /UNIQUE constraint failed/i.test(text);
+}
+
+async function holdTargets(rootType: EntityType, rootId: string, scope: string) {
+  return scope === "DESCENDANTS"
+    ? (await collectDescendants(rootType, rootId)).nodes.filter((n) => isHoldable(n.type))
+    : [{ type: rootType, id: rootId, depth: 0 }];
 }
 
 export async function openHold(input: unknown, session: Session): Promise<QualityCase> {
@@ -118,26 +130,44 @@ export async function openHold(input: unknown, session: Session): Promise<Qualit
   if (!root) throw new NotFoundError(rootType, data.rootId);
   await assertEntityInScope(session, rootType, data.rootId);
 
-  const targets =
-    data.scope === "DESCENDANTS"
-      ? (await collectDescendants(rootType, data.rootId)).nodes.filter((n) => isHoldable(n.type))
-      : [{ type: rootType, id: data.rootId, depth: 0 }];
+  const targets = await holdTargets(rootType, data.rootId, data.scope);
+  const createCase = async (offset: number) =>
+    repositories.qualityCases.createWithItems(
+      {
+        code: await nextCaseCode(offset),
+        rootType,
+        rootId: data.rootId,
+        reason: data.reason,
+        description: data.description,
+        scope: data.scope,
+        status: "EN_BLOCAGE",
+        evidenceRefs: parseEvidenceRefs(data.evidence),
+        openedBy: session.userId,
+        openedAt: new Date().toISOString(),
+      },
+      targets.map((t) => ({ objectType: t.type, objectId: t.id, depth: t.depth }))
+    );
 
-  const created = await repositories.qualityCases.createWithItems(
-    {
-      code: await nextCaseCode(),
-      rootType,
-      rootId: data.rootId,
-      reason: data.reason,
-      description: data.description,
-      scope: data.scope,
-      status: "EN_BLOCAGE",
-      evidenceRefs: parseEvidenceRefs(data.evidence),
-      openedBy: session.userId,
-      openedAt: new Date().toISOString(),
-    },
-    targets.map((t) => ({ objectType: t.type, objectId: t.id, depth: t.depth }))
-  );
+  // Two holds opened at the same instant can compute the same next code; the UNIQUE
+  // constraint rejects the loser, which simply takes the following number.
+  let created: QualityCase | null = null;
+  for (let attempt = 0; attempt < 5 && !created; attempt++) {
+    try {
+      created = await createCase(attempt);
+    } catch (error) {
+      if (!isUniqueViolation(error) || attempt === 4) throw error;
+    }
+  }
+  if (!created) throw new ConflictError("Impossible d'attribuer un numéro de dossier. Réessayez.");
+
+  // A derivation recorded between the genealogy walk and the insert would have passed the
+  // guard before the hold existed. Walk again now that it does and block what was missed.
+  if (data.scope === "DESCENDANTS") {
+    const known = new Set(targets.map((t) => `${t.type}:${t.id}`));
+    const missed = (await holdTargets(rootType, data.rootId, data.scope)).filter((t) => !known.has(`${t.type}:${t.id}`));
+    await repositories.qualityCases.addItems(created.id, missed.map((t) => ({ objectType: t.type, objectId: t.id, depth: t.depth })));
+    targets.push(...missed);
+  }
 
   await recordAudit({
     actorId: session.userId,
@@ -172,6 +202,8 @@ export const decideHoldInputSchema = z.object({
  */
 async function journalRefusal(caseId: string, session: Session, reason: string): Promise<void> {
   if (!(await repositories.qualityCases.findById(caseId))) return;
+  // Evidence, not a write amplifier: a few refusals per person and case per hour are kept.
+  if (!rateLimit(`refusal:${session.userId}:${caseId}`, 3, 60 * 60 * 1000).allowed) return;
   await appendLedgerEvent({
     eventType: "QUALITY_DECISION_REFUSED",
     objectType: "quality_case",
@@ -196,6 +228,10 @@ export async function decideHold(input: unknown, session: Session): Promise<Qual
 
   const existing = await repositories.qualityCases.findById(data.caseId);
   if (!existing) throw new NotFoundError("Dossier qualité", data.caseId);
+  if (!(await inScope(session, existing))) {
+    await journalRefusal(existing.id, session, "Dossier hors du périmètre du décideur.");
+    throw new AuthorizationError("Ce dossier n'appartient pas à votre périmètre.");
+  }
 
   const evidenceRefs = parseEvidenceRefs(data.evidence);
   const check = validateDecision(existing, session.userId, data.justification, evidenceRefs);
@@ -211,6 +247,7 @@ export async function decideHold(input: unknown, session: Session): Promise<Qual
     decisionEvidenceRefs: evidenceRefs,
     decidedAt: new Date().toISOString(),
   });
+  if (!decided) throw new ConflictError("Ce dossier vient d'être décidé par une autre personne. Rechargez la page.");
 
   await recordAudit({
     actorId: session.userId,

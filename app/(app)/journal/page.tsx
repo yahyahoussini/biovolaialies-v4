@@ -6,12 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/Table";
 import { can } from "@/domain/shared/permissions";
 import { requireModuleAccess } from "@/services/auth/guard";
-import { listRecentLedgerEvents, verifyLedger } from "@/services/ledger/ledger";
+import { listRecentLedgerEvents, verifyAuditMirror, verifyLedger } from "@/services/ledger/ledger";
 import { AnchorVerifier } from "./AnchorVerifier";
 
 export default async function LedgerPage() {
   const session = await requireModuleAccess("INTEGRITY");
-  const [verification, recent] = await Promise.all([verifyLedger(session), listRecentLedgerEvents(session, 100)]);
+  const [verification, recent, mirror] = await Promise.all([verifyLedger(session), listRecentLedgerEvents(session, 100), verifyAuditMirror(session)]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -36,6 +36,16 @@ export default async function LedgerPage() {
         <StatCard label="Événements" value={verification.count} />
         <StatCard label="Empreinte de tête" value={`${verification.headHash.slice(0, 12)}…`} hint={`n° ${verification.headSeq}`} />
       </div>
+
+      <p
+        role={mirror.ok ? "status" : "alert"}
+        className={`rounded-lg border p-4 text-sm ${mirror.ok ? "border-success/40 bg-success/10 text-success-strong" : "border-critical/40 bg-critical/10 text-critical-strong"}`}
+      >
+        Journal d&apos;audit ↔ journal chaîné : {mirror.auditRows} entrées d&apos;audit vérifiées
+        {mirror.ok ? " — toutes conformes à leur trace chaînée." : ` — ${mirror.altered.length} modifiée(s) après coup, ${mirror.missing.length} sans trace chaînée.`}
+        {mirror.preLedger > 0 ? ` (${mirror.preLedger} antérieure(s) à la mise en service du journal chaîné, non vérifiables.)` : null}
+        {" "}Les tables métier elles-mêmes (quantités, statuts) ne sont pas hachées.
+      </p>
 
       {!verification.ok ? (
         <p role="alert" className="rounded-lg border border-critical/40 bg-critical/10 p-4 text-sm text-critical-strong">

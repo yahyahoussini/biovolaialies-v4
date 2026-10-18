@@ -3,6 +3,8 @@ import { repositories } from "../../data/repositories";
 import type { ApiPrincipal } from "../../domain/api/types";
 import type { ApiScope } from "../../domain/shared/enums";
 import { AppError } from "../../domain/shared/errors";
+import { can } from "../../domain/shared/permissions";
+import { isGlobalScope } from "../../domain/shared/scope";
 import { logger } from "../../lib/logger";
 import { rateLimit } from "../../lib/rate-limit";
 import type { Session } from "../auth/session";
@@ -37,9 +39,10 @@ export interface ApiContext {
   request: Request;
 }
 
-function correlationIdOf(request: Request): string {
+export function correlationIdOf(request: Request): string {
   const given = request.headers.get("x-correlation-id");
-  return given && /^[\w.-]{8,100}$/.test(given) ? given : crypto.randomUUID();
+  // Any printable token up to 128 characters is echoed as sent; anything else gets a fresh id.
+  return given && /^[\x21-\x7e]{1,128}$/.test(given) ? given : crypto.randomUUID();
 }
 
 export function json(body: unknown, status: number, correlationId: string, extra: Record<string, string> = {}): Response {
@@ -51,7 +54,8 @@ export function json(body: unknown, status: number, correlationId: string, extra
 
 function errorResponse(error: unknown, correlationId: string): Response {
   if (error instanceof ApiError) {
-    return json({ error: { code: error.code, message: error.message, details: error.details }, correlationId }, error.status, correlationId);
+    const extra: Record<string, string> = error.status === 401 ? { "WWW-Authenticate": 'Bearer realm="bvu-api"' } : {};
+    return json({ error: { code: error.code, message: error.message, details: error.details }, correlationId }, error.status, correlationId, extra);
   }
   if (error instanceof AppError) {
     const status = { VALIDATION: 422, AUTHORIZATION: 403, NOT_FOUND: 404, CONFLICT: 409, DATABASE: 503, UNEXPECTED: 500 }[error.kind];
@@ -70,9 +74,10 @@ export async function readBody<T>(request: Request, schema: z.ZodType<T>): Promi
   if (length > MAX_BODY_BYTES) throw new ApiError(413, "PAYLOAD_TOO_LARGE", "Corps de requête trop volumineux (1 Mo maximum).");
   let raw: unknown;
   try {
-    const text = await request.text();
-    if (text.length > MAX_BODY_BYTES) throw new ApiError(413, "PAYLOAD_TOO_LARGE", "Corps de requête trop volumineux (1 Mo maximum).");
-    raw = JSON.parse(text);
+    // Counted in bytes after reading, so a chunked request without Content-Length is capped too.
+    const bytes = await request.arrayBuffer();
+    if (bytes.byteLength > MAX_BODY_BYTES) throw new ApiError(413, "PAYLOAD_TOO_LARGE", "Corps de requête trop volumineux (1 Mo maximum).");
+    raw = JSON.parse(new TextDecoder().decode(bytes));
   } catch (error) {
     if (error instanceof ApiError) throw error;
     throw new ApiError(400, "INVALID_JSON", "Le corps de la requête n'est pas un JSON valide.");
@@ -88,7 +93,13 @@ async function sessionFor(principal: ApiPrincipal): Promise<Session> {
   const client = await repositories.apiClients.findById(principal.clientId);
   const issuer = client ? await repositories.users.findById(client.createdBy) : null;
   if (!issuer || !issuer.active) throw new ApiError(401, "UNAUTHENTICATED", "Identifiants API invalides.");
-  return { userId: issuer.id, role: issuer.role, scopeType: issuer.scopeType, scopeId: issuer.scopeId, isDemoSwitch: false };
+  const session: Session = { userId: issuer.id, role: issuer.role, scopeType: issuer.scopeType, scopeId: issuer.scopeId, isDemoSwitch: false };
+  // A key acts with its issuer's authority, so it stops working the moment that person is no
+  // longer allowed to issue keys (role or scope changed), not only when they are deactivated.
+  if (!can(session, "CREATE", "API_CLIENTS") || !isGlobalScope(session)) {
+    throw new ApiError(401, "UNAUTHENTICATED", "Identifiants API invalides.");
+  }
+  return session;
 }
 
 export function apiRoute<P = Record<string, never>>(
