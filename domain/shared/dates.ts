@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "../../lib/zod";
 
 /** A business date: a real date, not before 2000, and not in the future beyond clock tolerance. */
 export const CLOCK_TOLERANCE_MS = 24 * 60 * 60 * 1000;

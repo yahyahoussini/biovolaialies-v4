@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "../../lib/zod";
 import { repositories } from "../../data/repositories";
 import type { Destination } from "../../domain/traceability/types";
 import { DESTINATION_TYPE } from "../../domain/shared/enums";

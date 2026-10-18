@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "../../lib/zod";
 import { repositories } from "../../data/repositories";
 import type { Lead } from "../../domain/leads/types";
 import { CONSENT_VERSION, leadSubmissionSchema } from "../../domain/leads/validation";

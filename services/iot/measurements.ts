@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "../../lib/zod";
 import { repositories } from "../../data/repositories";
 import type { Measurement } from "../../domain/iot/types";
 import {

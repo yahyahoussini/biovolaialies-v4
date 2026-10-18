@@ -1,5 +1,5 @@
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
-import { z } from "zod";
+import { z } from "../../lib/zod";
 import { repositories } from "../../data/repositories";
 import type { ApiClient, ApiPrincipal } from "../../domain/api/types";
 import { API_SCOPE, type ApiScope } from "../../domain/shared/enums";

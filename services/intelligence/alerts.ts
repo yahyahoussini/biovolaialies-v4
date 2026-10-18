@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "../../lib/zod";
 import { repositories } from "../../data/repositories";
 import type { AlertStatus, AnomalyStatus } from "../../domain/shared/enums";
 import { AuthorizationError, NotFoundError, ValidationError } from "../../domain/shared/errors";

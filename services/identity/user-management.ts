@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "../../lib/zod";
 import { repositories } from "../../data/repositories";
 import type { User } from "../../domain/identity/types";
 import { ROLE, SCOPE_TYPE, type Role, type ScopeType } from "../../domain/shared/enums";

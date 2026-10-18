@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "../../lib/zod";
 import { repositories } from "../../data/repositories";
 import type { ApiPrincipal } from "../../domain/api/types";
 import type { ApiScope } from "../../domain/shared/enums";

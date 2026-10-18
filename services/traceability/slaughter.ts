@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "../../lib/zod";
 import { repositories } from "../../data/repositories";
 import { validateProcessingYield, validateTransferQuantity } from "../../domain/production/quantity-integrity";
 import type { SlaughterBatch } from "../../domain/production/types";

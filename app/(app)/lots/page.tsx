@@ -1,6 +1,6 @@
 import { PageHeader } from "@/components/domain/PageHeader";
 import { repositories } from "@/data/repositories";
-import { canAccessModule } from "@/domain/shared/permissions";
+import { can } from "@/domain/shared/permissions";
 import { requireModuleAccess } from "@/services/auth/guard";
 import { listBuildingsInScope } from "@/services/identity/queries";
 import { listLotsWithContext } from "@/services/production/lot-queries";
@@ -19,7 +19,7 @@ export default async function LotListPage() {
     id: building.id,
     label: `${farmNameById.get(building.farmId) ?? "—"} — ${building.code} (${building.name})`,
   }));
-  const canCreate = canAccessModule(session, "LOTS");
+  const canCreate = can(session, "CREATE", "LOTS");
 
   return (
     <div className="flex flex-col gap-6">

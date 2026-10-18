@@ -30,7 +30,12 @@ export function DecisionForm({ caseId }: { caseId: string }) {
   }
 
   return (
-    <form action={submit} className="flex flex-col gap-3">
+    <form onSubmit={(event) => {
+            // Not `action={…}`: React 19 resets a form after an action runs, which would wipe
+            // everything typed whenever the server rejects the submission.
+            event.preventDefault();
+            submit(new FormData(event.currentTarget, (event.nativeEvent as SubmitEvent).submitter));
+          }} className="flex flex-col gap-3">
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="justification">Justification (20 caractères minimum)</Label>
         <textarea id="justification" name="justification" required minLength={20} rows={3} className="rounded-md border border-border bg-surface px-3 py-2 text-sm" />

@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "../../lib/zod";
 import { LEAD_ACTIVITY } from "../shared/enums";
 
 /** Version of the consent sentence shown under the form — stored with each lead (accountability under law 09-08). */

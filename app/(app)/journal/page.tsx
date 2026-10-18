@@ -4,6 +4,7 @@ import { StatCard } from "@/components/domain/StatCard";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/Table";
+import { repositories } from "@/data/repositories";
 import { can } from "@/domain/shared/permissions";
 import { requireModuleAccess } from "@/services/auth/guard";
 import { listRecentLedgerEvents, verifyAuditMirror, verifyLedger } from "@/services/ledger/ledger";
@@ -11,7 +12,17 @@ import { AnchorVerifier } from "./AnchorVerifier";
 
 export default async function LedgerPage() {
   const session = await requireModuleAccess("INTEGRITY");
-  const [verification, recent, mirror] = await Promise.all([verifyLedger(session), listRecentLedgerEvents(session, 100), verifyAuditMirror(session)]);
+  const [verification, recent, mirror, users, apiClients] = await Promise.all([
+    verifyLedger(session),
+    listRecentLedgerEvents(session, 100),
+    verifyAuditMirror(session),
+    repositories.users.list(),
+    repositories.apiClients.list(),
+  ]);
+  const userName = new Map(users.map((u) => [u.id, u.fullName]));
+  const clientName = new Map(apiClients.map((c) => [c.id, c.name]));
+  const actorLabel = (kind: string, id: string | null) =>
+    kind === "USER" ? (id ? (userName.get(id) ?? "Utilisateur supprimé") : "Utilisateur") : kind === "API_CLIENT" ? `API · ${id ? (clientName.get(id) ?? "client inconnu") : "?"}` : "Système";
 
   return (
     <div className="flex flex-col gap-6">
@@ -90,7 +101,7 @@ export default async function LedgerPage() {
                   <TableCell className="whitespace-nowrap">{new Date(e.recordedAt).toLocaleString("fr-FR")}</TableCell>
                   <TableCell>{e.eventType}</TableCell>
                   <TableCell className="font-mono text-xs">{e.objectType}</TableCell>
-                  <TableCell>{e.actorKind === "USER" ? "Utilisateur" : e.actorKind === "API_CLIENT" ? "Client API" : "Système"}</TableCell>
+                  <TableCell>{actorLabel(e.actorKind, e.actorId)}</TableCell>
                   <TableCell className="font-mono text-xs">{e.hash.slice(0, 16)}…</TableCell>
                 </TableRow>
               ))}

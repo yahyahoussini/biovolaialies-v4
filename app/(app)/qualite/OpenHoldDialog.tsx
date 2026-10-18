@@ -56,7 +56,12 @@ export function OpenHoldDialog({ defaultType = "LOT", defaultCode = "", triggerL
             responsable qualité.
           </DialogDescription>
         </DialogHeader>
-        <form action={submit} className="flex flex-col gap-4">
+        <form onSubmit={(event) => {
+            // Not `action={…}`: React 19 resets a form after an action runs, which would wipe
+            // everything typed whenever the server rejects the submission.
+            event.preventDefault();
+            submit(new FormData(event.currentTarget, (event.nativeEvent as SubmitEvent).submitter));
+          }} className="flex flex-col gap-4">
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="rootType">Type d&apos;objet</Label>

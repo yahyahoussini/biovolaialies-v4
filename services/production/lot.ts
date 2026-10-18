@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "../../lib/zod";
 import { repositories } from "../../data/repositories";
 import { validateInitialPopulation } from "../../domain/production/population";
 import { DATA_STATUS } from "../../domain/shared/enums";

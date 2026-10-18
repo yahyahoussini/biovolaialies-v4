@@ -1,11 +1,11 @@
-import { z } from "zod";
+import { z } from "../../lib/zod";
 import { repositories } from "../../data/repositories";
 import type { Shipment } from "../../domain/traceability/shipment";
 import { DATA_STATUS, MEASUREMENT_SOURCE_TYPE } from "../../domain/shared/enums";
 import { AuthorizationError, ConflictError, NotFoundError, ValidationError } from "../../domain/shared/errors";
 import { can } from "../../domain/shared/permissions";
 import { isGlobalScope } from "../../domain/shared/scope";
-import { businessDate } from "../../domain/shared/dates";
+import { businessDate, orderError } from "../../domain/shared/dates";
 import { recordAudit } from "../audit/record";
 import type { Session } from "../auth/session";
 import { isWithinScope } from "../identity/scope-check";
@@ -55,6 +55,8 @@ async function createShipmentUnlocked(input: unknown, session: Session): Promise
     if (!path || !isWithinScope(session, path)) throw new AuthorizationError("Ce produit n'appartient pas à votre périmètre.");
   }
   await assertNotOnHold("PRODUCT", product.id);
+  const shipOrder = orderError("Le conditionnement", product.packagingDate, "L'expédition", data.shippedAt);
+  if (shipOrder) throw new ValidationError(shipOrder);
   if (await repositories.shipments.findByCode(data.code)) throw new ConflictError(`Le code d'expédition "${data.code}" est déjà utilisé.`);
 
   // One unit per product, always: the recall adds shipped quantities together.

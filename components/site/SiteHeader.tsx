@@ -30,7 +30,7 @@ export function SiteHeader() {
           </Link>
           <Link
             href="/#contact"
-            className="rounded-full bg-bvu-green px-4 py-2.5 text-sm font-bold text-white transition hover:-translate-y-0.5"
+            className="rounded-full bg-bvu-green px-4 py-2.5 text-sm font-bold text-white transition hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bvu-ink"
           >
             Demander un échange
           </Link>

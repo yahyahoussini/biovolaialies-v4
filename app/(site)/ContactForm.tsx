@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef, useTransition } from "react";
 import { LEAD_ACTIVITY } from "@/domain/shared/enums";
 import { submitContactAction, type ContactFormState } from "./actions";
 
@@ -30,7 +30,15 @@ function FieldError({ id, message }: { id: string; message?: string }) {
 
 export function ContactForm({ demoStorageNote }: { demoStorageNote: boolean }) {
   const [state, action, pending] = useActionState(submitContactAction, INITIAL);
+  const [, startTransition] = useTransition();
+  const formRef = useRef<HTMLFormElement>(null);
   const e = state.fieldErrors;
+
+  // After a rejected submission, take the user to the first field that needs fixing.
+  useEffect(() => {
+    if (state.status !== "error") return;
+    formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
+  }, [state]);
 
   if (state.status === "success") {
     return (
@@ -44,7 +52,18 @@ export function ContactForm({ demoStorageNote }: { demoStorageNote: boolean }) {
   const describedBy = (field: string) => (e[field] ? `${field}-error` : undefined);
 
   return (
-    <form action={action} className="grid gap-4" noValidate>
+    <form
+      ref={formRef}
+      onSubmit={(event) => {
+        // Not `action={action}`: React 19 resets a form after an action runs, which would wipe
+        // everything the visitor typed whenever the server rejects the submission.
+        event.preventDefault();
+        const data = new FormData(event.currentTarget);
+        startTransition(() => action(data));
+      }}
+      className="grid gap-4"
+      noValidate
+    >
       {/* Honeypot: hidden from people and assistive tech, irresistible to naive bots. */}
       <div className="absolute -left-[10000px]" aria-hidden="true">
         <label>

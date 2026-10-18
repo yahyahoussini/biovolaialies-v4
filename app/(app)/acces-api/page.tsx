@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/Table";
 import { can } from "@/domain/shared/permissions";
-import { env } from "@/lib/env";
 import { requireModuleAccess } from "@/services/auth/guard";
 import { listApiClients } from "@/services/api/clients";
 import { CreateApiClientDialog, RevokeButton } from "./ApiClientControls";
@@ -30,7 +29,7 @@ export default async function ApiAccessPage() {
           <p>
             Spécification OpenAPI 3.1 :{" "}
             <a className="text-bio-green underline" href="/api/v1/openapi.json">
-              {env.APP_URL}/api/v1/openapi.json
+              /api/v1/openapi.json
             </a>{" "}
             · Disponibilité : <code>/api/v1/health/ready</code>
           </p>

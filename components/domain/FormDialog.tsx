@@ -84,7 +84,12 @@ export function FormDialog({
           <DialogTitle>{title}</DialogTitle>
           {description ? <DialogDescription>{description}</DialogDescription> : null}
         </DialogHeader>
-        <form action={submit} className="grid grid-cols-2 gap-3">
+        <form onSubmit={(event) => {
+            // Not `action={…}`: React 19 resets a form after an action runs, which would wipe
+            // everything typed whenever the server rejects the submission.
+            event.preventDefault();
+            submit(new FormData(event.currentTarget, (event.nativeEvent as SubmitEvent).submitter));
+          }} className="grid grid-cols-2 gap-3">
           {fields.map((field) => {
             const id = `fd-${field.name}`;
             return (

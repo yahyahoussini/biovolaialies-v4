@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "../../lib/zod";
 import { repositories } from "../../data/repositories";
 import { EQUIPMENT_STATUS_LABEL, type CommissioningTest, type EquipmentItem } from "../../domain/equipment/types";
 import { COMMISSIONING_RESULT } from "../../domain/shared/enums";
@@ -103,8 +103,11 @@ export async function updateEquipment(input: unknown, session: Session): Promise
   return updated;
 }
 
-export async function exportEquipmentCsv(session: Session): Promise<string> {
-  const items = await listEquipment(session);
+/** Exports what the screen shows: the same unit/category filters apply. */
+export async function exportEquipmentCsv(session: Session, filters: { unitCode?: string | null; category?: string | null } = {}): Promise<string> {
+  const items = (await listEquipment(session)).filter(
+    (i) => (!filters.unitCode || i.unitCode === filters.unitCode) && (!filters.category || i.category === filters.category)
+  );
   const header = ["Unité", "Catégorie", "Réf. classeur", "Équipement", "Qté réf.", "Qté max", "Statut", "Fonction", "Caractéristiques", "Remarque", "Candidats"];
   const rows = items.map((i) =>
     [i.unitLabel, i.category, i.reference, i.name, i.quantityRef?.toString() ?? null, i.quantityMax?.toString() ?? null, i.status ? `${i.status} — ${EQUIPMENT_STATUS_LABEL[i.status] ?? ""}` : null, i.function, i.characteristics, i.decisionRule, i.candidates].map(csvField).join(",")

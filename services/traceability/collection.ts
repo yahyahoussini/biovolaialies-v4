@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "../../lib/zod";
 import { repositories } from "../../data/repositories";
 import { validateTransferQuantity } from "../../domain/production/quantity-integrity";
 import type { Collection, Lot } from "../../domain/production/types";

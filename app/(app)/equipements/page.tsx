@@ -50,7 +50,7 @@ export default async function EquipmentPage({ searchParams }: PageProps<"/equipe
         description="Matériel existant chez le client et matériel à installer par BVU Tech, avec les caractéristiques à exiger. Quantités de référence à confirmer par l'audit de site."
         actions={
           <Button asChild size="sm" variant="secondary">
-            <a href="/equipements/export">
+            <a href={`/equipements/export${filterHref(u, c).replace("/equipements", "")}`}>
               <Download className="size-4" aria-hidden="true" />
               Exporter (CSV)
             </a>
