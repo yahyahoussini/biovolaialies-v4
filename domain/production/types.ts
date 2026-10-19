@@ -15,6 +15,8 @@ export interface Lot {
   endedAt: string | null;
   dataStatus: DataStatus;
   createdAt: string;
+  /** Production line of the client's process; null on lots recorded before it existed. */
+  productionLine?: string | null;
 }
 
 export interface LotEvent {

@@ -1,8 +1,22 @@
-import { integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { index, integer, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 import {
+  AGGREGATE_GRANULARITY,
+  ALERT_OUTCOME,
   ALERT_SEVERITY,
   ALERT_STATUS,
+  BAND_SOURCE,
+  BAND_STATUS,
+  CALIBRATION_RESULT,
   CHICK_GRADE,
+  DEVICE_TYPE,
+  NOTIFICATION_CHANNEL,
+  NOTIFICATION_STATUS,
+  READING_ATTRIBUTION,
+  READING_FLAG,
+  RULE_STATE,
+  SEASON,
+  SITE_EVENT_KIND,
+  ZONE_KIND,
   COMMISSIONING_RESULT,
   HATCH_CYCLE_STATUS,
   LEAD_ACTIVITY,
@@ -156,6 +170,8 @@ export const lots = sqliteTable("lots", {
   endedAt: text("ended_at"),
   dataStatus: text("data_status", { enum: DATA_STATUS }).notNull(),
   createdAt: createdAt(),
+  /** Production line of the client's process (handwritten flow): reference bands are chosen by it. */
+  productionLine: text("production_line"),
 });
 
 export const lotEvents = sqliteTable("lot_events", {
@@ -302,12 +318,19 @@ export const devices = sqliteTable("devices", {
     .notNull()
     .references(() => buildings.id),
   code: text("code").notNull().unique(),
-  type: text("type", { enum: ["CAPTEUR_MULTI", "PASSERELLE"] as const }).notNull(),
+  type: text("type", { enum: DEVICE_TYPE }).notNull(),
   status: text("status", { enum: DEVICE_STATUS }).notNull(),
   installedAt: text("installed_at").notNull(),
   lastCommunicationAt: text("last_communication_at"),
   batteryLevel: integer("battery_level"),
   signalQuality: integer("signal_quality"),
+  /** Document 2 reference (A01, D01, L01…) when the device is one of the catalogue's. */
+  catalogRef: text("catalog_ref"),
+  /** The gateway this device reports through (document 2 ch. 6). Null for a gateway itself. */
+  gatewayId: text("gateway_id"),
+  /** Gateways only: the offset last measured between the gateway clock and the server (seconds). */
+  clockOffsetSeconds: real("clock_offset_seconds"),
+  lastClockSyncAt: text("last_clock_sync_at"),
 });
 
 export const sensors = sqliteTable("sensors", {
@@ -319,6 +342,13 @@ export const sensors = sqliteTable("sensors", {
   unit: text("unit").notNull(),
   status: text("status", { enum: DEVICE_STATUS }).notNull(),
   configuration: text("configuration", { mode: "json" }),
+  /** The identifier the gateway sends. Unique, so a reading can never land on the wrong channel. */
+  code: text("code").unique(),
+  catalogRef: text("catalog_ref"),
+  zoneId: text("zone_id").references(() => zones.id),
+  /** Where it is in the zone: "8,5 m", "HAUT", "PORTE", "LIGNE 2"… (document 2 placement rules). */
+  position: text("position"),
+  mountingHeightM: real("mounting_height_m"),
 });
 
 export const measurements = sqliteTable("measurements", {
@@ -339,6 +369,265 @@ export const measurements = sqliteTable("measurements", {
   deviceId: text("device_id")
     .notNull()
     .references(() => devices.id),
+  createdAt: createdAt(),
+  /** Telemetry columns (null on readings recorded before the ingestion layer existed). */
+  zoneId: text("zone_id"),
+  qualityFlag: text("quality_flag", { enum: READING_FLAG }),
+  attribution: text("attribution", { enum: READING_ATTRIBUTION }),
+  ingestMessageId: text("ingest_message_id"),
+  receivedAt: text("received_at"),
+}, (t) => [
+  // A gateway replaying its buffer resends readings it already sent: same channel, same instant
+  // means same reading. This index is what makes the replay free of duplicates.
+  uniqueIndex("measurements_sensor_captured_uq").on(t.sensorId, t.capturedAt),
+  index("measurements_building_captured_idx").on(t.buildingId, t.capturedAt),
+  index("measurements_lot_idx").on(t.lotId),
+]);
+
+// ---------------------------------------------------------------------------
+// Telemetry — zones, occupation, ingestion, aggregates, rules (client documents 2 and 3)
+// ---------------------------------------------------------------------------
+
+/** A place a lot can occupy and a sensor can measure: part of a building, the run, an incubator, the egg room. */
+export const zones = sqliteTable("zones", {
+  id: id(),
+  farmId: text("farm_id")
+    .notNull()
+    .references(() => farms.id),
+  buildingId: text("building_id").references(() => buildings.id),
+  code: text("code").notNull(),
+  name: text("name").notNull(),
+  kind: text("kind", { enum: ZONE_KIND }).notNull(),
+  createdAt: createdAt(),
+}, (t) => [uniqueIndex("zones_farm_code_uq").on(t.farmId, t.code)]);
+
+/**
+ * "La table qu'on oublie" (document 3, ch. 2): which lot occupied which zone between which
+ * dates. A reading is tied to a lot only through this table, never by guessing from the building.
+ */
+export const zoneOccupations = sqliteTable("zone_occupations", {
+  id: id(),
+  zoneId: text("zone_id")
+    .notNull()
+    .references(() => zones.id),
+  lotId: text("lot_id")
+    .notNull()
+    .references(() => lots.id),
+  startedAt: text("started_at").notNull(),
+  /** Null while the lot is still there. */
+  endedAt: text("ended_at"),
+  headCount: integer("head_count"),
+  note: text("note"),
+  recordedBy: text("recorded_by").references(() => users.id),
+  createdAt: createdAt(),
+}, (t) => [index("zone_occupations_zone_idx").on(t.zoneId, t.startedAt)]);
+
+/**
+ * One uplink from a gateway. A message resent after a lost acknowledgement has the same seq and
+ * the same content, and is recognised as a duplicate. The same seq with different content means
+ * the gateway's counter restarted: the message is accepted (readings still dedupe one by one)
+ * and the restart is reported, which is why the content hash is part of the key.
+ */
+export const ingestMessages = sqliteTable("ingest_messages", {
+  id: id(),
+  gatewayId: text("gateway_id")
+    .notNull()
+    .references(() => devices.id),
+  seq: integer("seq").notNull(),
+  sentAt: text("sent_at").notNull(),
+  receivedAt: text("received_at").notNull(),
+  clockOffsetSeconds: real("clock_offset_seconds"),
+  readingCount: integer("reading_count").notNull(),
+  eventCount: integer("event_count").notNull(),
+  accepted: integer("accepted").notNull(),
+  duplicates: integer("duplicates").notNull(),
+  rejected: integer("rejected").notNull(),
+  flagged: integer("flagged").notNull(),
+  payloadHash: text("payload_hash").notNull(),
+  apiClientId: text("api_client_id"),
+}, (t) => [uniqueIndex("ingest_messages_gateway_seq_hash_uq").on(t.gatewayId, t.seq, t.payloadHash)]);
+
+/** Discrete site events: GSM alarm, safety thermostat, doors and badges, power, camera stills (document 2: L01, L03, O01, F02). */
+export const siteEvents = sqliteTable("site_events", {
+  id: id(),
+  deviceId: text("device_id")
+    .notNull()
+    .references(() => devices.id),
+  buildingId: text("building_id")
+    .notNull()
+    .references(() => buildings.id),
+  zoneId: text("zone_id"),
+  lotId: text("lot_id"),
+  kind: text("kind", { enum: SITE_EVENT_KIND }).notNull(),
+  occurredAt: text("occurred_at").notNull(),
+  /** Badge holder reference for access events — never a name copied from elsewhere. */
+  badge: text("badge"),
+  /** Camera stills and short clips stay on site; only this reference is kept centrally (document 3, ch. 8). */
+  mediaRef: text("media_ref"),
+  payload: text("payload", { mode: "json" }),
+  ingestMessageId: text("ingest_message_id"),
+  createdAt: createdAt(),
+}, (t) => [
+  uniqueIndex("site_events_device_kind_at_uq").on(t.deviceId, t.kind, t.occurredAt),
+  index("site_events_building_at_idx").on(t.buildingId, t.occurredAt),
+]);
+
+/**
+ * Retention tiers (document 3, ch. 3): 15-minute buckets kept two years, hourly kept forever.
+ * count/sum/sumSq make buckets mergeable, so an hour is computed exactly from its quarters and
+ * the standard deviation survives the purge of raw readings. `expected` is what the sensor's
+ * acquisition interval promises, so availability = count / expected.
+ */
+export const measurementAggregates = sqliteTable("measurement_aggregates", {
+  id: id(),
+  sensorId: text("sensor_id")
+    .notNull()
+    .references(() => sensors.id),
+  granularity: text("granularity", { enum: AGGREGATE_GRANULARITY }).notNull(),
+  bucketStart: text("bucket_start").notNull(),
+  buildingId: text("building_id").notNull(),
+  zoneId: text("zone_id"),
+  lotId: text("lot_id"),
+  count: integer("count").notNull(),
+  expected: integer("expected"),
+  suspectCount: integer("suspect_count").notNull(),
+  sum: real("sum").notNull(),
+  sumSq: real("sum_sq").notNull(),
+  min: real("min"),
+  max: real("max"),
+}, (t) => [
+  uniqueIndex("aggregates_sensor_gran_bucket_uq").on(t.sensorId, t.granularity, t.bucketStart),
+  index("aggregates_lot_idx").on(t.lotId, t.granularity),
+]);
+
+/**
+ * Reference bands, editable without redeploying (document 3, ch. 1 and 4). A change never
+ * edits a row: it adds a version and marks the previous one REMPLACEE, so the band in force
+ * at any past instant can be shown next to the alert it produced.
+ */
+export const referenceBands = sqliteTable("reference_bands", {
+  id: id(),
+  sensorType: text("sensor_type", { enum: SENSOR_TYPE }).notNull(),
+  /** Production line the band applies to, or "*" for all. */
+  productionLine: text("production_line").notNull(),
+  ageDayFrom: integer("age_day_from").notNull(),
+  ageDayTo: integer("age_day_to").notNull(),
+  season: text("season", { enum: SEASON }).notNull(),
+  low: real("low").notNull(),
+  high: real("high").notNull(),
+  unit: text("unit").notNull(),
+  source: text("source", { enum: BAND_SOURCE }).notNull(),
+  status: text("status", { enum: BAND_STATUS }).notNull(),
+  version: integer("version").notNull(),
+  lotsUsed: integer("lots_used"),
+  samples: integer("samples"),
+  learnedFrom: text("learned_from", { mode: "json" }).$type<string[]>(),
+  supersedesId: text("supersedes_id"),
+  note: text("note"),
+  createdBy: text("created_by").references(() => users.id),
+  createdAt: createdAt(),
+  decidedBy: text("decided_by").references(() => users.id),
+  decidedAt: text("decided_at"),
+});
+
+/** Per-rule parameters (thresholds, delays, light programme), global or per building — set from the screen, not in code. */
+export const ruleSettings = sqliteTable("rule_settings", {
+  id: id(),
+  ruleCode: text("rule_code").notNull(),
+  /** Null = the default for every building. */
+  buildingId: text("building_id"),
+  params: text("params", { mode: "json" }).$type<Record<string, number | string>>().notNull(),
+  updatedBy: text("updated_by").references(() => users.id),
+  updatedAt: text("updated_at").notNull(),
+}, (t) => [uniqueIndex("rule_settings_rule_building_uq").on(t.ruleCode, t.buildingId)]);
+
+/** Current state of one rule on one subject (a sensor, a zone pair, a building). */
+export const ruleStates = sqliteTable("rule_states", {
+  id: id(),
+  ruleCode: text("rule_code").notNull(),
+  subjectKey: text("subject_key").notNull(),
+  buildingId: text("building_id").notNull(),
+  state: text("state", { enum: RULE_STATE }).notNull(),
+  since: text("since").notNull(),
+  openAlertId: text("open_alert_id"),
+  /** Running memory some rules need between steps (cumulative exposure, last delivery…). */
+  memory: text("memory", { mode: "json" }).$type<Record<string, number | string | null>>(),
+}, (t) => [uniqueIndex("rule_states_rule_subject_uq").on(t.ruleCode, t.subjectKey)]);
+
+/** Evaluation progress per building: rules have looked at every reading up to `evaluatedUntil`. */
+export const ruleWatermarks = sqliteTable("rule_watermarks", {
+  buildingId: text("building_id").primaryKey(),
+  evaluatedUntil: text("evaluated_until").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
+/** Every change of state, and only those: the state at any instant is rebuilt from here (document 3, ch. 3). */
+export const ruleTransitions = sqliteTable("rule_transitions", {
+  id: id(),
+  ruleCode: text("rule_code").notNull(),
+  subjectKey: text("subject_key").notNull(),
+  buildingId: text("building_id").notNull(),
+  lotId: text("lot_id"),
+  fromState: text("from_state", { enum: RULE_STATE }).notNull(),
+  toState: text("to_state", { enum: RULE_STATE }).notNull(),
+  at: text("at").notNull(),
+  value: real("value"),
+  referenceLow: real("reference_low"),
+  referenceHigh: real("reference_high"),
+  bandId: text("band_id"),
+  diagnosis: text("diagnosis").notNull(),
+  context: text("context", { mode: "json" }).$type<Record<string, unknown>>(),
+  alertId: text("alert_id"),
+  createdAt: createdAt(),
+}, (t) => [index("rule_transitions_building_at_idx").on(t.buildingId, t.at)]);
+
+/** Who was told about an alert, by which channel, and whether it actually left. */
+export const alertNotifications = sqliteTable("alert_notifications", {
+  id: id(),
+  alertId: text("alert_id")
+    .notNull()
+    .references(() => alerts.id),
+  level: integer("level").notNull(),
+  recipientId: text("recipient_id").references(() => users.id),
+  channel: text("channel", { enum: NOTIFICATION_CHANNEL }).notNull(),
+  status: text("status", { enum: NOTIFICATION_STATUS }).notNull(),
+  detail: text("detail"),
+  sentAt: text("sent_at").notNull(),
+});
+
+/** Calibration register (document 3, lot 6): date, method, reference, result, next due date, evidence. */
+export const sensorCalibrations = sqliteTable("sensor_calibrations", {
+  id: id(),
+  sensorId: text("sensor_id")
+    .notNull()
+    .references(() => sensors.id),
+  calibratedAt: text("calibrated_at").notNull(),
+  method: text("method").notNull(),
+  referenceInstrument: text("reference_instrument").notNull(),
+  referenceValue: real("reference_value").notNull(),
+  measuredValue: real("measured_value").notNull(),
+  offsetApplied: real("offset_applied"),
+  tolerance: real("tolerance").notNull(),
+  result: text("result", { enum: CALIBRATION_RESULT }).notNull(),
+  nextDueAt: text("next_due_at").notNull(),
+  performedBy: text("performed_by")
+    .notNull()
+    .references(() => users.id),
+  evidenceRef: text("evidence_ref").notNull(),
+  createdAt: createdAt(),
+}, (t) => [index("sensor_calibrations_sensor_idx").on(t.sensorId, t.calibratedAt)]);
+
+/** An egg logger's trip (document 2, H03): from the laying house to setting, it travels with one egg lot. */
+export const eggLoggerMissions = sqliteTable("egg_logger_missions", {
+  id: id(),
+  sensorId: text("sensor_id")
+    .notNull()
+    .references(() => sensors.id),
+  eggLotId: text("egg_lot_id")
+    .notNull()
+    .references(() => eggLots.id),
+  startedAt: text("started_at").notNull(),
+  endedAt: text("ended_at"),
   createdAt: createdAt(),
 });
 
@@ -408,6 +697,11 @@ export const alerts = sqliteTable("alerts", {
   assignedTo: text("assigned_to").references(() => users.id),
   raisedAt: text("raised_at").notNull(),
   resolvedAt: text("resolved_at"),
+  /** Escalation (document 3, lot 7): level reached, and when the next level is due if nobody acknowledges. */
+  escalationLevel: integer("escalation_level").notNull().default(1),
+  nextEscalationAt: text("next_escalation_at"),
+  /** Set when closed: was the alert right? Without it the history teaches nothing (document 3, ch. 4). */
+  outcome: text("outcome", { enum: ALERT_OUTCOME }),
 });
 
 export const actionRecords = sqliteTable("actions", {
@@ -713,6 +1007,8 @@ export const apiClients = sqliteTable("api_clients", {
   createdAt: createdAt(),
   lastUsedAt: text("last_used_at"),
   revokedAt: text("revoked_at"),
+  /** A gateway key may post only for this gateway. Null for an integration server serving several. */
+  deviceId: text("device_id"),
 });
 
 // ---------------------------------------------------------------------------

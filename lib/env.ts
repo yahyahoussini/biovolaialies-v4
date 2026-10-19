@@ -113,6 +113,10 @@ const envSchema = z
     LEADS_NOTIFY_FROM: z.string().min(3).optional(),
     /** Optional HMAC key for signing ledger anchors; falls back to SESSION_SECRET. */
     LEDGER_ANCHOR_KEY: z.string().min(32).optional(),
+    /** Sender of alert e-mails (Resend). With RESEND_API_KEY set, alert recipients are e-mailed; otherwise the notification is recorded as not configured. */
+    ALERTS_NOTIFY_FROM: z.string().min(3).optional(),
+    /** Shared secret the scheduler sends (Authorization: Bearer …) to run the telemetry jobs route. Without it the route is closed. */
+    CRON_SECRET: z.string().min(16).optional(),
   })
   .transform((raw) => ({
     ...raw,

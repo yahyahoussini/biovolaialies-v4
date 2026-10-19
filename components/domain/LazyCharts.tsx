@@ -36,3 +36,8 @@ export const PerformanceTrendChart = dynamic(
   () => import("./PerformanceTrendChart").then((m) => m.PerformanceTrendChart),
   { ssr: false, loading: ChartFallback }
 );
+
+export const MultiLineChart = dynamic(
+  () => import("./MultiLineChart").then((m) => m.MultiLineChart),
+  { ssr: false, loading: ChartFallback }
+);

@@ -8,7 +8,7 @@ import type { SeededHierarchy } from "./hierarchy";
 const simulator = new DeterministicSensorSimulator();
 const NOW = new Date("2026-08-16T12:00:00.000Z");
 
-const SENSOR_UNIT: Record<SensorType, string> = {
+const SENSOR_UNIT: Partial<Record<SensorType, string>> = {
   TEMPERATURE: "C",
   HUMIDITE: "%",
   CO2: "PPM",
@@ -93,7 +93,7 @@ export async function seedIot(hierarchy: SeededHierarchy): Promise<void> {
       const sensor = await repositories.sensors.create({
         deviceId: device.id,
         sensorType,
-        unit: SENSOR_UNIT[sensorType],
+        unit: SENSOR_UNIT[sensorType] ?? "",
         status: isFaultDemo ? "FAULT" : seed.degraded ? "OFFLINE" : "ONLINE",
         configuration: { intervalMinutes: seed.intervalMinutes },
       });

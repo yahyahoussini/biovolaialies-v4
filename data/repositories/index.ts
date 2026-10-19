@@ -22,6 +22,23 @@ import {
 import { DrizzleShipmentRepository } from "./shipment.repository";
 import { DrizzleApiClientRepository } from "./api-client.repository";
 import { DrizzleEquipmentRepository } from "./equipment.repository";
+import {
+  DrizzleAggregateRepository,
+  DrizzleAlertNotificationRepository,
+  DrizzleCalibrationRepository,
+  DrizzleEggLoggerMissionRepository,
+  DrizzleIngestMessageRepository,
+  DrizzleReferenceBandRepository,
+  DrizzleRuleSettingsRepository,
+  DrizzleRuleStateRepository,
+  DrizzleRuleTransitionRepository,
+  DrizzleRuleWatermarkRepository,
+  DrizzleSiteEventRepository,
+  DrizzleTelemetryReadingRepository,
+  DrizzleTelemetrySensorRepository,
+  DrizzleZoneOccupationRepository,
+  DrizzleZoneRepository,
+} from "./telemetry.repository";
 import { DrizzleKpiDefinitionRepository } from "./kpi-definition.repository";
 import { DrizzleKpiValueRepository } from "./kpi-value.repository";
 import { DrizzleLotEventRepository } from "./lot-event.repository";
@@ -89,4 +106,19 @@ export const repositories = {
   shipments: new DrizzleShipmentRepository(),
   apiClients: new DrizzleApiClientRepository(),
   equipment: new DrizzleEquipmentRepository(),
+  zones: new DrizzleZoneRepository(),
+  zoneOccupations: new DrizzleZoneOccupationRepository(),
+  readings: new DrizzleTelemetryReadingRepository(),
+  telemetrySensors: new DrizzleTelemetrySensorRepository(),
+  ingestMessages: new DrizzleIngestMessageRepository(),
+  siteEvents: new DrizzleSiteEventRepository(),
+  aggregates: new DrizzleAggregateRepository(),
+  bands: new DrizzleReferenceBandRepository(),
+  ruleSettings: new DrizzleRuleSettingsRepository(),
+  ruleStates: new DrizzleRuleStateRepository(),
+  ruleWatermarks: new DrizzleRuleWatermarkRepository(),
+  ruleTransitions: new DrizzleRuleTransitionRepository(),
+  alertNotifications: new DrizzleAlertNotificationRepository(),
+  calibrations: new DrizzleCalibrationRepository(),
+  eggLoggerMissions: new DrizzleEggLoggerMissionRepository(),
 };

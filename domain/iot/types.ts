@@ -1,11 +1,11 @@
-import type { DeviceStatus, SensorType } from "../shared/enums";
+import type { DeviceStatus, DeviceType, ReadingAttribution, ReadingFlag, SensorType } from "../shared/enums";
 import type { ProvenanceFields } from "../shared/provenance";
 
 export interface Device {
   id: string;
   buildingId: string;
   code: string;
-  type: "CAPTEUR_MULTI" | "PASSERELLE";
+  type: DeviceType;
   status: DeviceStatus;
   installedAt: string;
   lastCommunicationAt: string | null;
@@ -13,6 +13,11 @@ export interface Device {
   batteryLevel: number | null;
   /** 0-100, null when not applicable to this device's connectivity. */
   signalQuality: number | null;
+  /** Telemetry fields (client documents 2 and 3); absent on devices recorded before them. */
+  catalogRef?: string | null;
+  gatewayId?: string | null;
+  clockOffsetSeconds?: number | null;
+  lastClockSyncAt?: string | null;
 }
 
 export interface Sensor {
@@ -23,6 +28,12 @@ export interface Sensor {
   /** A sensor can individually fault even while its parent device is ONLINE — reuses DeviceStatus rather than a new enum. */
   status: DeviceStatus;
   configuration: Record<string, unknown> | null;
+  /** Identifier the gateway sends for this channel. */
+  code?: string | null;
+  catalogRef?: string | null;
+  zoneId?: string | null;
+  position?: string | null;
+  mountingHeightM?: number | null;
 }
 
 /**
@@ -38,6 +49,11 @@ export interface Measurement extends Omit<ProvenanceFields, "deviceId"> {
   value: number;
   unit: string;
   capturedAt: string;
+  zoneId?: string | null;
+  qualityFlag?: ReadingFlag | null;
+  attribution?: ReadingAttribution | null;
+  ingestMessageId?: string | null;
+  receivedAt?: string | null;
 }
 
 export type NewDevice = Omit<Device, "id">;

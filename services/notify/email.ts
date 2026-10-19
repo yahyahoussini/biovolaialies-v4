@@ -41,3 +41,26 @@ export async function sendInternalNotification(message: EmailMessage): Promise<b
     return false;
   }
 }
+
+export function isAlertEmailConfigured(): boolean {
+  return Boolean(env.RESEND_API_KEY && (env.ALERTS_NOTIFY_FROM ?? env.LEADS_NOTIFY_FROM));
+}
+
+/** Sends one plain-text e-mail to the given people. Never throws; returns whether the provider accepted it. */
+export async function sendEmailTo(to: string[], message: EmailMessage): Promise<boolean> {
+  const from = env.ALERTS_NOTIFY_FROM ?? env.LEADS_NOTIFY_FROM;
+  if (!env.RESEND_API_KEY || !from || to.length === 0) return false;
+  try {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ from, to, subject: message.subject, text: message.text }),
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!response.ok) logger.warn("general", `Alert e-mail refused by provider (HTTP ${response.status}).`);
+    return response.ok;
+  } catch (error) {
+    logger.error("general", "Alert e-mail failed", error);
+    return false;
+  }
+}

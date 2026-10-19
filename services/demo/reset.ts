@@ -1,6 +1,7 @@
 import { truncateAllTables } from "../../data/db/truncate";
 import { repositories } from "../../data/repositories";
 import { seedDatabase } from "../../data/seed/seed-database";
+import { clearTelemetrySeriesCache } from "../telemetry/evaluate";
 import { AuthorizationError, ConflictError } from "../../domain/shared/errors";
 import { can } from "../../domain/shared/permissions";
 import { env } from "../../lib/env";
@@ -47,7 +48,8 @@ export async function resetDemoScenario(session: Session): Promise<DemoResetResu
 
   logger.warn("demo", `Demo reset requested by user ${session.userId} — wiping and reseeding.`);
   await truncateAllTables();
-  const result = await seedDatabase();
+  clearTelemetrySeriesCache();
+  const result = await seedDatabase({ lightTelemetry: true });
 
   await recordAudit({
     actorId: null, // the acting user's row was just deleted and recreated with a new id; attributing to a stale id would dangle

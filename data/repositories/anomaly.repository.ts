@@ -43,4 +43,8 @@ export class DrizzleAnomalyRepository implements AnomalyRepository {
     if (!row) throw new NotFoundError("Anomaly", id);
     return row as Anomaly;
   }
+
+  async updateSeverity(id: string, severity: Anomaly["severity"]): Promise<void> {
+    await db.update(anomalies).set({ severity }).where(eq(anomalies.id, id));
+  }
 }

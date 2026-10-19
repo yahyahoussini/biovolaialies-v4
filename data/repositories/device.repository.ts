@@ -32,6 +32,14 @@ export class DrizzleDeviceRepository implements DeviceRepository {
     return row;
   }
 
+  async attach(id: string, patch: { catalogRef: string | null; gatewayId: string | null }): Promise<void> {
+    await db.update(devices).set(patch).where(eq(devices.id, id));
+  }
+
+  async setClock(id: string, clockOffsetSeconds: number, at: string): Promise<void> {
+    await db.update(devices).set({ clockOffsetSeconds, lastClockSyncAt: at }).where(eq(devices.id, id));
+  }
+
   async update(
     id: string,
     patch: Partial<Pick<Device, "status" | "lastCommunicationAt" | "batteryLevel" | "signalQuality">>

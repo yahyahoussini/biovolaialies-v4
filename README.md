@@ -79,10 +79,10 @@ Every visitor to the link gets the complete demo dataset — the seven accounts 
 [DEMO_RUNBOOK.md](DEMO_RUNBOOK.md) §1, 12 lots, the IoT history, the anomaly scenario, the public QR
 passports — and can sign in.
 
-**How it works.** The seeded SQLite database is committed at `data/demo/snapshot.db` and traced into
-every server route (`next.config.ts`). On a serverless host with no `DATABASE_URL` configured, the
-app copies it into the function's writable temp directory on cold start and runs from there
-(`data/db/client.ts`).
+**How it works.** The seeded SQLite database is committed gzipped at `data/demo/snapshot.db.gz`
+(about 4 MB; 23 MB once unpacked, mostly telemetry) and traced into every server route
+(`next.config.ts`). On a serverless host with no `DATABASE_URL` configured, the app unpacks it into
+the function's writable temp directory on cold start and runs from there (`data/db/client.ts`).
 
 **What that means.** Reads are exactly the local experience. Writes — creating a lot, acknowledging
 an alert, a sign-in timestamp — land in that instance's copy and last as long as it stays warm;
@@ -90,23 +90,14 @@ a cold start begins again from the pristine snapshot. For a demo that is a featu
 and no visitor can break it for the next one. It is *not* a persistent database — for that, see the
 next section.
 
-**Refreshing the snapshot** after a schema or seed change, then commit the file:
-
-```powershell
-# PowerShell
-Remove-Item data/demo/snapshot.db
-$env:DATABASE_URL="file:./data/demo/snapshot.db"
-npm run db:migrate; npm run db:seed
-```
+**Refreshing the snapshot** after a schema or seed change, then commit the `.gz`:
 
 ```bash
-# bash / zsh
-rm data/demo/snapshot.db
-DATABASE_URL="file:./data/demo/snapshot.db" npm run db:migrate
-DATABASE_URL="file:./data/demo/snapshot.db" npm run db:seed
+npm run demo:snapshot   # fresh database, every migration, full seed, VACUUM, gzip (≈ 40 s)
 ```
 
-(Shell variables beat `.env.local` here — these scripts never override a variable already set.)
+In the snapshot, raw telemetry readings are kept for the last 6 hours only (production keeps 90
+days); the 15-minute and hourly buckets cover the whole simulated window. The audit trail says so.
 
 `DEMO_MODE` stays off in production by default; leave it that way. The presenter reset it gates
 replays the whole seed, and the snapshot already resets itself for free.

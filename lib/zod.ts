@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { fr } from "zod/locales";
+import { ValidationError } from "../domain/shared/errors";
 
 /**
  * zod with French built-in messages. Every server-side schema imports `z` from here.
@@ -12,3 +13,10 @@ import { fr } from "zod/locales";
 z.config({ customError: fr().localeError });
 
 export { z };
+
+/** Parses or throws the domain's ValidationError (French messages), never a raw ZodError. */
+export function parseInput<T>(schema: z.ZodType<T>, input: unknown): T {
+  const parsed = schema.safeParse(input);
+  if (!parsed.success) throw new ValidationError(parsed.error.issues.map((i) => i.message).join(" "));
+  return parsed.data;
+}

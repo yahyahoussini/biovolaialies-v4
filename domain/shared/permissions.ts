@@ -110,7 +110,8 @@ const PERMISSIONS: Record<Role, Partial<Record<Module, readonly Action[]>>> = {
   TECHNICIAN: {
     BUILDINGS: READ_ONLY,
     LOTS: ["VIEW", "EDIT"],
-    IOT: ["VIEW", "EDIT"],
+    /** VALIDATE: reference bands and rule settings — the poultry technician's call (document 3, ch. 4). */
+    IOT: ["VIEW", "EDIT", "VALIDATE"],
     ANOMALIES: ["VIEW", "VALIDATE"],
     ALERTS: ["VIEW", "ACKNOWLEDGE"],
     ACTIONS: ["VIEW", "CREATE"],

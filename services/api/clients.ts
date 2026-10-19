@@ -18,6 +18,8 @@ export function hashApiKey(key: string): string {
 export const createApiClientSchema = z.object({
   name: z.string().trim().min(3).max(100),
   scopes: z.array(z.enum(API_SCOPE)).min(1, "Choisissez au moins un droit."),
+  /** Code of the gateway the key is bound to (telemetry keys). Optional. */
+  gatewayCode: z.string().trim().max(80).optional().nullable(),
 });
 
 export async function createApiClient(input: unknown, session: Session): Promise<{ client: ApiClient; key: string }> {
@@ -25,6 +27,12 @@ export async function createApiClient(input: unknown, session: Session): Promise
   const parsed = createApiClientSchema.safeParse(input);
   if (!parsed.success) throw new ValidationError(parsed.error.issues.map((i) => i.message).join(" "));
 
+  let deviceId: string | null = null;
+  if (parsed.data.gatewayCode) {
+    const gateway = await repositories.devices.findByCode(parsed.data.gatewayCode);
+    if (!gateway || gateway.type !== "PASSERELLE") throw new ValidationError("Ce code ne désigne aucune passerelle.");
+    deviceId = gateway.id;
+  }
   const key = `${KEY_PREFIX}${randomBytes(32).toString("base64url")}`;
   const client = await repositories.apiClients.create({
     name: parsed.data.name,
@@ -32,6 +40,7 @@ export async function createApiClient(input: unknown, session: Session): Promise
     keyHash: hashApiKey(key),
     scopes: [...new Set(parsed.data.scopes)],
     createdBy: session.userId,
+    deviceId,
   });
   await recordAudit({
     actorId: session.userId,
@@ -74,5 +83,10 @@ export async function authenticateApiKey(authorization: string | null): Promise<
   // Constant-time confirmation of the stored hash (the lookup itself is by exact match).
   if (!timingSafeEqual(Buffer.from(client.keyHash, "hex"), Buffer.from(hash, "hex"))) return null;
   await repositories.apiClients.touch(client.id, new Date().toISOString());
-  return { clientId: client.id, name: client.name, scopes: client.scopes.filter((s): s is ApiScope => (API_SCOPE as readonly string[]).includes(s)) };
+  return {
+    clientId: client.id,
+    name: client.name,
+    scopes: client.scopes.filter((s): s is ApiScope => (API_SCOPE as readonly string[]).includes(s)),
+    deviceId: client.deviceId ?? null,
+  };
 }

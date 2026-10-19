@@ -11,9 +11,11 @@ export interface ApiClient {
   createdAt: string;
   lastUsedAt: string | null;
   revokedAt: string | null;
+  /** Gateway this key is bound to; it may then post telemetry for that gateway only. */
+  deviceId: string | null;
 }
 
-export type NewApiClient = Omit<ApiClient, "id" | "createdAt" | "lastUsedAt" | "revokedAt" | "active">;
+export type NewApiClient = Omit<ApiClient, "id" | "createdAt" | "lastUsedAt" | "revokedAt" | "active" | "deviceId"> & { deviceId?: string | null };
 
 export interface ApiClientRepository {
   create(input: NewApiClient): Promise<ApiClient>;
@@ -29,4 +31,6 @@ export interface ApiPrincipal {
   clientId: string;
   name: string;
   scopes: ApiScope[];
+  /** Set when the key is bound to one gateway. */
+  deviceId?: string | null;
 }

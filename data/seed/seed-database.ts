@@ -12,6 +12,7 @@ import { seedIot } from "./generators/iot";
 import { seedLots } from "./generators/lots";
 import { seedEquipmentReference } from "../../services/equipment/equipment";
 import { seedUpstreamChain } from "./generators/upstream-chain";
+import { seedTelemetry } from "./generators/telemetry";
 import { seedVerifiedTraceabilityChain, VERIFIED_LOT_CODE } from "./generators/verified-traceability-chain";
 
 /** Fixed reference times for seed-time rule evaluation — deterministic and reproducible regardless of when the seed actually runs (same reasoning as phase-4's services/iot/hero-scenario.ts). */
@@ -53,6 +54,8 @@ export interface SeedOptions {
    * documented start state.
    */
   withoutHeroAnomaly?: boolean;
+  /** 8 hours of telemetry instead of 56 — for the in-app reset, which must fit in one request. */
+  lightTelemetry?: boolean;
 }
 
 export async function seedDatabase(options: SeedOptions = {}): Promise<SeedResult> {
@@ -118,6 +121,9 @@ export async function seedDatabase(options: SeedOptions = {}): Promise<SeedResul
     verifiedProductId: verified.productId,
     adminSession,
   });
+
+  logger.info("seed", "Seeding telemetry (documents 2 and 3): reference beldi building, hatchery probes, 56 h of simulated gateway traffic with an outage and its catch-up…");
+  await seedTelemetry({ heroProducerId: hierarchy.heroProducerId, adminSession, light: options.lightTelemetry });
 
   logger.info("seed", "Generating the hero public QR passports (lot + product)…");
   // Pinned so a demo reset restores the exact same public URLs (phase-12 brief §5/§7) —

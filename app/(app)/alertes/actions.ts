@@ -34,10 +34,10 @@ export async function acknowledgeAlertAction(alertId: string, comment?: string):
   }
 }
 
-export async function resolveAlertAction(alertId: string, comment?: string): Promise<ActionResult> {
+export async function resolveAlertAction(alertId: string, comment?: string, outcome?: string): Promise<ActionResult> {
   try {
     const session = await requireSession();
-    await resolveAlert(alertId, session, comment);
+    await resolveAlert(alertId, session, comment, outcome);
     await revalidateAfterAlertChange(alertId);
     return { ok: true };
   } catch (error) {
@@ -45,10 +45,10 @@ export async function resolveAlertAction(alertId: string, comment?: string): Pro
   }
 }
 
-export async function dismissAlertAction(alertId: string, comment?: string): Promise<ActionResult> {
+export async function dismissAlertAction(alertId: string, comment?: string, outcome?: string): Promise<ActionResult> {
   try {
     const session = await requireSession();
-    await dismissAlert(alertId, session, comment);
+    await dismissAlert(alertId, session, comment, outcome);
     await revalidateAfterAlertChange(alertId);
     return { ok: true };
   } catch (error) {

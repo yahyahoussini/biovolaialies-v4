@@ -70,6 +70,18 @@ export function buildOpenApiDocument(serverUrl: string) {
             correlationId: { type: "string" },
           },
         },
+        GatewayMessage: {
+          type: "object",
+          required: ["gateway", "seq", "sentAt"],
+          properties: {
+            gateway: { type: "string", description: "Code de la passerelle (ex. GW-BAT01)." },
+            seq: { type: "integer", minimum: 0, description: "Compteur de messages, conservé à travers les redémarrages." },
+            sentAt: { type: "string", format: "date-time", description: "Heure d'ENVOI (horloge passerelle) ; sert à mesurer sa dérive." },
+            simulated: { type: "boolean", description: "Simulateur uniquement : données stockées comme SIMULATION." },
+            readings: { type: "array", maxItems: 5000, items: { type: "object", required: ["sensor", "at", "value"], properties: { sensor: { type: "string", description: "Code de voie (ex. BAT01-A01-1-T)." }, at: { type: "string", format: "date-time" }, value: { type: "number" } } } },
+            events: { type: "array", maxItems: 500, items: { type: "object", required: ["device", "kind", "at"], properties: { device: { type: "string" }, kind: { type: "string" }, at: { type: "string", format: "date-time" }, badge: { type: "string" }, mediaRef: { type: "string", description: "Référence d'une image ou séquence conservée sur site." }, data: { type: "object" } } } },
+          },
+        },
         Event: {
           type: "object",
           required: ["eventType", "objectType", "occurredAt"],
@@ -155,6 +167,37 @@ export function buildOpenApiDocument(serverUrl: string) {
             content: { "application/json": { schema: { type: "object", required: ["sourceSystem", "schemaVersion", "batchId", "records"], properties: { sourceSystem: { type: "string" }, schemaVersion: { type: "integer" }, batchId: { type: "string" }, records: { type: "array", maxItems: 500, items: { $ref: "#/components/schemas/Event" } } } } } },
           },
           responses: { "207": { description: "Résultat par enregistrement { accepted, duplicates, rejected, results[] }" }, "422": { description: "Tous les enregistrements rejetés", content: { "application/json": { schema: error } } }, ...errors([400, 401, 403, 429, 500]) },
+        },
+      },
+      "/telemetry/gateway": {
+        post: {
+          operationId: "gatewayUplink",
+          summary: "Passerelle de terrain — mesures et événements de site, en direct ou en rattrapage (jusqu'à 250 messages par requête)",
+          "x-scope": "telemetry:write",
+          description:
+            "Un message par période de remontée (2 min). Après une coupure, la passerelle renvoie son tampon (30 jours) : mêmes messages, même `seq`, `sentAt` = heure d'envoi. " +
+            "Un message déjà reçu est reconnu (gateway + seq + contenu) ; une mesure déjà stockée (voie + horodatage) n'est jamais écrite deux fois. " +
+            "Aucune mesure lisible n'est rejetée pour sa valeur : elle est stockée avec un indicateur (HORLOGE, HORS_PLAGE_PHYSIQUE, CAPTEUR_HORS_SERVICE, ETALONNAGE_ECHU, SUSPECT) et exclue des moyennes et des règles. " +
+            "Une clé liée à une passerelle ne peut parler que pour elle.",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  oneOf: [
+                    { $ref: "#/components/schemas/GatewayMessage" },
+                    { type: "object", required: ["messages"], properties: { messages: { type: "array", maxItems: 250, items: { $ref: "#/components/schemas/GatewayMessage" } } } },
+                  ],
+                },
+              },
+            },
+          },
+          responses: {
+            "200": { description: "{ results[] } : par message, status accepted|duplicate, seqReused, clockOffsetSeconds, mesures acceptées / doublons / rejetées / signalées" },
+            "207": { description: "Certains messages refusés (results[].status = rejected, results[].error)" },
+            "422": { description: "Tous les messages refusés" },
+            ...errors([400, 401, 403, 413, 429, 500]),
+          },
         },
       },
       "/quality/holds": {

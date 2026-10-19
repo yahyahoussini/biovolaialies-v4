@@ -46,6 +46,7 @@ export interface AnomalyRepository {
   listByBuilding(buildingId: string): Promise<Anomaly[]>;
   create(input: NewAnomaly): Promise<Anomaly>;
   updateStatus(id: string, status: AnomalyStatus): Promise<Anomaly>;
+  updateSeverity(id: string, severity: Anomaly["severity"]): Promise<void>;
 }
 
 export interface AlertRepository {
@@ -56,6 +57,10 @@ export interface AlertRepository {
   listByAnomalyIds(anomalyIds: string[]): Promise<Alert[]>;
   create(input: NewAlert): Promise<Alert>;
   updateStatus(id: string, status: Alert["status"], resolvedAt: string | null): Promise<Alert>;
+  setEscalation(id: string, level: number, nextEscalationAt: string | null): Promise<void>;
+  setOutcome(id: string, outcome: NonNullable<Alert["outcome"]>): Promise<void>;
+  /** Open (not acknowledged) alerts whose next escalation has fallen due. */
+  listDueForEscalation(now: string): Promise<Alert[]>;
 }
 
 export interface ActionRecordRepository {

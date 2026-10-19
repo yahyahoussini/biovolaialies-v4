@@ -1,4 +1,4 @@
-import type { AlertSeverity, AlertStatus, AnomalyStatus, DataStatus } from "../shared/enums";
+import type { AlertOutcome, AlertSeverity, AlertStatus, AnomalyStatus, DataStatus } from "../shared/enums";
 
 export interface KpiDefinition {
   id: string;
@@ -86,6 +86,11 @@ export interface Alert {
   assignedTo: string | null;
   raisedAt: string;
   resolvedAt: string | null;
+  /** Escalation reached and next due (telemetry alerts); defaults to level 1, none due. */
+  escalationLevel?: number;
+  nextEscalationAt?: string | null;
+  /** Whether the alert was right, recorded when it is closed. */
+  outcome?: AlertOutcome | null;
 }
 
 /** A human's response to an alert/anomaly. Named ActionRecord to avoid clashing with the RBAC `Action` verb type. */

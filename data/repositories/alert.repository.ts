@@ -1,4 +1,4 @@
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, lte } from "drizzle-orm";
 import type { AlertRepository } from "../../domain/intelligence/repositories";
 import type { Alert, NewAlert } from "../../domain/intelligence/types";
 import { NotFoundError } from "../../domain/shared/errors";
@@ -37,5 +37,19 @@ export class DrizzleAlertRepository implements AlertRepository {
     const [row] = await db.update(alerts).set({ status, resolvedAt }).where(eq(alerts.id, id)).returning();
     if (!row) throw new NotFoundError("Alert", id);
     return row;
+  }
+
+  async setEscalation(id: string, level: number, nextEscalationAt: string | null): Promise<void> {
+    await db.update(alerts).set({ escalationLevel: level, nextEscalationAt }).where(eq(alerts.id, id));
+  }
+
+  async setOutcome(id: string, outcome: NonNullable<Alert["outcome"]>): Promise<void> {
+    await db.update(alerts).set({ outcome }).where(eq(alerts.id, id));
+  }
+
+  async listDueForEscalation(now: string): Promise<Alert[]> {
+    return db.query.alerts.findMany({
+      where: and(eq(alerts.status, "OPEN"), isNotNull(alerts.nextEscalationAt), lte(alerts.nextEscalationAt, now)),
+    });
   }
 }

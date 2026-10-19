@@ -11,6 +11,10 @@ export interface DeviceRepository {
     id: string,
     patch: Partial<Pick<Device, "status" | "lastCommunicationAt" | "batteryLevel" | "signalQuality">>
   ): Promise<Device>;
+  /** Sets the catalogue reference and the gateway a device reports through. */
+  attach(id: string, patch: { catalogRef: string | null; gatewayId: string | null }): Promise<void>;
+  /** Gateways: records the clock offset measured on the last message. */
+  setClock(id: string, clockOffsetSeconds: number, at: string): Promise<void>;
 }
 
 export interface SensorRepository {

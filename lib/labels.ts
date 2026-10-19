@@ -1,3 +1,4 @@
+import { SENSOR_TYPE_LABEL } from "../domain/telemetry/labels";
 import type {
   DeviceStatus,
   MeasurementSourceType,
@@ -85,15 +86,7 @@ export const VALIDATION_STATUS_LABEL: Record<ValidationStatus, string> = {
   REJETE: "Rejeté",
 };
 
-export const MEASUREMENT_TYPE_LABEL: Record<SensorType, string> = {
-  TEMPERATURE: "Température",
-  HUMIDITE: "Humidité",
-  CO2: "CO₂",
-  EAU: "Eau",
-  ALIMENT: "Aliment",
-  POIDS: "Poids",
-  LUMIERE: "Luminosité",
-};
+export const MEASUREMENT_TYPE_LABEL: Record<SensorType, string> = SENSOR_TYPE_LABEL;
 
 /**
  * Traceability vocabulary in French. The graph and timeline previously printed the raw
