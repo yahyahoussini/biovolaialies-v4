@@ -14,7 +14,7 @@ export function MeasurementChart({ points, unit, label = "Valeur" }: { points: C
     .slice()
     .reverse()
     .map((point) => ({
-      time: new Date(point.capturedAt).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }),
+      time: new Date(point.capturedAt).toLocaleString("fr-FR", { timeZone: "Africa/Casablanca", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }),
       value: point.value,
     }));
 
@@ -54,7 +54,7 @@ export function MeasurementChart({ points, unit, label = "Valeur" }: { points: C
               minTickGap={40}
             />
             <YAxis tick={AXIS_TICK} tickLine={false} axisLine={false} width={46} unit={` ${unit}`} />
-            <Tooltip formatter={(value) => [`${value} ${unit}`, label]} {...TOOLTIP_STYLE} />
+            <Tooltip formatter={(value) => [`${Number(value).toLocaleString("fr-FR")} ${unit}`, label]} {...TOOLTIP_STYLE} />
             <Line
               type="monotone"
               dataKey="value"

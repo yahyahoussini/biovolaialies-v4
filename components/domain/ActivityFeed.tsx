@@ -35,7 +35,7 @@ export function ActivityFeed({ events }: { events: DashboardEvent[] }) {
               </p>
             </div>
             <span className="shrink-0 whitespace-nowrap text-xs text-secondary">
-              {new Date(event.occurredAt).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+              {new Date(event.occurredAt).toLocaleString("fr-FR", { timeZone: "Africa/Casablanca", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
             </span>
           </li>
         );

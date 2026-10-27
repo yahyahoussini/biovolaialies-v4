@@ -18,7 +18,7 @@ export function MultiLineChart({ series, unit }: { series: Series[]; unit: strin
   }
   const index = series.map((s) => new Map(s.points.map((p) => [p.capturedAt, p.value])));
   const data = times.map((t) => ({
-    time: new Date(t).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit" }),
+    time: new Date(t).toLocaleString("fr-FR", { timeZone: "Africa/Casablanca", day: "2-digit", month: "2-digit", hour: "2-digit" }),
     ...Object.fromEntries(series.map((s, i) => [s.label, index[i].get(t) ?? null])),
   }));
   return (
@@ -32,7 +32,7 @@ export function MultiLineChart({ series, unit }: { series: Series[]; unit: strin
             <CartesianGrid stroke={CHART.grid} strokeDasharray="3 3" vertical={false} />
             <XAxis dataKey="time" tick={AXIS_TICK} tickLine={false} axisLine={{ stroke: CHART.grid }} interval="preserveStartEnd" minTickGap={40} />
             <YAxis tick={AXIS_TICK} tickLine={false} axisLine={false} width={46} unit={` ${unit}`} domain={["auto", "auto"]} />
-            <Tooltip {...TOOLTIP_STYLE} />
+            <Tooltip formatter={(value) => `${Number(value).toLocaleString("fr-FR")} ${unit}`} {...TOOLTIP_STYLE} />
             <Legend wrapperStyle={{ fontSize: 12 }} />
             {series.map((s, i) => (
               <Line key={s.label} type="monotone" dataKey={s.label} stroke={PALETTE[i % PALETTE.length]} strokeWidth={2} dot={false} isAnimationActive={false} connectNulls={false} />

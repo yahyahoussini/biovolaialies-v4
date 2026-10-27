@@ -17,7 +17,7 @@ export function DashboardClock({ initialIso }: { initialIso: string }) {
 
   return (
     <span className="text-xs text-secondary" suppressHydrationWarning>
-      {now.toLocaleString("fr-FR", { weekday: "long", day: "2-digit", month: "long", hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+      {now.toLocaleString("fr-FR", { timeZone: "Africa/Casablanca", weekday: "long", day: "2-digit", month: "long", hour: "2-digit", minute: "2-digit", second: "2-digit" })}
     </span>
   );
 }

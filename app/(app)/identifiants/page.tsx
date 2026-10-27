@@ -19,7 +19,17 @@ import { addAliasAction, retireAliasAction } from "../lots/flow-actions";
 
 const SCHEME_LABEL: Record<string, string> = { FOURNISSEUR: "Code fournisseur", RFID: "Puce RFID", BAGUE: "Bague", ANCIEN_CODE: "Ancien code", EAN: "Code EAN", AUTRE: "Autre" };
 const VIA_LABEL: Record<ResolvedIdentifier["via"], string> = { BVU: "Identifiant BIOVOLAILLES", ALIAS: "Code externe rattaché", CODE_METIER: "Code métier" };
-const TYPE_LABEL: Record<string, string> = { ...ENTITY_TYPE_LABEL, SUBJECT: "Sujet identifié", TRANSFER: "Transfert" };
+const TYPE_LABEL: Record<string, string> = {
+  ...ENTITY_TYPE_LABEL,
+  SUBJECT: "Sujet identifié",
+  TRANSFER: "Transfert",
+  QUALITY_CASE: "Blocage qualité",
+  SAMPLE: "Échantillon",
+  PACKAGE: "Colis",
+  CRATE: "Caisse",
+  SENSOR: "Capteur",
+  ASSET: "Équipement",
+};
 
 async function hrefFor(r: ResolvedIdentifier): Promise<string | null> {
   switch (r.objectType) {

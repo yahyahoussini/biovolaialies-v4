@@ -31,7 +31,7 @@ export function IotEnvironmentSummary({ readings }: { readings: EnvironmentReadi
           </span>
           <div className="flex items-center justify-between">
             <DataStatusBadge status={reading.dataStatus} />
-            <span className="text-micro text-secondary">{new Date(reading.capturedAt).toLocaleTimeString("fr-FR")}</span>
+            <span className="text-micro text-secondary">{new Date(reading.capturedAt).toLocaleTimeString("fr-FR", { timeZone: "Africa/Casablanca" })}</span>
           </div>
         </Card>
       ))}

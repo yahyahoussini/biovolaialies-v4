@@ -20,7 +20,7 @@ export function PerformanceTrendChart({ points, unit, label }: { points: TrendPo
   }
 
   const data = points.map((point) => ({
-    day: new Date(point.date).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" }),
+    day: new Date(point.date).toLocaleDateString("fr-FR", { timeZone: "Africa/Casablanca", day: "2-digit", month: "2-digit" }),
     value: point.value,
   }));
 
@@ -47,7 +47,7 @@ export function PerformanceTrendChart({ points, unit, label }: { points: TrendPo
               minTickGap={24}
             />
             <YAxis tick={AXIS_TICK} tickLine={false} axisLine={false} width={48} unit={` ${unit}`} />
-            <Tooltip formatter={(value) => [`${value} ${unit}`, label]} {...TOOLTIP_STYLE} />
+            <Tooltip formatter={(value) => [`${Number(value).toLocaleString("fr-FR")} ${unit}`, label]} {...TOOLTIP_STYLE} />
             <Bar dataKey="value" fill={CHART.series} radius={[3, 3, 0, 0]} maxBarSize={44} isAnimationActive={false} />
           </BarChart>
         </ResponsiveContainer>

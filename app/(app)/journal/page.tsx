@@ -44,8 +44,8 @@ export default async function LedgerPage() {
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <StatCard label="Intégrité" value={verification.ok ? "Intègre" : "Rompue"} icon={Link2} tone={verification.ok ? "success" : "critical"} hint={verification.reason ?? undefined} />
-        <StatCard label="Événements" value={verification.count} />
-        <StatCard label="Empreinte de tête" value={`${verification.headHash.slice(0, 12)}…`} hint={`n° ${verification.headSeq}`} />
+        <StatCard label="Événements" value={verification.count.toLocaleString("fr-FR")} />
+        <StatCard label="Empreinte de tête" value={`${verification.headHash.slice(0, 12)}…`} hint={`n° ${verification.headSeq.toLocaleString("fr-FR")}`} />
       </div>
 
       <p
