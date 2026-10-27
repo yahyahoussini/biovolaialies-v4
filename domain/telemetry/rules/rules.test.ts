@@ -33,7 +33,7 @@ function series(
   return { sensorId, sensorCode: sensorId, sensorType, catalogRef, zoneId: opts.zoneId ?? "z1", zoneKind: opts.zoneKind ?? "ELEVAGE", zoneName: "Zone 1", position: opts.position ?? null, unit: opts.unit ?? "C", times, values };
 }
 
-const lot: OccupantInfo = { lotId: "lot-1", lotCode: "L-1", productionLine: "CHAIR_BELDI", startedAt: "2026-07-20T00:00:00Z" };
+const lot: OccupantInfo = { lotId: "lot-1", lotCode: "L-1", productionLine: "CHAIR_FERMIER", startedAt: "2026-07-20T00:00:00Z" };
 
 function ctxAt(at: number, s: ChannelSeries[], extra: Partial<EvalContext> = {}): EvalContext {
   return {
@@ -56,7 +56,7 @@ const evaluator = (code: DecisionRule): RuleEvaluator => EVALUATORS.find((e) => 
 const tempBand: ReferenceBand = {
   id: "band-t",
   sensorType: "TEMPERATURE",
-  productionLine: "CHAIR_BELDI",
+  productionLine: "CHAIR_FERMIER",
   ageDayFrom: 0,
   ageDayTo: 150,
   season: "TOUTES",

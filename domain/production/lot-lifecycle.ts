@@ -10,7 +10,8 @@ const ALLOWED_TRANSITIONS: Record<LotStatus, readonly LotStatus[]> = {
   PLANIFIE: ["CREE", "ARCHIVE"],
   CREE: ["ACTIF", "SUSPENDU", "ARCHIVE"],
   ACTIF: ["EN_TRANSFERT", "SUSPENDU", "BLOQUE", "ABATTU"],
-  EN_TRANSFERT: ["ACTIF", "SUSPENDU", "BLOQUE"],
+  // Every bird left through transfers: the lot ends here, its birds live on in the lots that received them.
+  EN_TRANSFERT: ["ACTIF", "SUSPENDU", "BLOQUE", "CLOTURE"],
   SUSPENDU: ["ACTIF", "BLOQUE", "ARCHIVE"],
   BLOQUE: ["LIBERE", "ARCHIVE"],
   LIBERE: ["ACTIF", "EN_TRANSFERT", "ABATTU"],

@@ -180,15 +180,15 @@ describe("reference bands", () => {
   it("prefers the lot's line and season, ignores inactive bands", () => {
     const bands = [
       band({ id: "generic" }),
-      band({ id: "beldi", productionLine: "CHAIR_BELDI" }),
-      band({ id: "beldi-ete", productionLine: "CHAIR_BELDI", season: "ETE" }),
-      band({ id: "proposed", productionLine: "CHAIR_BELDI", season: "ETE", status: "PROPOSEE" }),
+      band({ id: "beldi", productionLine: "CHAIR_FERMIER" }),
+      band({ id: "beldi-ete", productionLine: "CHAIR_FERMIER", season: "ETE" }),
+      band({ id: "proposed", productionLine: "CHAIR_FERMIER", season: "ETE", status: "PROPOSEE" }),
       band({ id: "other-line", productionLine: "PONDEUSE_BLANC", season: "ETE" }),
     ];
-    expect(selectBand(bands, "TEMPERATURE", "CHAIR_BELDI", 40, "ETE")?.id).toBe("beldi-ete");
-    expect(selectBand(bands, "TEMPERATURE", "CHAIR_BELDI", 40, "HIVER")?.id).toBe("beldi");
+    expect(selectBand(bands, "TEMPERATURE", "CHAIR_FERMIER", 40, "ETE")?.id).toBe("beldi-ete");
+    expect(selectBand(bands, "TEMPERATURE", "CHAIR_FERMIER", 40, "HIVER")?.id).toBe("beldi");
     expect(selectBand(bands, "TEMPERATURE", null, 40, "ETE")?.id).toBe("generic");
-    expect(selectBand(bands, "TEMPERATURE", "CHAIR_BELDI", 200, "ETE")).toBeNull();
+    expect(selectBand(bands, "TEMPERATURE", "CHAIR_FERMIER", 200, "ETE")).toBeNull();
   });
 
   it("interpolates percentiles", () => {

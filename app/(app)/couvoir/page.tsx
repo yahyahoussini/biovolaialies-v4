@@ -14,6 +14,8 @@ import { HATCH_CYCLE_STATUS_LABEL, HATCH_CYCLE_STATUS_TONE, pct } from "@/lib/ha
 import { DATA_STATUS_LABEL } from "@/lib/status-colors";
 import { requireModuleAccess } from "@/services/auth/guard";
 import { getHatcheryOverview } from "@/services/hatchery/hatchery";
+import { importParentStockAction } from "../lots/flow-actions";
+import { listProductionLines } from "@/services/production/lines";
 import {
   createChickLotAction,
   createEggLotAction,
@@ -42,6 +44,7 @@ function n(value: number | null): string {
 export default async function HatcheryPage() {
   const session = await requireModuleAccess("HATCHERY");
   const o = await getHatcheryOverview(session);
+  const breederLines = (await listProductionLines()).filter((l) => l.purpose === "REPRODUCTION" && l.active);
   const canCreate = can(session, "CREATE", "HATCHERY");
   const hatched = o.cycles.filter((c) => c.status === "ECLOS");
   const totalSet = hatched.reduce((s, c) => s + c.eggsSet, 0);
@@ -72,24 +75,51 @@ export default async function HatcheryPage() {
         <CardHeader className="flex flex-row items-center justify-between gap-3">
           <CardTitle>Troupeaux reproducteurs</CardTitle>
           {canCreate ? (
-            <FormDialog
-              title="Mettre en place un troupeau reproducteur"
-              description="L'origine génétique est enregistrée une fois et ne peut plus être modifiée."
-              triggerLabel="Nouveau troupeau"
-              action={createParentFlockAction}
-              fields={[
-                { name: "code", label: "Code", type: "text", required: true, placeholder: "PF-2026-01", half: true },
-                { name: "buildingId", label: "Bâtiment", type: "select", required: true, options: o.flockBuildings.map((b) => ({ value: b.id, label: b.label })), half: true },
-                { name: "strain", label: "Souche", type: "text", required: true, placeholder: "Ross 308 PS", half: true },
-                { name: "geneticSupplier", label: "Fournisseur génétique", type: "text", required: true, half: true },
-                { name: "originCountry", label: "Pays d'origine", type: "text", required: true, half: true },
-                { name: "importReference", label: "Référence d'import", type: "text", half: true },
-                { name: "placedAt", label: "Mise en place", type: "date", required: true, half: true },
-                { name: "femaleCount", label: "Femelles", type: "number", required: true, half: true },
-                { name: "maleCount", label: "Mâles", type: "number", required: true, half: true },
-                dataStatusField,
-              ]}
-            />
+            <div className="flex flex-wrap gap-2">
+              <FormDialog
+                title="Importer des poussins reproducteurs d'un jour"
+                description="Début de la chaîne : le lot de reproducteurs démarre en élevage en cages, puis suit le plan de sa ligne (sol à 6 semaines, production à 7 mois, réforme à 30 mois). L'origine génétique ne pourra plus être modifiée."
+                triggerLabel="Importer"
+                action={importParentStockAction}
+                fields={[
+                  { name: "code", label: "Code du troupeau", type: "text", required: true, placeholder: "REP-2026-03", half: true },
+                  { name: "lineCode", label: "Ligne", type: "select", required: true, half: true, options: breederLines.map((l) => ({ value: l.code, label: l.label })) },
+                  { name: "buildingId", label: "Bâtiment d'élevage en cages", type: "select", required: true, options: o.flockBuildings.map((b) => ({ value: b.id, label: b.label })) },
+                  { name: "strain", label: "Souche", type: "text", required: true, placeholder: "Hubbard JA57", half: true },
+                  { name: "geneticSupplier", label: "Fournisseur génétique", type: "text", required: true, half: true },
+                  { name: "originCountry", label: "Pays d'origine", type: "text", required: true, half: true },
+                  { name: "importReference", label: "Référence d'import (DUM)", type: "text", half: true },
+                  { name: "supplierFlockCode", label: "Code du troupeau chez le fournisseur", type: "text", half: true, hint: "Gardé comme alias de notre identifiant." },
+                  { name: "documentId", label: "Certificat sanitaire", type: "text", half: true },
+                  { name: "hatchedAt", label: "Éclosion", type: "date", required: true, half: true },
+                  { name: "placedAt", label: "Arrivée", type: "date", required: true, half: true },
+                  { name: "femaleCount", label: "Femelles", type: "number", required: true, half: true },
+                  { name: "maleCount", label: "Mâles", type: "number", required: true, half: true },
+                  dataStatusField,
+                ]}
+              />
+              <FormDialog
+                title="Mettre en place un troupeau reproducteur"
+                description="Pour un troupeau déjà en production : il démarre en production d'œufs à couver. L'origine génétique est enregistrée une fois et ne peut plus être modifiée."
+                triggerLabel="Troupeau en production"
+                triggerVariant="secondary"
+                action={createParentFlockAction}
+                fields={[
+                  { name: "code", label: "Code", type: "text", required: true, placeholder: "PF-2026-01", half: true },
+                  { name: "buildingId", label: "Bâtiment", type: "select", required: true, options: o.flockBuildings.map((b) => ({ value: b.id, label: b.label })), half: true },
+                  { name: "lineCode", label: "Ligne", type: "select", half: true, options: [{ value: "", label: "—" }, ...breederLines.map((l) => ({ value: l.code, label: l.label }))] },
+                  { name: "strain", label: "Souche", type: "text", required: true, placeholder: "Ross 308 PS", half: true },
+                  { name: "geneticSupplier", label: "Fournisseur génétique", type: "text", required: true, half: true },
+                  { name: "originCountry", label: "Pays d'origine", type: "text", required: true, half: true },
+                  { name: "importReference", label: "Référence d'import", type: "text", half: true },
+                  { name: "hatchedAt", label: "Éclosion (si connue)", type: "date", half: true },
+                  { name: "placedAt", label: "Mise en place", type: "date", required: true, half: true },
+                  { name: "femaleCount", label: "Femelles", type: "number", required: true, half: true },
+                  { name: "maleCount", label: "Mâles", type: "number", required: true, half: true },
+                  dataStatusField,
+                ]}
+              />
+            </div>
           ) : null}
         </CardHeader>
         <CardContent>

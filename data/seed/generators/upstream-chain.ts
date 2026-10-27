@@ -22,7 +22,7 @@ import { repositories } from "../../repositories";
  * exceed the packaged quantity. Hatch rates (~85 % of eggs set) sit in the usual range for a
  * broiler parent flock; they are demonstration values, not a breed-standard claim.
  * The hatchery is a separate site owned by the hero producer, so the hero farm's own
- * buildings and lot counts are unchanged.
+ * buildings are unchanged; the breeder flock is carried by its own lot on the hatchery site.
  */
 export async function seedUpstreamChain(input: {
   heroProducerId: string;
@@ -49,6 +49,8 @@ export async function seedUpstreamChain(input: {
     {
       code: "PF-2025-02",
       buildingId: reproBuilding.id,
+      lineCode: "REPRO_CHAIR",
+      hatchedAt: "2024-09-14T00:00:00.000Z",
       strain: "Ross 308 PS",
       geneticSupplier: "Aviagen",
       originCountry: "Royaume-Uni",

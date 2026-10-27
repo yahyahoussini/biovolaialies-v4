@@ -1,4 +1,4 @@
-import type { DataStatus, EventType, LotStatus, MeasurementSourceType, SensorType, ValidationStatus } from "../shared/enums";
+import type { DataStatus, EventType, LinePurpose, LotStatus, MeasurementSourceType, SensorType, ValidationStatus } from "../shared/enums";
 import type { ProvenanceFields } from "../shared/provenance";
 
 export interface Lot {
@@ -17,6 +17,10 @@ export interface Lot {
   createdAt: string;
   /** Production line of the client's process; null on lots recorded before it existed. */
   productionLine?: string | null;
+  /** Breeders, meat birds or layers — from the line. Null on lots recorded before lines existed. */
+  purpose?: LinePurpose | null;
+  /** Hatch date of the birds, the reference for every age. Null when unknown. */
+  hatchedAt?: string | null;
 }
 
 export interface LotEvent {

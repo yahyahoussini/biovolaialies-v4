@@ -38,7 +38,7 @@ async function fixture(suffix: string) {
     startedAt: new Date(LOT_START).toISOString(),
     endedAt: null,
     dataStatus: "SIMULATION",
-    productionLine: "CHAIR_BELDI",
+    productionLine: "CHAIR_FERMIER",
   });
   const provisioned = await provisionBuildingUnchecked(building.id, { installedAt: new Date(LOT_START - DAY).toISOString() });
   for (const zone of provisioned.zones.filter((z) => z.kind === "ELEVAGE")) {

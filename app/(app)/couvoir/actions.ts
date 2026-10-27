@@ -41,6 +41,8 @@ export async function createParentFlockAction(v: Record<string, string>): Promis
         placedAt: iso(v.placedAt),
         femaleCount: num(v.femaleCount),
         maleCount: num(v.maleCount),
+        lineCode: opt(v.lineCode),
+        hatchedAt: v.hatchedAt ? iso(v.hatchedAt) : null,
         dataStatus: v.dataStatus,
         documentId: opt(v.documentId),
       },

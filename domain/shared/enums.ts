@@ -85,6 +85,10 @@ export const EVENT_TYPE = [
   "SENSOR_FAULT",
   "ALERT_ACTION",
   "AUTRE",
+  /** A lot entered a new phase of its line (cages, floor, laying, reform…). */
+  "CHANGEMENT_PHASE",
+  /** Birds received into this lot through a two-sided transfer. */
+  "RECEPTION",
 ] as const;
 export type EventType = (typeof EVENT_TYPE)[number];
 
@@ -301,3 +305,55 @@ export type NotificationStatus = (typeof NOTIFICATION_STATUS)[number];
 
 export const CALIBRATION_RESULT = ["CONFORME", "AJUSTE", "NON_CONFORME"] as const;
 export type CalibrationResult = (typeof CALIBRATION_RESULT)[number];
+
+// ---------------------------------------------------------------------------
+// Production flow of the client's handwritten diagram — lines, phases, movements, individuals
+// ---------------------------------------------------------------------------
+
+/** What a production line is for: breeders laying hatching eggs, meat birds, or layers of table eggs. */
+export const LINE_PURPOSE = ["REPRODUCTION", "CHAIR", "PONTE"] as const;
+export type LinePurpose = (typeof LINE_PURPOSE)[number];
+
+/**
+ * Phases a lot goes through (handwritten flow): breeders are reared in cages to 6 weeks, on the
+ * floor to 7 months, then lay hatching eggs to 30 months; commercial chicks grow on a growing
+ * farm, then on a partner farm, layers then lay table eggs; layers and breeders end as spent hens.
+ */
+export const LOT_PHASE = ["DEMARRAGE_CAGE", "ELEVAGE_SOL", "PRODUCTION_OAC", "CROISSANCE", "ELEVAGE_PARTENAIRE", "PONTE", "REFORME"] as const;
+export type LotPhase = (typeof LOT_PHASE)[number];
+
+/** How a phase start compares with the line's plan, computed from the birds' age — recorded, never blocking. */
+export const PHASE_PLAN_CHECK = ["CONFORME", "AVANT_PLAN", "APRES_PLAN", "HORS_PLAN", "SANS_PLAN"] as const;
+export type PhasePlanCheck = (typeof PHASE_PLAN_CHECK)[number];
+
+/** Table-egg shell types of the handwritten flow. "Pistache" is kept as the client wrote it. */
+export const EGG_TYPE = ["BLANC", "PISTACHE", "AUTRE"] as const;
+export type EggType = (typeof EGG_TYPE)[number];
+
+export const TABLE_EGG_LOT_STATUS = ["EN_STOCK", "CONDITIONNE", "EXPEDIE", "DETRUIT"] as const;
+export type TableEggLotStatus = (typeof TABLE_EGG_LOT_STATUS)[number];
+
+/** What a movement carries from one site to another. */
+export const TRANSFER_OBJECT = ["LOT", "CHICK_LOT", "EGG_LOT"] as const;
+export type TransferObject = (typeof TRANSFER_OBJECT)[number];
+
+/**
+ * A movement is counted and signed at departure, then counted and signed again at arrival by
+ * someone else (document 3, chapter 6: "comptée et signée des deux côtés").
+ */
+export const TRANSFER_STATUS = ["EN_TRANSIT", "RECU_CONFORME", "RECU_AVEC_ECART", "LITIGE", "ANNULE"] as const;
+export type TransferStatus = (typeof TRANSFER_STATUS)[number];
+
+export const SUBJECT_SEX = ["FEMELLE", "MALE", "INDETERMINE"] as const;
+export type SubjectSex = (typeof SUBJECT_SEX)[number];
+
+/** Individually tracked birds (document 3: breeders and birds under observation). */
+export const SUBJECT_STATUS = ["ACTIF", "OBSERVATION", "MORT", "REFORME", "SORTI"] as const;
+export type SubjectStatus = (typeof SUBJECT_STATUS)[number];
+
+export const SUBJECT_EVENT_TYPE = ["PESEE", "OBSERVATION", "TRAITEMENT", "MOUVEMENT", "STATUT", "LECTURE"] as const;
+export type SubjectEventType = (typeof SUBJECT_EVENT_TYPE)[number];
+
+/** Codes other parties give to our objects: kept as aliases, never as the identity (document 3, chapter 2). */
+export const ID_ALIAS_SCHEME = ["FOURNISSEUR", "RFID", "BAGUE", "ANCIEN_CODE", "EAN", "AUTRE"] as const;
+export type IdAliasScheme = (typeof ID_ALIAS_SCHEME)[number];

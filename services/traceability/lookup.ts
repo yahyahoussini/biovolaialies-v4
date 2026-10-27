@@ -17,6 +17,7 @@ export async function findEntityIdByCode(type: EntityType, code: string): Promis
     PRODUCT: () => repositories.products.findByCode(c),
     SHIPMENT: () => repositories.shipments.findByCode(c),
     DESTINATION: () => repositories.destinations.findByCode(c),
+    TABLE_EGG_LOT: () => repositories.tableEggLots.findByCode(c),
   };
   return (await finders[type]())?.id ?? null;
 }

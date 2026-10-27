@@ -47,6 +47,13 @@ export async function createSlaughterBatch(input: unknown, session: Session): Pr
 
   await assertNotOnHold("LOT", lot.id);
   if (data.sourceCollectionId) await assertNotOnHold("COLLECTION", data.sourceCollectionId);
+  // Layers and breeders leave for slaughter as spent hens (handwritten flow: "24 à 30 mois ⇒ abattoir").
+  if (lot.purpose === "PONTE" || lot.purpose === "REPRODUCTION") {
+    const phase = await repositories.lotPhases.current(lot.id);
+    if (phase && phase.phase !== "REFORME") {
+      throw new ValidationError("Des pondeuses ou des reproducteurs passent d'abord en réforme : enregistrez la phase « Réforme » avant l'abattage.");
+    }
+  }
 
   const existingCode = await repositories.slaughterBatches.findByCode(data.code);
   if (existingCode) throw new ConflictError(`Le code de lot d'abattage "${data.code}" est déjà utilisé.`);

@@ -18,6 +18,14 @@ const DELETION_ORDER = [
   schema.ledgerEvents,
   schema.qualityHoldItems,
   schema.qualityCases,
+  // Production flow: aliases point at identifiers; events at subjects; all of them at lots.
+  schema.identifierAliases,
+  schema.bvuIds,
+  schema.subjectEvents,
+  schema.subjects,
+  schema.tableEggLots,
+  schema.transfers,
+  schema.lotPhases,
   schema.apiClients,
   schema.commissioningTests,
   schema.equipmentItems,
@@ -65,6 +73,7 @@ const DELETION_ORDER = [
   schema.feedUsageRecords,
   schema.lotEvents,
   schema.lots,
+  schema.productionLines,
   // Users carry no FK of their own but are referenced by nearly every provenance column above.
   schema.users,
   schema.buildings,

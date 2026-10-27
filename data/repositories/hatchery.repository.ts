@@ -49,6 +49,10 @@ export class DrizzleEggLotRepository implements EggLotRepository {
     const [row] = await db.insert(eggLots).values(input).returning();
     return row as EggLot;
   }
+  async updateStorage(id: string, storageBuildingId: string) {
+    const [row] = await db.update(eggLots).set({ storageBuildingId }).where(eq(eggLots.id, id)).returning();
+    return row as EggLot;
+  }
 }
 
 export class DrizzleHatchCycleRepository implements HatchCycleRepository {

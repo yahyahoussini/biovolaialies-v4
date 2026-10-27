@@ -44,9 +44,27 @@ The `/programme` screen shows, test by test, what is automated, partial, or can 
 The public QR passport now also shows the strain and the hatchery's city, and stops reading as
 verified while a quality hold applies to the product or its lot.
 
+## Production flow (the client's handwritten diagram)
+
+| Piece | Where | What it does |
+|---|---|---|
+| Production lines | `domain/production/lines.ts`, `/lignes` | The five lines of the diagram (breeders broiler and layer, poulet fermier, white-egg and "Pistache" layers) with their age plans: cages to 6 weeks, floor to 7 months, laying to 30 months; slaughter at 5.5–7 months; reform at 24–30 months. Plans are data, edited by the administration with the reason audited. |
+| Lot phases | `services/production/phases.ts`, lot page « Cycle de vie » | A lot enters the phases its line allows, in order. The birds' age is compared with the plan and the result is kept with the phase (on plan, early, late); a late phase is recorded, not refused. A move to another building of the same farm comes with the phase; a move to another farm is a transfer. `/lignes` lists the lots whose age calls for the next step, most overdue first. |
+| Parent-stock import | `/couvoir` « Importer » | Day-old parent chicks open a breeders' lot in its first rearing phase. Every parent flock is now carried by a lot (mortality, feed, sensors, phases); hatching eggs are refused while the flock is not laying. |
+| Two-sided transfers | `services/production/transfers.ts`, `/transferts` | Lots, day-old chicks and hatching eggs move between sites counted and signed at departure, then counted and signed at arrival by a different person (document 3, ch. 6). The gap that neither count explains is kept and must be explained; either side can dispute; counts never change once signed. The receiving partner gets its own lot, linked in the genealogy. Both signatures go to the chained ledger. |
+| Individual birds | `/lots/[id]/sujets` | Breeders and birds under observation: permanent identity, ring as visual back-up, optional chip. A ring or chip names one bird for life; a chip is freed only through a recorded release. A weight is individual only with its attribution proof. |
+| Table eggs | `/oeufs-consommation` | Daily collections from laying layer lots, every egg graded once (saleable, cracked, dirty, small). A layer or breeder lot goes through reform before slaughter. |
+| BIOVOLAILLES identifier | `domain/identity/bvu-id.ts`, `/identifiants` | `BVU-<kind>-<14 hex>` as in the client's trace engine, the last digit a Luhn mod-16 check: a code typed or read wrong is refused. Supplier codes, rings and chips are aliases of it. Objects created before it get theirs from `backfillBvuIds()`. |
+
+Population reconciliation (T17) now counts the birds that left by transfer.
+
 ## Known gaps (also listed on `/programme`)
 
 - No offline mobile app: the server side (idempotent replay) is ready, the client app is not.
+- No egg-marking line yet (document 3, lot 15): table-egg collections exist, codes per tray or egg do not.
+- Open questions on the diagram, taken with a default until the client answers: "Pistache" is kept as an
+  egg type, "Agrégés" are treated as partner farms, the growing phase ends at 6 weeks (step 8 is
+  crossed out), individual identity is used for breeders and birds under observation only.
 - No PLC / Modbus / OPC UA connectors: they depend on the machines actually installed (K01).
 - A transformation has a single source; multi-parent products (T34) are not modelled.
 - No versioned multi-site template (T35): buildings are equipped from the reference case, not from a versioned configuration.

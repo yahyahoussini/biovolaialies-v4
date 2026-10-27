@@ -25,12 +25,17 @@ import {
 import { assertNotOnHold } from "../quality/holds";
 import { createRelation } from "../traceability/relations";
 import { withLock } from "../../lib/keyed-lock";
+import { allowedPhases, PHASE_LABEL } from "../../domain/production/lines";
+import type { LotPhase } from "../../domain/shared/enums";
+import { assignBvuId } from "../identity/bvu-ids";
+import { requireProductionLine } from "../production/lines";
+import { startLotPhaseUnlocked } from "../production/phases";
 
 /**
  * Every write that draws on hatchery stock (eggs left in a lot, chicks left in a cycle or a
  * chick lot) runs under one lock, so concurrent submissions see each other's consumption.
  */
-const HATCHERY_STOCK_LOCK = "hatchery-stock";
+export const HATCHERY_STOCK_LOCK = "hatchery-stock";
 
 /**
  * Upstream chain (client spec A03–A07): parent flock → egg lot → incubation cycle → chick lot →
@@ -91,14 +96,59 @@ export const createParentFlockSchema = z.object({
   placedAt: businessDate("Mise en place"),
   femaleCount: z.number().int().positive(),
   maleCount: z.number().int().nonnegative(),
+  /** Breeder line of the handwritten flow; optional for flocks registered after the fact. */
+  lineCode: z.string().trim().max(40).optional().nullable(),
+  /** Hatch date of the breeders, when known — their age drives the phase plan. */
+  hatchedAt: businessDate("Éclosion des reproducteurs").optional().nullable(),
+  /** The flock's own code at its genetic supplier, kept as an alias of our identifier. */
+  supplierFlockCode: z.string().trim().max(120).optional().nullable(),
   ...provenance,
 });
 
+/**
+ * Registers a flock of breeders already laying. The flock is carried by a lot of breeders (so its
+ * mortality, feed, sensors and phases are recorded like any lot) opened in the hatching-egg
+ * production phase. Day-old parent stock that still has to be reared goes through
+ * `importParentStock` instead, which opens the lot at the first rearing phase.
+ */
 export async function createParentFlock(input: unknown, session: Session): Promise<ParentFlock> {
   requireHatchery(session, "CREATE");
   const data = parseOrThrow(createParentFlockSchema, input);
+  return registerParentFlock(data, "PRODUCTION_OAC", session);
+}
+
+export async function registerParentFlock(data: z.infer<typeof createParentFlockSchema>, firstPhase: LotPhase, session: Session): Promise<ParentFlock> {
+  const building = await repositories.buildings.findById(data.buildingId);
+  if (!building) throw new NotFoundError("Bâtiment", data.buildingId);
   assertInScope(session, await resolveBuildingHierarchy(data.buildingId));
   await assertUniqueCode("de troupeau", await repositories.parentFlocks.findByCode(data.code), data.code);
+  if (await repositories.lots.findByCode(data.code)) throw new ConflictError(`Le code ${data.code} est déjà utilisé par un lot.`);
+  const line = data.lineCode ? await requireProductionLine(data.lineCode) : null;
+  if (line && line.purpose !== "REPRODUCTION") throw new ValidationError(`La ligne ${line.label} n'est pas une ligne de reproducteurs.`);
+  if (data.hatchedAt) {
+    const order = orderError("L'éclosion des reproducteurs", data.hatchedAt, "La mise en place", data.placedAt);
+    if (order) throw new ValidationError(order);
+  }
+
+  const headCount = data.femaleCount + data.maleCount;
+  const lot = await repositories.lots.create({
+    buildingId: building.id,
+    code: data.code,
+    species: "Poulet",
+    breed: data.strain,
+    status: "ACTIF",
+    initialPopulation: headCount,
+    currentPopulation: headCount,
+    plannedStartAt: null,
+    startedAt: data.placedAt,
+    endedAt: null,
+    dataStatus: data.dataStatus,
+    productionLine: line?.code ?? null,
+    purpose: "REPRODUCTION",
+    hatchedAt: data.hatchedAt ?? null,
+  });
+  await repositories.lotEvents.create({ lotId: lot.id, eventType: "CREATION_LOT", payload: { initialPopulation: headCount }, occurredAt: data.placedAt, actorId: session.userId, dataStatus: data.dataStatus, sourceType: data.sourceType, sourceId: null, deviceId: null, measurementMethod: null, validationStatus: null });
+  await repositories.lotEvents.create({ lotId: lot.id, eventType: "MISE_EN_PLACE", payload: { notes: `${data.femaleCount} femelles, ${data.maleCount} mâles — ${data.geneticSupplier} (${data.originCountry})` }, occurredAt: data.placedAt, actorId: session.userId, dataStatus: data.dataStatus, sourceType: data.sourceType, sourceId: null, deviceId: null, measurementMethod: null, validationStatus: null });
 
   const flock = await repositories.parentFlocks.create({
     code: data.code,
@@ -110,10 +160,38 @@ export async function createParentFlock(input: unknown, session: Session): Promi
     placedAt: data.placedAt,
     femaleCount: data.femaleCount,
     maleCount: data.maleCount,
+    lotId: lot.id,
+    productionLine: line?.code ?? null,
     ...provenanceFields(data, session),
   });
-  await audit(session, "parent_flock", flock.id, `${flock.strain} — ${flock.geneticSupplier} (${flock.originCountry}), ${flock.femaleCount}♀/${flock.maleCount}♂`, "Mise en place d'un troupeau reproducteur");
+  await createRelation({ fromType: "PARENT_FLOCK", fromId: flock.id, relationType: "PROVIENT_DE", toType: "LOT", toId: lot.id, metadata: { quantity: headCount }, actorId: session.userId });
+  await assignBvuId("LOT", lot.id);
+  const flockBvuId = await assignBvuId("PARENT_FLOCK", flock.id);
+  if (data.supplierFlockCode) {
+    await repositories.identifierAliases.create({ bvuId: flockBvuId, scheme: "FOURNISSEUR", issuer: data.geneticSupplier, value: data.supplierFlockCode, validFrom: new Date().toISOString(), validTo: null, reason: "Code du troupeau chez le fournisseur génétique", createdBy: session.userId });
+  }
+  if (!line || allowedPhases(line).includes(firstPhase)) {
+    await startLotPhaseUnlocked({ lotId: lot.id, phase: firstPhase, startedAt: data.placedAt, buildingId: null, notes: "Mise en place" }, session, true);
+  }
+  await audit(session, "parent_flock", flock.id, `${flock.strain} — ${flock.geneticSupplier} (${flock.originCountry}), ${flock.femaleCount}♀/${flock.maleCount}♂`, "Mise en place d'un troupeau reproducteur", lot.id);
   return flock;
+}
+
+/**
+ * Import of day-old parent chicks (handwritten flow, step 1): the start of the chain. Opens the
+ * breeders' lot in its first rearing phase — cages to 6 weeks — so the plan follows them to the
+ * floor at 6 weeks, to laying at 7 months, and to reform at 30 months.
+ */
+export const importParentStockSchema = createParentFlockSchema.extend({
+  lineCode: z.string().trim().min(1, "La ligne de reproducteurs est requise."),
+  hatchedAt: businessDate("Éclosion des reproducteurs"),
+});
+
+export async function importParentStock(input: unknown, session: Session): Promise<ParentFlock> {
+  requireHatchery(session, "CREATE");
+  const data = parseOrThrow(importParentStockSchema, input);
+  const line = await requireProductionLine(data.lineCode);
+  return registerParentFlock(data, line.phasePlan[0].phase, session);
 }
 
 // ---------------------------------------------------------------------------
@@ -139,6 +217,14 @@ export async function createEggLot(input: unknown, session: Session): Promise<Eg
   await assertNotOnHold("PARENT_FLOCK", flock.id);
   const eggOrder = orderError("Mise en place du troupeau", flock.placedAt, "La collecte", data.collectedAt);
   if (eggOrder) throw new ValidationError(eggOrder);
+  if (flock.lotId) {
+    const phases = await repositories.lotPhases.listByLot(flock.lotId);
+    const at = Date.parse(data.collectedAt);
+    const phaseAt = phases.filter((p) => Date.parse(p.startedAt) <= at && (p.endedAt === null || Date.parse(p.endedAt) > at)).pop();
+    if (phases.length && phaseAt?.phase !== "PRODUCTION_OAC") {
+      throw new ValidationError(`Le troupeau ${flock.code} n'était pas en production d'œufs à couver à cette date (${phaseAt ? PHASE_LABEL[phaseAt.phase].toLowerCase() : "pas encore en place"}).`);
+    }
+  }
   await assertUniqueCode("de lot d'œufs", await repositories.eggLots.findByCode(data.code), data.code);
 
   const egg = await repositories.eggLots.create({
@@ -158,6 +244,30 @@ export async function createEggLot(input: unknown, session: Session): Promise<Eg
 export async function eggsAllocated(eggLotId: string): Promise<number> {
   const edges = await repositories.relations.listTo("EGG_LOT", eggLotId);
   return edges.filter((e) => e.fromType === "HATCH_CYCLE").reduce((sum, e) => sum + Number((e.metadata as { quantity?: number }).quantity ?? 0), 0);
+}
+
+/** Eggs of an egg lot broken or missing in transport — no longer there to be set. */
+export async function eggsLostInTransfers(eggLotId: string): Promise<number> {
+  return (await repositories.transfers.listByObject("EGG_LOT", eggLotId))
+    .filter((t) => t.status !== "EN_TRANSIT" && t.status !== "ANNULE")
+    .reduce((s, t) => s + (t.deadOnArrival ?? 0) + Math.max(0, t.discrepancy ?? 0), 0);
+}
+
+export async function eggLotInTransit(eggLotId: string): Promise<boolean> {
+  return (await repositories.transfers.listByObject("EGG_LOT", eggLotId)).some((t) => t.status === "EN_TRANSIT");
+}
+
+/**
+ * Chicks of a chick lot already gone: every transfer not cancelled (whatever arrived alive), plus
+ * placements recorded directly, before transfers existed.
+ */
+export async function chicksCommitted(chickLotId: string): Promise<number> {
+  const [moves, edges] = await Promise.all([repositories.transfers.listByObject("CHICK_LOT", chickLotId), repositories.relations.listTo("CHICK_LOT", chickLotId)]);
+  const viaTransfers = moves.filter((t) => t.status !== "ANNULE").reduce((s, t) => s + t.quantitySent, 0);
+  const direct = edges
+    .filter((e) => e.fromType === "LOT" && !(e.metadata as { transferId?: string }).transferId)
+    .reduce((s, e) => s + Number((e.metadata as { quantity?: number }).quantity ?? 0), 0);
+  return viaTransfers + direct;
 }
 
 // ---------------------------------------------------------------------------
@@ -194,9 +304,10 @@ async function createHatchCycleUnlocked(input: unknown, session: Session): Promi
     const eggFlock = await repositories.parentFlocks.findById(egg.parentFlockId);
     assertInScope(session, await resolveBuildingHierarchy(egg.storageBuildingId ?? eggFlock?.buildingId ?? ""));
     await assertNotOnHold("EGG_LOT", egg.id);
+    if (await eggLotInTransit(egg.id)) throw new ConflictError(`${egg.code} est en transit : réceptionnez-le au couvoir avant de le mettre en incubation.`);
     const setOrder = orderError(`La collecte de ${egg.code}`, egg.collectedAt, "La mise en incubation", data.setAt);
     if (setOrder) throw new ValidationError(setOrder);
-    const check = validateEggAllocation(egg.quantity, await eggsAllocated(egg.id), allocation.quantity);
+    const check = validateEggAllocation(egg.quantity - (await eggsLostInTransfers(egg.id)), await eggsAllocated(egg.id), allocation.quantity);
     if (!check.ok) throw new ValidationError(`${egg.code} : ${check.error}`);
   }
 
@@ -343,7 +454,7 @@ async function placeChicksIntoLotUnlocked(input: unknown, session: Session): Pro
 
   const existing = await repositories.relations.findExact("LOT", lot.id, "PROVIENT_DE", "CHICK_LOT", chicks.id);
   if (existing) throw new ConflictError("Ce lot est déjà relié à ce lot de poussins.");
-  const remaining = chicks.quantity - (await chicksPlaced(chicks.id));
+  const remaining = chicks.quantity - (await chicksCommitted(chicks.id));
   if (data.quantity > remaining) throw new ValidationError(`Seulement ${remaining} poussins de ${chicks.code} restent à placer.`);
   // Total across every chick lot already placed into this farm lot, not this placement alone.
   const alreadyInLot = (await repositories.relations.listFrom("LOT", lot.id))
@@ -396,7 +507,7 @@ export async function getHatcheryOverview(session: Session): Promise<HatcheryOve
     flocks: visibleFlocks.map((f) => ({ ...f, buildingLabel: buildingLabel.get(f.buildingId) ?? "—", eggLotCount: visibleEggs.filter((e) => e.parentFlockId === f.id).length })),
     eggLots: await Promise.all(visibleEggs.map(async (e) => ({ ...e, flockCode: flockById.get(e.parentFlockId)?.code ?? "—", allocated: await eggsAllocated(e.id) }))),
     cycles: visibleCycles.map((c) => ({ ...c, buildingLabel: buildingLabel.get(c.buildingId) ?? "—", dispatched: visibleChicks.filter((k) => k.hatchCycleId === c.id).reduce((s, k) => s + k.quantity, 0) })),
-    chickLots: await Promise.all(visibleChicks.map(async (c) => ({ ...c, cycleCode: cycleById.get(c.hatchCycleId)?.code ?? "—", placed: await chicksPlaced(c.id) }))),
+    chickLots: await Promise.all(visibleChicks.map(async (c) => ({ ...c, cycleCode: cycleById.get(c.hatchCycleId)?.code ?? "—", placed: await chicksCommitted(c.id) }))),
     couvoirBuildings: buildings.filter((b) => b.zoneType === "COUVOIR" && visibleBuilding(b.id)).map((b) => ({ id: b.id, label: buildingLabel.get(b.id)! })),
     flockBuildings: buildings.filter((b) => b.zoneType !== "COUVOIR" && visibleBuilding(b.id)).map((b) => ({ id: b.id, label: buildingLabel.get(b.id)! })),
   };

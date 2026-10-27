@@ -23,6 +23,10 @@ export class DrizzleSlaughterBatchRepository implements SlaughterBatchRepository
     return rows as SlaughterBatch[];
   }
 
+  async list(): Promise<SlaughterBatch[]> {
+    return (await db.query.slaughterBatches.findMany({ orderBy: (t, { desc }) => desc(t.createdAt) })) as SlaughterBatch[];
+  }
+
   async create(input: NewSlaughterBatch): Promise<SlaughterBatch> {
     const [row] = await db.insert(slaughterBatches).values(input).returning();
     return row as SlaughterBatch;

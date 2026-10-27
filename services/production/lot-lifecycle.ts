@@ -2,7 +2,7 @@ import { repositories } from "../../data/repositories";
 import { validateTransition } from "../../domain/production/lot-lifecycle";
 import type { Lot } from "../../domain/production/types";
 import type { LotStatus } from "../../domain/shared/enums";
-import { AuthorizationError, ConflictError } from "../../domain/shared/errors";
+import { AuthorizationError, ConflictError, ValidationError } from "../../domain/shared/errors";
 import { can } from "../../domain/shared/permissions";
 import { recordAudit } from "../audit/record";
 import type { Session } from "../auth/session";
@@ -18,7 +18,9 @@ export async function transitionLotStatus(
   lotId: string,
   toStatus: LotStatus,
   session: Session,
-  reason?: string
+  reason?: string,
+  /** When the change actually happened, for an entry made after the fact. Defaults to now. */
+  at?: string
 ): Promise<Lot> {
   if (!can(session, "EDIT", "LOTS")) {
     throw new AuthorizationError("Vous n'avez pas les droits pour changer le statut de ce lot.");
@@ -34,11 +36,19 @@ export async function transitionLotStatus(
   }
 
   const extra: Partial<Pick<Lot, "startedAt" | "endedAt">> = {};
-  const now = new Date().toISOString();
+  if (at !== undefined && (Number.isNaN(Date.parse(at)) || Date.parse(at) > Date.now() + 86_400_000)) {
+    throw new ValidationError("Date du changement de statut invalide ou dans le futur.");
+  }
+  const now = at ? new Date(at).toISOString() : new Date().toISOString();
   if (toStatus === "ACTIF" && !lot.startedAt) extra.startedAt = now;
   if ((toStatus === "CLOTURE" || toStatus === "ARCHIVE") && !lot.endedAt) extra.endedAt = now;
 
   const updated = await repositories.lots.updateStatus(lotId, toStatus, extra);
+  // A slaughtered, closed or archived lot is in no phase any more.
+  if (toStatus === "ABATTU" || toStatus === "CLOTURE" || toStatus === "ARCHIVE") {
+    const open = await repositories.lotPhases.current(lotId);
+    if (open && open.startedAt <= now) await repositories.lotPhases.close(open.id, now);
+  }
 
   await recordAudit({
     actorId: session.userId,

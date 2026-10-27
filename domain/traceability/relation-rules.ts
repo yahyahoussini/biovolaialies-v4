@@ -22,9 +22,16 @@ export const ALLOWED_RELATIONS: Partial<Record<RelationType, RelationRule[]>> = 
     { from: "HATCH_CYCLE", to: "EGG_LOT" },
     { from: "CHICK_LOT", to: "HATCH_CYCLE" },
     { from: "LOT", to: "CHICK_LOT" },
+    // Birds received from another lot (partner farm, distribution by line), and the flock a
+    // parent-stock lot became.
+    { from: "LOT", to: "LOT" },
+    { from: "PARENT_FLOCK", to: "LOT" },
   ],
   EXPEDIE_DEPUIS: [{ from: "SHIPMENT", to: "PRODUCT" }],
-  COLLECTE_DE: [{ from: "COLLECTION", to: "LOT" }],
+  COLLECTE_DE: [
+    { from: "COLLECTION", to: "LOT" },
+    { from: "TABLE_EGG_LOT", to: "LOT" },
+  ],
   ABATTU_DEPUIS: [
     { from: "SLAUGHTER_BATCH", to: "COLLECTION" },
     { from: "SLAUGHTER_BATCH", to: "LOT" },

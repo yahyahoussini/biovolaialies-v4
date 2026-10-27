@@ -8,6 +8,17 @@ import {
   BAND_STATUS,
   CALIBRATION_RESULT,
   CHICK_GRADE,
+  EGG_TYPE,
+  ID_ALIAS_SCHEME,
+  LINE_PURPOSE,
+  LOT_PHASE,
+  PHASE_PLAN_CHECK,
+  SUBJECT_EVENT_TYPE,
+  SUBJECT_SEX,
+  SUBJECT_STATUS,
+  TABLE_EGG_LOT_STATUS,
+  TRANSFER_OBJECT,
+  TRANSFER_STATUS,
   DEVICE_TYPE,
   NOTIFICATION_CHANNEL,
   NOTIFICATION_STATUS,
@@ -172,6 +183,10 @@ export const lots = sqliteTable("lots", {
   createdAt: createdAt(),
   /** Production line of the client's process (handwritten flow): reference bands are chosen by it. */
   productionLine: text("production_line"),
+  /** Breeders, meat birds or layers — set from the line; null on lots recorded before lines existed. */
+  purpose: text("purpose", { enum: LINE_PURPOSE }),
+  /** Hatch date of the birds: the age every phase and band is judged against. Null when unknown. */
+  hatchedAt: text("hatched_at"),
 });
 
 export const lotEvents = sqliteTable("lot_events", {
@@ -846,6 +861,12 @@ export const parentFlocks = sqliteTable("parent_flocks", {
   maleCount: integer("male_count").notNull(),
   ...provenanceColumns(),
   createdAt: createdAt(),
+  /**
+   * The lot that carries the flock's population, feed, mortality, phases and sensors. A parent
+   * flock is a lot of breeders plus its genetic origin; null only on flocks recorded before.
+   */
+  lotId: text("lot_id").references(() => lots.id),
+  productionLine: text("production_line"),
 });
 
 export const eggLots = sqliteTable("egg_lots", {
@@ -1045,3 +1066,217 @@ export const commissioningTests = sqliteTable("commissioning_tests", {
   evidence: text("evidence"),
   notes: text("notes"),
 });
+
+// ---------------------------------------------------------------------------
+// Production flow (handwritten diagram): lines, phases, movements, individuals, table eggs
+// ---------------------------------------------------------------------------
+
+/**
+ * A production line of the client's flow — what the birds are for and the phases they go
+ * through, with the age windows the diagram gives. The plan is data, editable without a release.
+ */
+export const productionLines = sqliteTable("production_lines", {
+  id: id(),
+  code: text("code").notNull().unique(),
+  label: text("label").notNull(),
+  purpose: text("purpose", { enum: LINE_PURPOSE }).notNull(),
+  /** Line whose breeders produce the chicks of this one (commercial lines only). */
+  parentLineCode: text("parent_line_code"),
+  eggType: text("egg_type", { enum: EGG_TYPE }),
+  /** Ordered phases; each but the last ends between two ages in days. */
+  phasePlan: text("phase_plan", { mode: "json" }).$type<{ phase: string; endsBetween: [number, number] | null }[]>().notNull(),
+  /** Age window for leaving the line (slaughter of meat birds, reform of layers and breeders). */
+  exitMinDays: integer("exit_min_days"),
+  exitMaxDays: integer("exit_max_days"),
+  exitLabel: text("exit_label").notNull(),
+  /** Where the figures come from: the client's diagram, or a hypothesis to confirm. */
+  source: text("source").notNull(),
+  active: integer("active", { mode: "boolean" }).notNull().default(true),
+  createdAt: createdAt(),
+  updatedAt: text("updated_at"),
+  updatedBy: text("updated_by").references(() => users.id),
+});
+
+export const lotPhases = sqliteTable(
+  "lot_phases",
+  {
+    id: id(),
+    lotId: text("lot_id")
+      .notNull()
+      .references(() => lots.id),
+    phase: text("phase", { enum: LOT_PHASE }).notNull(),
+    buildingId: text("building_id")
+      .notNull()
+      .references(() => buildings.id),
+    startedAt: text("started_at").notNull(),
+    endedAt: text("ended_at"),
+    ageDaysAtStart: integer("age_days_at_start"),
+    planCheck: text("plan_check", { enum: PHASE_PLAN_CHECK }).notNull(),
+    notes: text("notes"),
+    actorId: text("actor_id").references(() => users.id),
+    createdAt: createdAt(),
+  },
+  (t) => [index("lot_phases_lot_idx").on(t.lotId, t.startedAt)]
+);
+
+/**
+ * A movement of birds or eggs between sites, counted and signed by the sender, then counted and
+ * signed again by a different person at arrival. The gap between the two counts is kept.
+ */
+export const transfers = sqliteTable(
+  "transfers",
+  {
+    id: id(),
+    code: text("code").notNull().unique(),
+    objectType: text("object_type", { enum: TRANSFER_OBJECT }).notNull(),
+    objectId: text("object_id").notNull(),
+    sourceBuildingId: text("source_building_id")
+      .notNull()
+      .references(() => buildings.id),
+    destinationBuildingId: text("destination_building_id")
+      .notNull()
+      .references(() => buildings.id),
+    /** Existing lot the birds join, or the lot created at reception. */
+    destinationLotId: text("destination_lot_id").references(() => lots.id),
+    /** Code of the lot to create at reception when no destination lot exists yet. */
+    destinationLotCode: text("destination_lot_code"),
+    /** Line of the lot created at reception — required for chicks, whose line the hatchery cannot infer. */
+    destinationLineCode: text("destination_line_code"),
+    phaseOnArrival: text("phase_on_arrival", { enum: LOT_PHASE }),
+    quantitySent: integer("quantity_sent").notNull(),
+    sentAt: text("sent_at").notNull(),
+    sentBy: text("sent_by")
+      .notNull()
+      .references(() => users.id),
+    senderName: text("sender_name").notNull(),
+    senderSignature: text("sender_signature").notNull(),
+    documentRef: text("document_ref"),
+    transporter: text("transporter"),
+    vehicle: text("vehicle"),
+    crates: integer("crates"),
+    notes: text("notes"),
+    quantityReceived: integer("quantity_received"),
+    deadOnArrival: integer("dead_on_arrival"),
+    receivedAt: text("received_at"),
+    receivedBy: text("received_by").references(() => users.id),
+    receiverName: text("receiver_name"),
+    receiverSignature: text("receiver_signature"),
+    /** sent − (received alive + dead on arrival): what neither count explains. */
+    discrepancy: integer("discrepancy"),
+    discrepancyReason: text("discrepancy_reason"),
+    status: text("status", { enum: TRANSFER_STATUS }).notNull(),
+    statusReason: text("status_reason"),
+    createdAt: createdAt(),
+    updatedAt: text("updated_at"),
+  },
+  (t) => [index("transfers_object_idx").on(t.objectType, t.objectId), index("transfers_destination_idx").on(t.destinationBuildingId, t.status)]
+);
+
+/** Individually identified birds: a permanent identity, a visual ring, optionally an RFID chip. */
+export const subjects = sqliteTable(
+  "subjects",
+  {
+    id: id(),
+    bvuId: text("bvu_id").notNull().unique(),
+    lotId: text("lot_id")
+      .notNull()
+      .references(() => lots.id),
+    sex: text("sex", { enum: SUBJECT_SEX }).notNull(),
+    /** Ring number: the visual back-up identity every subject must carry. */
+    visualId: text("visual_id").notNull().unique(),
+    /** Chip or tag UID. Never reused: releasing one is a controlled, recorded act. */
+    rfidUid: text("rfid_uid").unique(),
+    taggedAt: text("tagged_at").notNull(),
+    status: text("status", { enum: SUBJECT_STATUS }).notNull(),
+    statusAt: text("status_at").notNull(),
+    statusReason: text("status_reason"),
+    notes: text("notes"),
+    dataStatus: text("data_status", { enum: DATA_STATUS }).notNull(),
+    actorId: text("actor_id").references(() => users.id),
+    createdAt: createdAt(),
+  },
+  (t) => [index("subjects_lot_idx").on(t.lotId)]
+);
+
+export const subjectEvents = sqliteTable(
+  "subject_events",
+  {
+    id: id(),
+    subjectId: text("subject_id")
+      .notNull()
+      .references(() => subjects.id),
+    eventType: text("event_type", { enum: SUBJECT_EVENT_TYPE }).notNull(),
+    value: real("value"),
+    unit: text("unit"),
+    payload: text("payload", { mode: "json" }).$type<Record<string, unknown>>().notNull(),
+    /** How the reading was tied to this bird (RFID read at a station, ring checked by hand…). */
+    attributionProof: text("attribution_proof"),
+    occurredAt: text("occurred_at").notNull(),
+    actorId: text("actor_id").references(() => users.id),
+    deviceId: text("device_id"),
+    sourceType: text("source_type", { enum: MEASUREMENT_SOURCE_TYPE }).notNull(),
+    dataStatus: text("data_status", { enum: DATA_STATUS }).notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index("subject_events_subject_idx").on(t.subjectId, t.occurredAt)]
+);
+
+/** One day's collection of table eggs from a layer lot, graded at collection. */
+export const tableEggLots = sqliteTable(
+  "table_egg_lots",
+  {
+    id: id(),
+    code: text("code").notNull().unique(),
+    lotId: text("lot_id")
+      .notNull()
+      .references(() => lots.id),
+    collectedOn: text("collected_on").notNull(),
+    eggType: text("egg_type", { enum: EGG_TYPE }).notNull(),
+    /** Every egg collected: saleable + cracked + dirty + small. */
+    quantity: integer("quantity").notNull(),
+    saleable: integer("saleable").notNull(),
+    cracked: integer("cracked").notNull(),
+    dirty: integer("dirty").notNull(),
+    small: integer("small").notNull(),
+    status: text("status", { enum: TABLE_EGG_LOT_STATUS }).notNull(),
+    ...provenanceColumns(),
+    createdAt: createdAt(),
+  },
+  (t) => [index("table_egg_lots_lot_idx").on(t.lotId, t.collectedOn)]
+);
+
+/**
+ * The BIOVOLAILLES identifier of each traced object (document 3, chapter 2): ours, permanent,
+ * and the thing every record attaches to. Assigned once per object, never changed.
+ */
+export const bvuIds = sqliteTable(
+  "bvu_ids",
+  {
+    bvuId: text("bvu_id").primaryKey(),
+    objectType: text("object_type").notNull(),
+    objectId: text("object_id").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex("bvu_ids_object_idx").on(t.objectType, t.objectId)]
+);
+
+/** A supplier's code, a ring, a chip, an old code — resolvable to our identifier, never replacing it. */
+export const identifierAliases = sqliteTable(
+  "identifier_aliases",
+  {
+    id: id(),
+    bvuId: text("bvu_id")
+      .notNull()
+      .references(() => bvuIds.bvuId),
+    scheme: text("scheme", { enum: ID_ALIAS_SCHEME }).notNull(),
+    /** Who issued the code (supplier name, ring maker); empty for our own schemes. */
+    issuer: text("issuer").notNull().default(""),
+    value: text("value").notNull(),
+    validFrom: text("valid_from").notNull(),
+    validTo: text("valid_to"),
+    reason: text("reason"),
+    createdBy: text("created_by").references(() => users.id),
+    createdAt: createdAt(),
+  },
+  (t) => [index("identifier_aliases_value_idx").on(t.scheme, t.value), index("identifier_aliases_bvu_idx").on(t.bvuId)]
+);

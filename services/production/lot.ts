@@ -27,6 +27,10 @@ export const createLotInputSchema = z.object({
   initialPopulation: z.number().int().positive("La population initiale doit être positive."),
   plannedStartAt: z.string().trim().min(1).optional().nullable(),
   dataStatus: z.enum(DATA_STATUS),
+  /** Production line of the client's flow; the lot's purpose follows from it. */
+  productionLine: z.string().trim().max(40).optional().nullable(),
+  /** Hatch date of the birds, when known: the reference for every age and phase. */
+  hatchedAt: z.string().trim().refine((v) => !Number.isNaN(Date.parse(v)), "Date d'éclosion invalide.").optional().nullable(),
 });
 export type CreateLotInput = z.infer<typeof createLotInputSchema>;
 
@@ -60,6 +64,10 @@ export async function createLot(input: unknown, session: Session): Promise<Lot> 
   const populationCheck = validateInitialPopulation(data.initialPopulation);
   if (!populationCheck.ok) throw new ValidationError(populationCheck.error);
 
+  const line = data.productionLine ? await repositories.productionLines.findByCode(data.productionLine) : null;
+  if (data.productionLine && !line) throw new NotFoundError("Ligne de production", data.productionLine);
+  if (line && !line.active) throw new ValidationError(`La ligne ${line.label} est désactivée.`);
+
   const newLot: NewLot = {
     buildingId: data.buildingId,
     code: data.code,
@@ -72,6 +80,9 @@ export async function createLot(input: unknown, session: Session): Promise<Lot> 
     startedAt: null,
     endedAt: null,
     dataStatus: data.dataStatus,
+    productionLine: line?.code ?? null,
+    purpose: line?.purpose ?? null,
+    hatchedAt: data.hatchedAt ? new Date(data.hatchedAt).toISOString() : null,
   };
 
   const lot = await repositories.lots.create(newLot);

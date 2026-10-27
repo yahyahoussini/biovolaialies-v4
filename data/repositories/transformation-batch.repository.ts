@@ -23,6 +23,10 @@ export class DrizzleTransformationBatchRepository implements TransformationBatch
     return rows as TransformationBatch[];
   }
 
+  async list(): Promise<TransformationBatch[]> {
+    return (await db.query.transformationBatches.findMany({ orderBy: (t, { desc }) => desc(t.createdAt) })) as TransformationBatch[];
+  }
+
   async create(input: NewTransformationBatch): Promise<TransformationBatch> {
     const [row] = await db.insert(transformationBatches).values(input).returning();
     return row as TransformationBatch;

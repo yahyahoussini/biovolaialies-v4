@@ -105,6 +105,7 @@ export const ENTITY_TYPE_LABEL: Record<EntityType, string> = {
   TRANSFORMATION_BATCH: "Transformation",
   PRODUCT: "Produit",
   DESTINATION: "Destination",
+  TABLE_EGG_LOT: "Œufs de consommation",
 };
 
 /** Read as "<downstream node> <label> <upstream node>", matching the edge direction. */

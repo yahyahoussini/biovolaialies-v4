@@ -23,6 +23,10 @@ export class DrizzleCollectionRepository implements CollectionRepository {
     return rows as Collection[];
   }
 
+  async list(): Promise<Collection[]> {
+    return (await db.query.collections.findMany({ orderBy: (t, { desc }) => desc(t.createdAt) })) as Collection[];
+  }
+
   async create(input: NewCollection): Promise<Collection> {
     const [row] = await db.insert(collections).values(input).returning();
     return row as Collection;

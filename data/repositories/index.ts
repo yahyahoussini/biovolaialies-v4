@@ -39,6 +39,16 @@ import {
   DrizzleZoneOccupationRepository,
   DrizzleZoneRepository,
 } from "./telemetry.repository";
+import {
+  DrizzleBvuIdRepository,
+  DrizzleIdentifierAliasRepository,
+  DrizzleLotPhaseRepository,
+  DrizzleProductionLineRepository,
+  DrizzleSubjectEventRepository,
+  DrizzleSubjectRepository,
+  DrizzleTableEggLotRepository,
+  DrizzleTransferRepository,
+} from "./production-flow.repository";
 import { DrizzleKpiDefinitionRepository } from "./kpi-definition.repository";
 import { DrizzleKpiValueRepository } from "./kpi-value.repository";
 import { DrizzleLotEventRepository } from "./lot-event.repository";
@@ -121,4 +131,12 @@ export const repositories = {
   alertNotifications: new DrizzleAlertNotificationRepository(),
   calibrations: new DrizzleCalibrationRepository(),
   eggLoggerMissions: new DrizzleEggLoggerMissionRepository(),
+  productionLines: new DrizzleProductionLineRepository(),
+  lotPhases: new DrizzleLotPhaseRepository(),
+  transfers: new DrizzleTransferRepository(),
+  subjects: new DrizzleSubjectRepository(),
+  subjectEvents: new DrizzleSubjectEventRepository(),
+  tableEggLots: new DrizzleTableEggLotRepository(),
+  bvuIds: new DrizzleBvuIdRepository(),
+  identifierAliases: new DrizzleIdentifierAliasRepository(),
 };

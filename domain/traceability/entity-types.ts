@@ -16,6 +16,8 @@ export const ENTITY_TYPE = [
   "PRODUCT",
   "SHIPMENT",
   "DESTINATION",
+  /** A day's table eggs from a layer lot (handwritten flow, white and "Pistache" eggs). */
+  "TABLE_EGG_LOT",
 ] as const;
 export type EntityType = (typeof ENTITY_TYPE)[number];
 

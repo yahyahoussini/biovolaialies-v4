@@ -65,11 +65,15 @@ export async function computeLotDataQuality(lotId: string): Promise<LotDataQuali
   }
 
   const totalMortality = mortality.reduce((sum, record) => sum + record.count, 0);
-  // No structured exits/entries data this phase (transfers don't carry a population effect yet) — both 0.
+  // Birds leave a lot with a transfer at departure (a cancelled one gives them back). Birds
+  // received are already in initialPopulation: a reception sets or raises it with its own count.
+  const totalExits = (await repositories.transfers.listByObject("LOT", lot.id))
+    .filter((t) => t.status !== "ANNULE")
+    .reduce((sum, t) => sum + t.quantitySent, 0);
   const populationReconciliation = reconcilePopulation({
     initialPopulation: lot.initialPopulation,
     totalMortality,
-    totalExits: 0,
+    totalExits,
     totalEntries: 0,
     recordedPopulation: lot.currentPopulation,
   });

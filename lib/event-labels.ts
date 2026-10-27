@@ -17,6 +17,8 @@ export const EVENT_TYPE_LABEL: Record<EventType, string> = {
   SENSOR_FAULT: "Capteur en défaut",
   ALERT_ACTION: "Action sur alerte",
   AUTRE: "Autre",
+  CHANGEMENT_PHASE: "Changement de phase",
+  RECEPTION: "Réception",
 };
 
 /** Short human summary of an event's JSON payload, for timelines/activity feeds. */
@@ -38,6 +40,10 @@ export function summarizeEventPayload(eventType: EventType, payload: Record<stri
       return typeof payload.description === "string" ? payload.description : null;
     case "AUTRE":
       return typeof payload.description === "string" ? payload.description : null;
+    case "CHANGEMENT_PHASE":
+      return typeof payload.label === "string" ? payload.label : null;
+    case "RECEPTION":
+      return `${payload.received ?? "—"} reçu(s) vivant(s)${payload.deadOnArrival ? `, ${payload.deadOnArrival} mort(s) à l'arrivée` : ""}${payload.transferCode ? ` — ${payload.transferCode}` : ""}`;
     default:
       return null;
   }

@@ -1,4 +1,4 @@
-import { Bird, Box, Egg, Factory, Flame, MapPin, Package, Scissors, Send, Truck, Users, type LucideIcon } from "lucide-react";
+import { Bird, Box, Egg, EggFried, Factory, Flame, MapPin, Package, Scissors, Send, Truck, Users, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { DataStatusBadge } from "@/components/domain/DataStatusBadge";
 import type { EntityType } from "@/domain/traceability/entity-types";
@@ -18,6 +18,7 @@ const NODE_ICON: Record<EntityType, LucideIcon> = {
   TRANSFORMATION_BATCH: Factory,
   PRODUCT: Package,
   DESTINATION: MapPin,
+  TABLE_EGG_LOT: EggFried,
 };
 
 function sortForDisplay(nodes: ChainNode[]): ChainNode[] {

@@ -57,6 +57,13 @@
       "when": 1792364886997,
       "tag": "0007_telemetry",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1792403109211,
+      "tag": "0008_production_flow",
+      "breakpoints": true
     }
   ]
 }

@@ -34,6 +34,8 @@ export interface LotRepository {
   updateStatus(id: string, status: LotStatus, extra?: Partial<Pick<Lot, "startedAt" | "endedAt">>): Promise<Lot>;
   /** Population only ever moves through a validated event (see services/production/lot-events.ts) — never a raw field edit. */
   updatePopulation(id: string, currentPopulation: number): Promise<Lot>;
+  /** Line, age reference, site and counts as set by the production-flow services (phases, movements). */
+  updateFlow(id: string, patch: Partial<Pick<Lot, "buildingId" | "initialPopulation" | "currentPopulation" | "productionLine" | "purpose" | "hatchedAt">>): Promise<Lot>;
 }
 
 /** Core aggregate — fully implemented against Drizzle as of Phase 2. */
@@ -49,6 +51,7 @@ export interface CollectionRepository {
   findById(id: string): Promise<Collection | null>;
   findByCode(code: string): Promise<Collection | null>;
   listByLot(lotId: string): Promise<Collection[]>;
+  list(): Promise<Collection[]>;
   create(input: NewCollection): Promise<Collection>;
 }
 
@@ -56,6 +59,7 @@ export interface SlaughterBatchRepository {
   findById(id: string): Promise<SlaughterBatch | null>;
   findByCode(code: string): Promise<SlaughterBatch | null>;
   listBySourceLot(lotId: string): Promise<SlaughterBatch[]>;
+  list(): Promise<SlaughterBatch[]>;
   create(input: NewSlaughterBatch): Promise<SlaughterBatch>;
 }
 
@@ -64,6 +68,7 @@ export interface TransformationBatchRepository {
   findByCode(code: string): Promise<TransformationBatch | null>;
   /** Batches made from a given upstream object (slaughter batch or another transformation batch) — used by the chain traversal. */
   listByUpstream(upstreamType: TransformationBatch["upstreamType"], upstreamId: string): Promise<TransformationBatch[]>;
+  list(): Promise<TransformationBatch[]>;
   create(input: NewTransformationBatch): Promise<TransformationBatch>;
 }
 

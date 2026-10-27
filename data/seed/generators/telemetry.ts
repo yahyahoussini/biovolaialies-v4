@@ -69,7 +69,9 @@ async function seedPastLots(buildingId: string, sensorIds: { temperature: string
       startedAt: p.start,
       endedAt: new Date(start + p.days * DAY).toISOString(),
       dataStatus: "SIMULATION",
-      productionLine: "CHAIR_BELDI",
+      productionLine: "CHAIR_FERMIER",
+      purpose: "CHAIR",
+      hatchedAt: p.start,
     });
     const rows = [];
     for (let h = 0; h < p.days * 24; h += 1) {
@@ -119,7 +121,9 @@ export async function seedTelemetry(input: { heroProducerId: string; adminSessio
     startedAt: new Date(lotStart).toISOString(),
     endedAt: null,
     dataStatus: "SIMULATION",
-    productionLine: "CHAIR_BELDI",
+    productionLine: "CHAIR_FERMIER",
+    purpose: "CHAIR",
+    hatchedAt: new Date(lotStart).toISOString(),
   });
   const provisioned = await provisionBuildingUnchecked(building.id, { installedAt: "2025-02-15T08:00:00.000Z" });
   for (const zone of provisioned.zones.filter((z) => z.kind === "ELEVAGE")) {

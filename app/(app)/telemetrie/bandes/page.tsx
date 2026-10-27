@@ -27,7 +27,7 @@ function bandFields(b?: ReferenceBand) {
   return [
     ...(b ? [{ name: "bandId", label: "Bande remplacée", type: "select" as const, defaultValue: b.id, options: [{ value: b.id, label: `v${b.version}` }] }] : []),
     { name: "sensorType", label: "Grandeur", type: "select" as const, defaultValue: b?.sensorType ?? "TEMPERATURE", options: BAND_TYPES.map((t) => ({ value: t, label: SENSOR_TYPE_LABEL[t] })), half: true },
-    { name: "productionLine", label: "Ligne de production", type: "text" as const, defaultValue: b?.productionLine ?? "CHAIR_BELDI", half: true },
+    { name: "productionLine", label: "Ligne de production", type: "text" as const, defaultValue: b?.productionLine ?? "CHAIR_FERMIER", half: true },
     { name: "ageDayFrom", label: "Âge de (jours)", type: "number" as const, defaultValue: String(b?.ageDayFrom ?? 0), half: true },
     { name: "ageDayTo", label: "Âge à (jours)", type: "number" as const, defaultValue: String(b?.ageDayTo ?? 150), half: true },
     { name: "season", label: "Saison", type: "select" as const, defaultValue: b?.season ?? "TOUTES", options: SEASON.map((s) => ({ value: s, label: SEASON_LABEL[s] })), half: true },

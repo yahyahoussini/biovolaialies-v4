@@ -56,6 +56,12 @@ export class DrizzleLotRepository implements LotRepository {
     return row;
   }
 
+  async updateFlow(id: string, patch: Parameters<LotRepository["updateFlow"]>[1]): Promise<Lot> {
+    const [row] = await db.update(lots).set(patch).where(eq(lots.id, id)).returning();
+    if (!row) throw new NotFoundError("Lot", id);
+    return row;
+  }
+
   async updatePopulation(id: string, currentPopulation: number): Promise<Lot> {
     const [row] = await db.update(lots).set({ currentPopulation }).where(eq(lots.id, id)).returning();
     if (!row) throw new NotFoundError("Lot", id);

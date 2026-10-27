@@ -9,6 +9,10 @@ import {
   Building2,
   ClipboardCheck,
   Egg,
+  EggFried,
+  GitBranch,
+  ScanLine,
+  Truck,
   Inbox,
   KeyRound,
   Link2,
@@ -61,6 +65,10 @@ const ICONS: Record<string, LucideIcon> = {
   ledger: Link2,
   apiClients: KeyRound,
   shipments: Send,
+  lines: GitBranch,
+  transfers: Truck,
+  tableEggs: EggFried,
+  identifiers: ScanLine,
 };
 export type NavIconName = keyof typeof ICONS;
 

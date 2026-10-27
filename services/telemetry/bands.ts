@@ -35,7 +35,7 @@ export const STARTING_BANDS: Omit<ReferenceBand, "id" | "createdAt" | "createdBy
   ].map(([from, to, low, high]) => ({ sensorType: "POIDS" as const, ageDayFrom: from, ageDayTo: to, low, high, unit: "KG" })),
 ].map((b) => ({
   ...b,
-  productionLine: "CHAIR_BELDI",
+  productionLine: "CHAIR_FERMIER",
   season: "TOUTES" as const,
   source: "TECHNICIEN" as const,
   status: "ACTIVE" as const,

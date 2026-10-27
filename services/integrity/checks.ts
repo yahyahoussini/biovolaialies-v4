@@ -204,7 +204,7 @@ async function checkLotAndChain(lot: LotWithContext, session: Session, now: stri
         "LOT",
         lot.id,
         `Lot ${lot.code} : population attendue ${quality.populationReconciliation.expectedPopulation}, enregistrée ${quality.populationReconciliation.recordedPopulation}.`,
-        "La population courante doit se réconcilier avec la population initiale moins la mortalité déclarée.",
+        "La population courante doit se réconcilier avec la population initiale moins la mortalité déclarée et les animaux transférés.",
         now
       )
     );

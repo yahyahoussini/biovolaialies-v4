@@ -112,6 +112,11 @@ export async function resolveNode(type: EntityType, id: string): Promise<ChainNo
       if (!shipment) return null;
       return { type, id, code: shipment.code, label: `Expédition ${shipment.code}`, dataStatus: shipment.dataStatus, occurredAt: shipment.shippedAt, href: null };
     }
+    case "TABLE_EGG_LOT": {
+      const eggs = await repositories.tableEggLots.findById(id);
+      if (!eggs) return null;
+      return { type, id, code: eggs.code, label: `Œufs de consommation ${eggs.code}`, dataStatus: eggs.dataStatus, occurredAt: eggs.collectedOn, href: `/oeufs-consommation/${eggs.id}` };
+    }
     case "DESTINATION": {
       const destination = await repositories.destinations.findById(id);
       if (!destination) return null;

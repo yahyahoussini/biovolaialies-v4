@@ -13,6 +13,9 @@ import { seedLots } from "./generators/lots";
 import { seedEquipmentReference } from "../../services/equipment/equipment";
 import { seedUpstreamChain } from "./generators/upstream-chain";
 import { seedTelemetry } from "./generators/telemetry";
+import { seedProductionFlow } from "./generators/production-flow";
+import { ensureDefaultLines } from "../../services/production/lines";
+import { backfillBvuIds } from "../../services/identity/bvu-ids";
 import { seedVerifiedTraceabilityChain, VERIFIED_LOT_CODE } from "./generators/verified-traceability-chain";
 
 /** Fixed reference times for seed-time rule evaluation — deterministic and reproducible regardless of when the seed actually runs (same reasoning as phase-4's services/iot/hero-scenario.ts). */
@@ -59,6 +62,9 @@ export interface SeedOptions {
 }
 
 export async function seedDatabase(options: SeedOptions = {}): Promise<SeedResult> {
+  logger.info("seed", "Seeding the production lines of the client's flow…");
+  await ensureDefaultLines();
+
   logger.info("seed", "Seeding hierarchy (1 organization, 3 cooperatives, 7 producers, 8 farms, 12 buildings)…");
   const hierarchy = await seedHierarchy();
 
@@ -125,6 +131,9 @@ export async function seedDatabase(options: SeedOptions = {}): Promise<SeedResul
   logger.info("seed", "Seeding telemetry (documents 2 and 3): reference beldi building, hatchery probes, 56 h of simulated gateway traffic with an outage and its catch-up…");
   await seedTelemetry({ heroProducerId: hierarchy.heroProducerId, adminSession, light: options.lightTelemetry });
 
+  logger.info("seed", "Seeding the production flow of the handwritten diagram: parent-stock import, phases, two-sided transfers to partner farms, table eggs, reform…");
+  await seedProductionFlow({ hierarchy, adminSession, heroProducerId: hierarchy.heroProducerId });
+
   logger.info("seed", "Generating the hero public QR passports (lot + product)…");
   // Pinned so a demo reset restores the exact same public URLs (phase-12 brief §5/§7) —
   // a printed QR code stays valid across resets.
@@ -150,6 +159,9 @@ export async function seedDatabase(options: SeedOptions = {}): Promise<SeedResul
 
   logger.info("seed", "Loading the client's equipment register (87 lines) and commissioning checklist (20 tests)…");
   await seedEquipmentReference();
+
+  const assigned = await backfillBvuIds();
+  logger.info("seed", `BIOVOLAILLES identifiers given to ${assigned} object(s) created without one.`);
 
   logger.info("seed", "Seed complete.");
   return {

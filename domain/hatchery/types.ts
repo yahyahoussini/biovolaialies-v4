@@ -13,6 +13,9 @@ export interface ParentFlock extends ProvenanceFields {
   femaleCount: number;
   maleCount: number;
   createdAt: string;
+  /** The lot carrying the flock's population, phases, feed and sensors; null on flocks recorded before. */
+  lotId?: string | null;
+  productionLine?: string | null;
 }
 
 export interface EggLot extends ProvenanceFields {
@@ -74,4 +77,6 @@ export interface ChickLotRepository extends CodedRepository<ChickLot, NewChickLo
 
 export interface EggLotRepository extends CodedRepository<EggLot, NewEggLot> {
   listByParentFlock(parentFlockId: string): Promise<EggLot[]>;
+  /** Where the eggs are now — moved only by a received transfer. */
+  updateStorage(id: string, storageBuildingId: string): Promise<EggLot>;
 }

@@ -24,6 +24,7 @@ import { listQrTokensForLot } from "@/services/traceability/qr-tokens";
 import type { IotTabData } from "./IotTab";
 import { LotEditDialog } from "@/components/domain/LazyDialogs";
 import { LotStatusMenu } from "./LotStatusMenu";
+import { LotFlowSection } from "./LotFlowSection";
 import { LotTabs } from "./LotTabs";
 import type { PassportTabData } from "./PassportTab";
 
@@ -220,6 +221,8 @@ export default async function LotDetailPage({ params }: PageProps<"/lots/[lotId]
           <LotStatusMenu lotId={lot.id} currentStatus={lot.status} />
         </div>
       ) : null}
+
+      <LotFlowSection lot={lot} session={session} />
 
       <LotTabs
         lot={lot}
