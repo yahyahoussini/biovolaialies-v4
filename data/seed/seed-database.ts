@@ -14,6 +14,7 @@ import { seedEquipmentReference } from "../../services/equipment/equipment";
 import { seedUpstreamChain } from "./generators/upstream-chain";
 import { seedTelemetry } from "./generators/telemetry";
 import { seedProductionFlow } from "./generators/production-flow";
+import { seedEggMarking } from "./generators/egg-marking";
 import { ensureDefaultLines } from "../../services/production/lines";
 import { backfillBvuIds } from "../../services/identity/bvu-ids";
 import { seedVerifiedTraceabilityChain, VERIFIED_LOT_CODE } from "./generators/verified-traceability-chain";
@@ -133,6 +134,9 @@ export async function seedDatabase(options: SeedOptions = {}): Promise<SeedResul
 
   logger.info("seed", "Seeding the production flow of the handwritten diagram: parent-stock import, phases, two-sided transfers to partner farms, table eggs, reform…");
   await seedProductionFlow({ hierarchy, adminSession, heroProducerId: hierarchy.heroProducerId });
+
+  logger.info("seed", "Seeding egg marking (document 3, lot 15): three lines, a week of marked and packed collections, a read-back stop, candling rejects named by their code…");
+  await seedEggMarking({ adminSession });
 
   logger.info("seed", "Generating the hero public QR passports (lot + product)…");
   // Pinned so a demo reset restores the exact same public URLs (phase-12 brief §5/§7) —

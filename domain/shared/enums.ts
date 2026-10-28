@@ -215,6 +215,8 @@ export const API_SCOPE = [
   "recall:export",
   /** A field gateway posting its buffered readings and site events (document 3, ingestion layer). */
   "telemetry:write",
+  /** An egg-marking line controller: draws codes, reports the camera's reads and the trays (document 3, lot 15). */
+  "marking:write",
 ] as const;
 export type ApiScope = (typeof API_SCOPE)[number];
 

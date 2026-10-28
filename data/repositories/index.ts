@@ -57,6 +57,7 @@ import { DrizzleMeasurementRepository } from "./measurement.repository";
 import { DrizzleMortalityRecordRepository } from "./mortality-record.repository";
 import { DrizzleSanitaryObservationRepository } from "./sanitary-observation.repository";
 import { DrizzleFieldDiscrepancyRepository, DrizzleFieldEntryRepository } from "./field.repository";
+import { DrizzleMarkingRepository } from "./marking.repository";
 import { DrizzleOrganizationRepository } from "./organization.repository";
 import { DrizzleProducerRepository } from "./producer.repository";
 import { DrizzleProductRepository } from "./product.repository";
@@ -144,4 +145,5 @@ export const repositories = {
   identifierAliases: new DrizzleIdentifierAliasRepository(),
   fieldEntries: new DrizzleFieldEntryRepository(),
   fieldDiscrepancies: new DrizzleFieldDiscrepancyRepository(),
+  marking: new DrizzleMarkingRepository(),
 };

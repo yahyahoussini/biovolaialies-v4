@@ -200,6 +200,67 @@ export function buildOpenApiDocument(serverUrl: string) {
           },
         },
       },
+      "/marking/lines/{code}": {
+        get: {
+          operationId: "markingLine",
+          summary: "Ligne de marquage — réglages et campagne ouverte (démarrage du contrôleur de ligne)",
+          "x-scope": "marking:write",
+          parameters: [{ name: "code", in: "path", required: true, schema: { type: "string" } }],
+          responses: { "200": { description: "{ line: { code, prefix, routes, readThreshold, readWindow, trayCapacity, active }, openRun | null }" }, ...errors([401, 403, 404, 429, 500]) },
+        },
+      },
+      "/marking/runs/{runId}": {
+        get: {
+          operationId: "markingRun",
+          summary: "État d'une campagne (à interroger pendant un arrêt de lecture : l'impression reprend quand status = EN_COURS)",
+          "x-scope": "marking:write",
+          parameters: [{ name: "runId", in: "path", required: true, schema: { type: "string" } }],
+          responses: { "200": { description: "{ status: EN_COURS | ARRET_LECTURE | CLOS, allocated, printed, readOk, readKo, rate, guard }" }, ...errors([401, 403, 404, 429, 500]) },
+        },
+      },
+      "/marking/runs/{runId}/codes": {
+        post: {
+          operationId: "markingCodes",
+          summary: "Bloc de codes à imprimer sur les coquilles (5 000 au plus)",
+          "x-scope": "marking:write",
+          description:
+            "Code de coquille : 9 caractères (préfixe de ligne 2 + numéro 6 en base 32 de Crockford + 1 caractère de contrôle). Les numéros ne servent qu'une fois. " +
+            "`requestRef` rend la demande rejouable : même référence, même bloc (200, replayed). 409 READ_STOP (contrôle de lecture en défaut), SOURCE_BLOCKED (œufs retirés de la vente ou sous blocage qualité), RUN_CLOSED : arrêter l'impression.",
+          parameters: [{ name: "runId", in: "path", required: true, schema: { type: "string" } }],
+          requestBody: { required: true, content: { "application/json": { schema: { type: "object", required: ["count", "requestRef"], properties: { count: { type: "integer", minimum: 1, maximum: 5000 }, requestRef: { type: "string", minLength: 8, maxLength: 100 } } } } } },
+          responses: { "201": { description: "{ prefix, firstSerial, lastSerial, codes[] }" }, "200": { description: "Bloc déjà attribué à cette référence" }, ...errors([400, 401, 403, 404, 409, 422, 429, 500]) },
+        },
+      },
+      "/marking/runs/{runId}/reads": {
+        post: {
+          operationId: "markingReads",
+          summary: "Relecture caméra — plage de numéros imprimés et numéros illisibles (sortie de rejet)",
+          "x-scope": "marking:write",
+          description:
+            "À envoyer au moins tous les 500 œufs. `readAt` = heure de lecture (horloge du contrôleur, ISO 8601 avec fuseau). `batchRef` rend l'envoi rejouable. " +
+            "La réponse porte l'état de la campagne : `stopped: true` quand le taux de relecture des derniers œufs passe sous le seuil de la ligne — arrêter l'impression jusqu'à la levée de l'arrêt par une personne.",
+          parameters: [{ name: "runId", in: "path", required: true, schema: { type: "string" } }],
+          requestBody: {
+            required: true,
+            content: { "application/json": { schema: { type: "object", required: ["batchRef", "firstSerial", "lastSerial", "readAt"], properties: { batchRef: { type: "string", minLength: 8, maxLength: 100 }, firstSerial: { type: "integer" }, lastSerial: { type: "integer" }, readAt: { type: "string", format: "date-time" }, failed: { type: "array", items: { type: "integer" }, maxItems: 5000 } } } } },
+          },
+          responses: { "200": { description: "{ status, rate, considered, stopped, replayed, ok, ko }" }, ...errors([400, 401, 403, 404, 409, 422, 429, 500]) },
+        },
+      },
+      "/marking/runs/{runId}/trays": {
+        post: {
+          operationId: "markingTray",
+          summary: "Plateau conditionné (voie B) — reçoit un identifiant BIOVOLAILLES et l'URL de son QR",
+          "x-scope": "marking:write",
+          description: "Plage de numéros consécutifs, imprimés et relus par la campagne, hors œufs rejetés ; jamais dans deux plateaux. `trayRef` rend l'envoi rejouable.",
+          parameters: [{ name: "runId", in: "path", required: true, schema: { type: "string" } }],
+          requestBody: {
+            required: true,
+            content: { "application/json": { schema: { type: "object", required: ["firstSerial", "lastSerial"], properties: { trayRef: { type: "string", minLength: 8, maxLength: 100 }, firstSerial: { type: "integer" }, lastSerial: { type: "integer" }, capacity: { type: "integer", minimum: 1, maximum: 360 }, packedAt: { type: "string", format: "date-time" } } } } },
+          },
+          responses: { "201": { description: "{ trayId, bvuId, url, eggCount }" }, "200": { description: "Plateau déjà déclaré sous cette référence" }, ...errors([400, 401, 403, 404, 409, 422, 429, 500]) },
+        },
+      },
       "/quality/holds": {
         post: {
           operationId: "openHold",

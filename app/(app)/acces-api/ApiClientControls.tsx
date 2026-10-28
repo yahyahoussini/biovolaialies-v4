@@ -19,6 +19,7 @@ const SCOPE_LABEL: Record<(typeof API_SCOPE)[number], string> = {
   "ingest:write": "Ingestion par lots (API-08)",
   "recall:export": "Exporter un rappel (API-10)",
   "telemetry:write": "Passerelle de terrain : mesures et événements",
+  "marking:write": "Ligne de marquage des œufs : codes, lectures, plateaux",
 };
 
 export function CreateApiClientDialog() {

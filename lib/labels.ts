@@ -70,6 +70,8 @@ export const AUDIT_ENTITY_TYPE_LABEL: Record<string, string> = {
   lead: "Prospect",
   demo_scenario: "Scénario de démonstration",
   field_discrepancy: "Écart de saisie terrain",
+  egg_marking_line: "Ligne de marquage",
+  egg_marking_run: "Campagne de marquage",
 };
 
 export function auditEntityTypeLabel(entityType: string): string {

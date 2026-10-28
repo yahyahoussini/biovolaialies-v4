@@ -62,7 +62,9 @@ function errorResponse(error: unknown, correlationId: string): Response {
     if (status >= 500) logger.error("general", `API ${correlationId}`, error);
     // 404 bodies stay neutral: the same answer whether the object is absent or simply not visible.
     const message = error.kind === "NOT_FOUND" ? "Ressource introuvable." : error.message;
-    return json({ error: { code: error.kind, message }, correlationId }, status, correlationId);
+    // A refusal a machine must act on (a marking line told to stop) names itself; others keep their kind.
+    const code = "code" in error && typeof error.code === "string" ? error.code : error.kind;
+    return json({ error: { code, message }, correlationId }, status, correlationId);
   }
   logger.error("general", `API ${correlationId} unhandled`, error);
   return json({ error: { code: "INTERNAL", message: "Erreur interne. Réessayez avec un délai croissant." }, correlationId }, 500, correlationId);

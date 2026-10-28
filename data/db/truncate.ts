@@ -18,6 +18,14 @@ const DELETION_ORDER = [
   schema.ledgerEvents,
   schema.qualityHoldItems,
   schema.qualityCases,
+  // Egg marking: everything hangs off runs, runs off lines; exceptions point at hatch cycles.
+  schema.eggReadStops,
+  schema.eggTrays,
+  schema.eggReadExceptions,
+  schema.eggReadBatches,
+  schema.eggCodeBlocks,
+  schema.eggMarkingRuns,
+  schema.eggMarkingLines,
   // Field app entries point at transfers, lots and users.
   schema.fieldDiscrepancies,
   schema.fieldEntries,

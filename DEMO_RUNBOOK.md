@@ -66,6 +66,13 @@ fois avec du réseau ; ensuite elle s'ouvre et enregistre hors ligne, et envoie 
 retour du réseau. Le menu « Saisies terrain » montre côté bureau ce qui est arrivé, les refus avec leur
 raison et le jour en écart sur OUA-2026-CF1 (Salma a compté 4 morts, Hamid 6) à arbitrer.
 
+**Marquage des œufs** : `/marquage`, avec `partenaire.fassi@` (sa ligne seulement) ou l'administrateur.
+La campagne **MQ-FA-20261018-1** est arrêtée par le contrôle de lecture (tête encrassée) : ouvrir la
+campagne, « Lever l'arrêt » en disant ce qui a été fait, puis « Simuler 600 œufs » et « Simuler une tête
+encrassée » pour voir la ligne s'arrêter d'elle-même. Un lien de plateau (BVU-PKG-…) ouvre la page publique
+de l'œuf ; `/tracabilite/oeuf` accepte aussi le code imprimé sur une coquille (ex. le premier code d'un
+relevé). Voie A : cycle **INC-2026-38** au couvoir, 497 rebuts du mirage identifiés par leur code.
+
 ---
 
 ## 2. ⚠ Le point à connaître avant de commencer
@@ -171,6 +178,7 @@ Le parcours de 5 minutes, plus :
 - **Rôles** — sélecteur en haut à droite : **Technicien** (4 modules seulement : Lots, IoT, Anomalies, Alertes) puis **Auditeur** (voit tout, ne peut rien modifier — le bouton de prise en compte disparaît).
 - **Audit** — `/audit`, filtrer par lot : chaque mutation avec acteur, avant/après, motif.
 - **Intégrité** — `/integrite` : 473/477 contrôles passés, **0 critique** (voir §8).
+- **Marquage** — `/marquage` : lever l'arrêt de MQ-FA-20261018-1, simuler une tête encrassée, puis ouvrir un plateau sur le téléphone (page publique).
 
 ---
 

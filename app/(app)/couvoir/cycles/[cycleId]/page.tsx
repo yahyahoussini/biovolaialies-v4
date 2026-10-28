@@ -14,6 +14,7 @@ import { requireModuleAccess } from "@/services/auth/guard";
 import { getHatchCycleDetail } from "@/services/hatchery/hatchery";
 import { OpenHoldDialog } from "../../../qualite/OpenHoldDialog";
 import { recordCandlingAction, recordHatchAction } from "../../actions";
+import { CycleMarkingSection } from "./CycleMarkingSection";
 
 function n(value: number | null): string {
   return value === null ? "—" : value.toLocaleString("fr-FR");
@@ -152,6 +153,8 @@ export default async function HatchCyclePage({ params }: PageProps<"/couvoir/cyc
           </CardContent>
         </Card>
       </div>
+
+      <CycleMarkingSection cycleId={cycle.id} cycleCode={cycle.code} session={session} />
     </div>
   );
 }

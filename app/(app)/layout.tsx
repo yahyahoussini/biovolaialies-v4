@@ -39,6 +39,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           canAccessModule(session, "LOTS") && { label: "Lignes & phases", href: "/lignes", icon: "lines" },
           (canAccessModule(session, "LOTS") || canAccessModule(session, "HATCHERY")) && { label: "Transferts", href: "/transferts", icon: "transfers" },
           canAccessModule(session, "LOTS") && { label: "Œufs de consommation", href: "/oeufs-consommation", icon: "tableEggs" },
+          canAccessModule(session, "MARKING") && { label: "Marquage des œufs", href: "/marquage", icon: "marking" },
           canAccessModule(session, "EVENTS") && { label: "Saisies terrain", href: "/saisies-terrain", icon: "field" },
           canAccessModule(session, "TRACEABILITY") && { label: "Identifiants", href: "/identifiants", icon: "identifiers" },
           canAccessModule(session, "IOT") && { label: "Télémétrie", href: "/telemetrie", icon: "iot" },

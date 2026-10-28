@@ -22,6 +22,7 @@
     "demo:snapshot": "tsx scripts/build-snapshot.ts",
     "telemetry:jobs": "tsx scripts/telemetry-jobs.ts",
     "gateway:simulate": "tsx scripts/gateway-simulator.ts",
+    "marking:simulate": "tsx scripts/marking-line-simulator.ts",
     "mqtt:bridge": "tsx scripts/mqtt-bridge.ts"
   },
   "dependencies": {

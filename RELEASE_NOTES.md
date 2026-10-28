@@ -72,6 +72,11 @@ vérifiée"**. The public verification status is computed from real system state
 - Sanitary observation was a modelled table only in this release. It has since become a
   capability: vaccinations, treatments with withdrawal periods and reviewed observations on
   every lot page (see BVU_TECH.md, "Santé").
+- Egg marking was absent from this release. It has since been built (document 3, lot 15): code
+  sequence per line, camera read-back guard that stops the line, trays with their own identifier
+  and QR, candling rejects named by their code, and a public egg page with its own rate limit.
+  It runs on a simulated line controller until the supplier documents the machine's command set
+  (see BVU_TECH.md, "Marquage").
 
 ## 4. Known limitations
 

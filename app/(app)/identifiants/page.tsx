@@ -18,14 +18,14 @@ import { resolveIdentifier, type ResolvedIdentifier } from "@/services/identity/
 import { addAliasAction, retireAliasAction } from "../lots/flow-actions";
 
 const SCHEME_LABEL: Record<string, string> = { FOURNISSEUR: "Code fournisseur", RFID: "Puce RFID", BAGUE: "Bague", ANCIEN_CODE: "Ancien code", EAN: "Code EAN", AUTRE: "Autre" };
-const VIA_LABEL: Record<ResolvedIdentifier["via"], string> = { BVU: "Identifiant BIOVOLAILLES", ALIAS: "Code externe rattaché", CODE_METIER: "Code métier" };
+const VIA_LABEL: Record<ResolvedIdentifier["via"], string> = { BVU: "Identifiant BIOVOLAILLES", ALIAS: "Code externe rattaché", CODE_METIER: "Code métier", COQUILLE: "Code imprimé sur la coquille" };
 const TYPE_LABEL: Record<string, string> = {
   ...ENTITY_TYPE_LABEL,
   SUBJECT: "Sujet identifié",
   TRANSFER: "Transfert",
   QUALITY_CASE: "Blocage qualité",
   SAMPLE: "Échantillon",
-  PACKAGE: "Colis",
+  PACKAGE: "Plateau ou colis",
   CRATE: "Caisse",
   SENSOR: "Capteur",
   ASSET: "Équipement",
@@ -40,7 +40,13 @@ async function hrefFor(r: ResolvedIdentifier): Promise<string | null> {
     case "HATCH_CYCLE":
       return `/couvoir/cycles/${r.objectId}`;
     case "TABLE_EGG_LOT":
-      return `/oeufs-consommation/${r.objectId}`;
+      return r.markingRunId ? `/marquage/${r.markingRunId}` : `/oeufs-consommation/${r.objectId}`;
+    case "EGG_LOT":
+      return r.markingRunId ? `/marquage/${r.markingRunId}` : null;
+    case "PACKAGE": {
+      const tray = await repositories.marking.findTray(r.objectId);
+      return tray ? `/marquage/${tray.runId}` : null;
+    }
     case "TRANSFER":
       return `/transferts/${r.objectId}`;
     case "SUBJECT": {

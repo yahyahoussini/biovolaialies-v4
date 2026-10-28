@@ -29,6 +29,8 @@ export const MODULE = [
   "EQUIPMENT",
   /** Machine API clients (keys and scopes) for /api/v1. */
   "API_CLIENTS",
+  /** Egg-marking lines and runs (document 3, lot 15). VALIDATE = the read-back threshold, a quality decision. */
+  "MARKING",
 ] as const;
 export type Module = (typeof MODULE)[number];
 
@@ -74,6 +76,7 @@ const PERMISSIONS: Record<Role, Partial<Record<Module, readonly Action[]>>> = {
     QUALITY: ["VIEW", "CREATE", "EXPORT"],
     HATCHERY: ["VIEW", "CREATE", "EDIT"],
     EQUIPMENT: READ_ONLY,
+    MARKING: ["VIEW", "CREATE", "EDIT"],
   },
 
   PRODUCER: {
@@ -91,6 +94,8 @@ const PERMISSIONS: Record<Role, Partial<Record<Module, readonly Action[]>>> = {
     TRACEABILITY: ["VIEW", "CREATE", "EDIT"],
     QUALITY: READ_ONLY,
     HATCHERY: READ_ONLY,
+    /** The line usually stands on the farm: the farmer runs it and cleans the head when the guard stops it. */
+    MARKING: ["VIEW", "CREATE", "EDIT"],
   },
 
   FARM_MANAGER: {
@@ -108,6 +113,7 @@ const PERMISSIONS: Record<Role, Partial<Record<Module, readonly Action[]>>> = {
     QUALITY: ["VIEW", "CREATE"],
     HATCHERY: ["VIEW", "CREATE", "EDIT"],
     EQUIPMENT: READ_ONLY,
+    MARKING: ["VIEW", "CREATE", "EDIT"],
   },
 
   TECHNICIAN: {
@@ -124,6 +130,7 @@ const PERMISSIONS: Record<Role, Partial<Record<Module, readonly Action[]>>> = {
     QUALITY: ["VIEW", "CREATE"],
     HATCHERY: ["VIEW", "CREATE"],
     EQUIPMENT: READ_ONLY,
+    MARKING: ["VIEW", "CREATE", "EDIT"],
   },
 
   AUDITOR: {
@@ -146,6 +153,7 @@ const PERMISSIONS: Record<Role, Partial<Record<Module, readonly Action[]>>> = {
     QUALITY: ["VIEW", "EXPORT"],
     HATCHERY: READ_ONLY,
     EQUIPMENT: READ_ONLY,
+    MARKING: READ_ONLY,
   },
 
   /**
@@ -173,6 +181,8 @@ const PERMISSIONS: Record<Role, Partial<Record<Module, readonly Action[]>>> = {
     QUALITY: ["VIEW", "CREATE", "VALIDATE", "EXPORT"],
     HATCHERY: READ_ONLY,
     EQUIPMENT: READ_ONLY,
+    /** VALIDATE: the read-back threshold below which a marking stops counting as proof. */
+    MARKING: ["VIEW", "VALIDATE"],
   },
 };
 

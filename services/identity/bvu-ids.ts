@@ -3,6 +3,7 @@ import { repositories } from "../../data/repositories";
 import { BVU_KIND, newBvuId, normalizeBvuId, parseBvuId, type BvuObjectType } from "../../domain/identity/bvu-id";
 import type { IdentifierAlias } from "../../domain/production/flow";
 import { normalizeTag } from "../../domain/production/flow";
+import { parseShellCode } from "../../domain/marking/marking";
 import { ID_ALIAS_SCHEME } from "../../domain/shared/enums";
 import { AuthorizationError, ConflictError, NotFoundError, ValidationError } from "../../domain/shared/errors";
 import { can } from "../../domain/shared/permissions";
@@ -38,9 +39,11 @@ export interface ResolvedIdentifier {
   objectType: string;
   objectId: string;
   bvuId: string | null;
-  /** How the code was recognised — our identifier, an alias, or the object's business code. */
-  via: "BVU" | "ALIAS" | "CODE_METIER";
+  /** How the code was recognised — our identifier, an alias, the object's business code, or a code printed on a shell. */
+  via: "BVU" | "ALIAS" | "CODE_METIER" | "COQUILLE";
   alias?: IdentifierAlias;
+  /** Shell codes: the marking run that printed it. */
+  markingRunId?: string;
 }
 
 /**
@@ -56,6 +59,14 @@ export async function resolveIdentifier(raw: string): Promise<ResolvedIdentifier
     if (!parsed.valid) throw new ValidationError("Code BIOVOLAILLES illisible : le chiffre de contrôle ne correspond pas. Relisez ou rescannez le code.");
     const record = await repositories.bvuIds.find(normalizeBvuId(code));
     return record ? [{ objectType: record.objectType, objectId: record.objectId, bvuId: record.bvuId, via: "BVU" }] : [];
+  }
+  // A code printed on a shell names the eggs it was printed on (route B: a collection; route A: an egg lot).
+  const shell = parseShellCode(code);
+  const line = shell ? await repositories.marking.findLineByPrefix(shell.prefix) : null;
+  if (shell && line) {
+    if (!shell.valid) throw new ValidationError("Code de coquille illisible : le caractère de contrôle ne correspond pas. Relisez le code.");
+    const run = await repositories.marking.findRunBySerial(line.id, shell.serial);
+    if (run) return [{ objectType: run.sourceType, objectId: run.sourceId, bvuId: (await repositories.bvuIds.findByObject(run.sourceType, run.sourceId))?.bvuId ?? null, via: "COQUILLE", markingRunId: run.id }];
   }
   const aliases = [...(await repositories.identifierAliases.findActiveByValue(code)), ...(await repositories.identifierAliases.findActiveByValue(normalizeTag(code)))];
   const seen = new Set<string>();

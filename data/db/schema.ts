@@ -53,6 +53,7 @@ import {
   VALIDATION_STATUS,
 } from "../../domain/shared/enums";
 import { DISCREPANCY_STATUS, FIELD_KIND, FIELD_STATUS } from "../../domain/field/field";
+import { EGG_EXCEPTION, MARKING_ROUTE, MARKING_RUN_STATUS, MARKING_SOURCE, type MarkingRoute } from "../../domain/marking/marking";
 
 /**
  * Drizzle schema — mirrors domain/*\/types.ts 1:1 (same fields, camelCase JS <-> snake_case columns).
@@ -1345,4 +1346,163 @@ export const fieldDiscrepancies = sqliteTable(
     resolutionNote: text("resolution_note"),
   },
   (t) => [index("field_discrepancies_lot_idx").on(t.lotId, t.status)]
+);
+
+// ---------------------------------------------------------------------------
+// Egg marking (document 2, ch. 08; document 3, lot 15)
+// ---------------------------------------------------------------------------
+
+/** A marking machine and its read-back camera. The prefix is printed on every shell it marks. */
+export const eggMarkingLines = sqliteTable("egg_marking_lines", {
+  id: id(),
+  code: text("code").notNull().unique(),
+  name: text("name").notNull(),
+  buildingId: text("building_id")
+    .notNull()
+    .references(() => buildings.id),
+  routes: text("routes", { mode: "json" }).$type<MarkingRoute[]>().notNull(),
+  shellPrefix: text("shell_prefix").notNull().unique(),
+  nextSerial: integer("next_serial").notNull().default(0),
+  readThreshold: real("read_threshold").notNull(),
+  readWindow: integer("read_window").notNull(),
+  trayCapacity: integer("tray_capacity").notNull(),
+  protocol: text("protocol"),
+  active: integer("active", { mode: "boolean" }).notNull().default(true),
+  createdAt: createdAt(),
+  updatedAt: text("updated_at"),
+  updatedBy: text("updated_by").references(() => users.id),
+});
+
+/** One sitting of a line on one source. Counters are kept on the row so a run reads in one query. */
+export const eggMarkingRuns = sqliteTable(
+  "egg_marking_runs",
+  {
+    id: id(),
+    code: text("code").notNull().unique(),
+    lineId: text("line_id")
+      .notNull()
+      .references(() => eggMarkingLines.id),
+    route: text("route", { enum: MARKING_ROUTE }).notNull(),
+    sourceType: text("source_type", { enum: MARKING_SOURCE }).notNull(),
+    sourceId: text("source_id").notNull(),
+    status: text("status", { enum: MARKING_RUN_STATUS }).notNull(),
+    startedAt: text("started_at").notNull(),
+    startedBy: text("started_by")
+      .notNull()
+      .references(() => users.id),
+    endedAt: text("ended_at"),
+    endedBy: text("ended_by").references(() => users.id),
+    firstSerial: integer("first_serial"),
+    lastSerial: integer("last_serial"),
+    allocated: integer("allocated").notNull().default(0),
+    printed: integer("printed").notNull().default(0),
+    readOk: integer("read_ok").notNull().default(0),
+    readKo: integer("read_ko").notNull().default(0),
+    guardSince: text("guard_since").notNull(),
+    notes: text("notes"),
+    closeNote: text("close_note"),
+    createdAt: createdAt(),
+  },
+  (t) => [index("egg_marking_runs_line_idx").on(t.lineId, t.status), index("egg_marking_runs_source_idx").on(t.sourceType, t.sourceId)]
+);
+
+/** Codes handed out in one request. (line, first serial) unique: two blocks can never share a code. */
+export const eggCodeBlocks = sqliteTable(
+  "egg_code_blocks",
+  {
+    id: id(),
+    lineId: text("line_id")
+      .notNull()
+      .references(() => eggMarkingLines.id),
+    runId: text("run_id")
+      .notNull()
+      .references(() => eggMarkingRuns.id),
+    requestRef: text("request_ref").notNull(),
+    firstSerial: integer("first_serial").notNull(),
+    lastSerial: integer("last_serial").notNull(),
+    allocatedAt: text("allocated_at").notNull(),
+    requestedBy: text("requested_by").notNull(),
+  },
+  (t) => [uniqueIndex("egg_code_blocks_line_serial_idx").on(t.lineId, t.firstSerial), uniqueIndex("egg_code_blocks_ref_idx").on(t.runId, t.requestRef)]
+);
+
+/** Eggs printed and read back, one row per camera report — a range, never a row per egg. */
+export const eggReadBatches = sqliteTable(
+  "egg_read_batches",
+  {
+    id: id(),
+    runId: text("run_id")
+      .notNull()
+      .references(() => eggMarkingRuns.id),
+    batchRef: text("batch_ref").notNull(),
+    firstSerial: integer("first_serial").notNull(),
+    lastSerial: integer("last_serial").notNull(),
+    readAt: text("read_at").notNull(),
+    ok: integer("ok").notNull(),
+    ko: integer("ko").notNull(),
+    receivedAt: text("received_at").notNull(),
+    reportedBy: text("reported_by").notNull(),
+  },
+  (t) => [
+    uniqueIndex("egg_read_batches_ref_idx").on(t.runId, t.batchRef),
+    index("egg_read_batches_serial_idx").on(t.runId, t.firstSerial),
+    index("egg_read_batches_read_idx").on(t.readAt),
+  ]
+);
+
+/** The eggs that are not like the others: unreadable at the camera, or removed at candling. */
+export const eggReadExceptions = sqliteTable(
+  "egg_read_exceptions",
+  {
+    id: id(),
+    runId: text("run_id")
+      .notNull()
+      .references(() => eggMarkingRuns.id),
+    serial: integer("serial").notNull(),
+    kind: text("kind", { enum: EGG_EXCEPTION }).notNull(),
+    at: text("at").notNull(),
+    recordedBy: text("recorded_by").references(() => users.id),
+    hatchCycleId: text("hatch_cycle_id").references(() => hatchCycles.id),
+    note: text("note"),
+  },
+  (t) => [uniqueIndex("egg_read_exceptions_serial_idx").on(t.runId, t.serial, t.kind), index("egg_read_exceptions_cycle_idx").on(t.hatchCycleId)]
+);
+
+/** A tray, box or alvéole: consecutive codes, its own BIOVOLAILLES identifier, and the QR the consumer scans. */
+export const eggTrays = sqliteTable(
+  "egg_trays",
+  {
+    id: id(),
+    runId: text("run_id")
+      .notNull()
+      .references(() => eggMarkingRuns.id),
+    trayRef: text("tray_ref"),
+    firstSerial: integer("first_serial").notNull(),
+    lastSerial: integer("last_serial").notNull(),
+    capacity: integer("capacity").notNull(),
+    eggCount: integer("egg_count").notNull(),
+    packedAt: text("packed_at").notNull(),
+    /** Who declared it: "user:<id>" for a person in the application, "api:<client id>" for a line controller. */
+    packedBy: text("packed_by").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex("egg_trays_serial_idx").on(t.runId, t.firstSerial), uniqueIndex("egg_trays_ref_idx").on(t.runId, t.trayRef)]
+);
+
+/** Each time the read-back guard stopped the line, and who restarted it, after doing what. */
+export const eggReadStops = sqliteTable(
+  "egg_read_stops",
+  {
+    id: id(),
+    runId: text("run_id")
+      .notNull()
+      .references(() => eggMarkingRuns.id),
+    stoppedAt: text("stopped_at").notNull(),
+    rate: real("rate").notNull(),
+    considered: integer("considered").notNull(),
+    liftedAt: text("lifted_at"),
+    liftedBy: text("lifted_by").references(() => users.id),
+    liftNote: text("lift_note"),
+  },
+  (t) => [index("egg_read_stops_run_idx").on(t.runId)]
 );

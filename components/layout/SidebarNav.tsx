@@ -12,6 +12,7 @@ import {
   EggFried,
   GitBranch,
   ScanLine,
+  Printer,
   Smartphone,
   Truck,
   Inbox,
@@ -71,6 +72,7 @@ const ICONS: Record<string, LucideIcon> = {
   tableEggs: EggFried,
   identifiers: ScanLine,
   field: Smartphone,
+  marking: Printer,
 };
 export type NavIconName = keyof typeof ICONS;
 
