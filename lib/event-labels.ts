@@ -44,6 +44,12 @@ export function summarizeEventPayload(eventType: EventType, payload: Record<stri
       return typeof payload.label === "string" ? payload.label : null;
     case "RECEPTION":
       return `${payload.received ?? "—"} reçu(s) vivant(s)${payload.deadOnArrival ? `, ${payload.deadOnArrival} mort(s) à l'arrivée` : ""}${payload.transferCode ? ` — ${payload.transferCode}` : ""}`;
+    case "VACCINATION":
+      return `${payload.vaccine ?? "—"} — ${payload.disease ?? "—"}`;
+    case "TRAITEMENT":
+      return `${payload.product ?? "—"} — ${payload.indication ?? "—"}${payload.durationDays ? `, ${payload.durationDays} j` : ""}`;
+    case "OBSERVATION_SANITAIRE":
+      return typeof payload.signs === "string" ? payload.signs : null;
     default:
       return null;
   }

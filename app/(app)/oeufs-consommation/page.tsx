@@ -27,6 +27,8 @@ export default async function TableEggsPage() {
   const total = rows.reduce((s, r) => s + r.quantity, 0);
   const saleable = rows.reduce((s, r) => s + r.saleable, 0);
   const byType = (t: string) => rows.filter((r) => r.eggType === t).reduce((s, r) => s + r.quantity, 0);
+  // Graded saleable, but laid inside a treatment's egg withdrawal window: never offered for sale.
+  const withdrawn = rows.filter((r) => r.status === "RETIRE").reduce((s, r) => s + r.saleable, 0);
 
   return (
     <div className="flex flex-col gap-6">
@@ -56,9 +58,10 @@ export default async function TableEggsPage() {
           ) : null
         }
       />
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         <StatCard label="Œufs collectés" value={total.toLocaleString("fr-FR")} icon={EggFried} />
-        <StatCard label="Vendables" value={total ? `${((saleable / total) * 100).toLocaleString("fr-FR", { maximumFractionDigits: 1 })} %` : "—"} />
+        <StatCard label="Classés vendables" value={total ? `${((saleable / total) * 100).toLocaleString("fr-FR", { maximumFractionDigits: 1 })} %` : "—"} />
+        <StatCard label="Retirés de la vente" value={withdrawn.toLocaleString("fr-FR")} hint="délai d'attente d'un traitement" />
         <StatCard label="Œuf blanc" value={byType("BLANC").toLocaleString("fr-FR")} />
         <StatCard label="Œuf « Pistache »" value={byType("PISTACHE").toLocaleString("fr-FR")} />
       </div>

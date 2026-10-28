@@ -20,4 +20,4 @@ export const when = (v: string | null | undefined) => (v ? new Date(v).toLocaleS
 export const day = (v: string | null | undefined) => (v ? new Date(v).toLocaleDateString("fr-FR", { timeZone: "Africa/Casablanca" }) : "—");
 
 export const EGG_TYPE_LABEL: Record<string, string> = { BLANC: "Blanc", PISTACHE: "« Pistache »", AUTRE: "Autre" };
-export const TABLE_EGG_STATUS_LABEL: Record<string, string> = { EN_STOCK: "En stock", CONDITIONNE: "Conditionné", EXPEDIE: "Expédié", DETRUIT: "Détruit" };
+export const TABLE_EGG_STATUS_LABEL: Record<string, string> = { EN_STOCK: "En stock", CONDITIONNE: "Conditionné", EXPEDIE: "Expédié", DETRUIT: "Détruit", RETIRE: "Retiré de la vente" };

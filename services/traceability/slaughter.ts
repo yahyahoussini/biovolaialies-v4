@@ -1,4 +1,6 @@
 import { z } from "../../lib/zod";
+import { withdrawalMessage } from "../../domain/sanitary/health";
+import { meatWithdrawalsAt } from "../sanitary/health";
 import { repositories } from "../../data/repositories";
 import { validateProcessingYield, validateTransferQuantity } from "../../domain/production/quantity-integrity";
 import type { SlaughterBatch } from "../../domain/production/types";
@@ -54,6 +56,9 @@ export async function createSlaughterBatch(input: unknown, session: Session): Pr
       throw new ValidationError("Des pondeuses ou des reproducteurs passent d'abord en réforme : enregistrez la phase « Réforme » avant l'abattage.");
     }
   }
+
+  const meatWithdrawals = await meatWithdrawalsAt(lot.id, data.slaughteredAt);
+  if (meatWithdrawals.length > 0) throw new ValidationError(withdrawalMessage(meatWithdrawals, "meat") ?? "Délai d'attente viande en cours.");
 
   const existingCode = await repositories.slaughterBatches.findByCode(data.code);
   if (existingCode) throw new ConflictError(`Le code de lot d'abattage "${data.code}" est déjà utilisé.`);

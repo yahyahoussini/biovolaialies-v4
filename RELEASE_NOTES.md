@@ -69,9 +69,9 @@ vérifiée"**. The public verification status is computed from real system state
 - Age-adjusted environmental setpoints. `TEMPERATURE_OUT_OF_RANGE` is an absolute safety
   envelope (18-33 degC, tolerable at any age), not a brooding-to-finishing setpoint curve, so
   it cannot flag "28 degC is too warm for a five-week flock". Stated as such in the rule text.
-- Sanitary observation. A `sanitary_observations` table and domain type exist in the schema,
-  but there is no repository implementation, no service, no UI and the seed never writes a
-  row — it is a modelled shape, not a capability.
+- Sanitary observation was a modelled table only in this release. It has since become a
+  capability: vaccinations, treatments with withdrawal periods and reviewed observations on
+  every lot page (see BVU_TECH.md, "Santé").
 
 ## 4. Known limitations
 

@@ -23,6 +23,7 @@ The `/programme` screen shows, test by test, what is automated, partial, or can 
 | Commissioning | `/equipements/recette` | Commissioning table | 20 procedures; a result exists only once recorded with evidence. |
 | Programme | `/programme` | Roadmap, gates, risks, R01–R15, T01–T40 | Client's tables plus an honest coverage status for each rule and test. |
 | Telemetry | `/telemetrie` | Documents 2 and 3 | See the next section. |
+| Health (Santé) | lot page, "Santé" section | Document 3, ch. 02 and 05 | Vaccinations, treatments and observations, dated when they happened. A treatment carries its withdrawal periods and they act: slaughter is refused inside the meat window, and eggs collected inside the egg window are recorded as "Retiré de la vente" (only destruction is allowed). The farmer records; an observation is reviewed by the technician, never by the person who made it. |
 
 ## Telemetry (client documents 2 and 3)
 

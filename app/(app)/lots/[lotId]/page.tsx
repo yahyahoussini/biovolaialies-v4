@@ -25,6 +25,7 @@ import type { IotTabData } from "./IotTab";
 import { LotEditDialog } from "@/components/domain/LazyDialogs";
 import { LotStatusMenu } from "./LotStatusMenu";
 import { LotFlowSection } from "./LotFlowSection";
+import { LotHealthSection } from "./LotHealthSection";
 import { LotTabs } from "./LotTabs";
 import type { PassportTabData } from "./PassportTab";
 
@@ -223,6 +224,7 @@ export default async function LotDetailPage({ params }: PageProps<"/lots/[lotId]
       ) : null}
 
       <LotFlowSection lot={lot} session={session} />
+      <LotHealthSection lot={lot} session={session} />
 
       <LotTabs
         lot={lot}

@@ -55,6 +55,7 @@ import { DrizzleLotEventRepository } from "./lot-event.repository";
 import { DrizzleLotRepository } from "./lot.repository";
 import { DrizzleMeasurementRepository } from "./measurement.repository";
 import { DrizzleMortalityRecordRepository } from "./mortality-record.repository";
+import { DrizzleSanitaryObservationRepository } from "./sanitary-observation.repository";
 import { DrizzleOrganizationRepository } from "./organization.repository";
 import { DrizzleProducerRepository } from "./producer.repository";
 import { DrizzleProductRepository } from "./product.repository";
@@ -89,6 +90,7 @@ export const repositories = {
   waterUsage: new DrizzleWaterUsageRepository(),
   weightMeasurements: new DrizzleWeightMeasurementRepository(),
   mortalityRecords: new DrizzleMortalityRecordRepository(),
+  sanitaryObservations: new DrizzleSanitaryObservationRepository(),
   environmentMeasurements: new DrizzleEnvironmentMeasurementRepository(),
   devices: new DrizzleDeviceRepository(),
   sensors: new DrizzleSensorRepository(),

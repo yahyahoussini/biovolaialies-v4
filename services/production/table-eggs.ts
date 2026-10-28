@@ -11,6 +11,7 @@ import type { Session } from "../auth/session";
 import { assignBvuId } from "../identity/bvu-ids";
 import { assertInScope, buildHierarchyIndex, isWithinScope, resolveLotHierarchy } from "../identity/scope-check";
 import { assertNotOnHold } from "../quality/holds";
+import { eggWithdrawalsOn } from "../sanitary/health";
 import { createRelation } from "../traceability/relations";
 import { getProductionLine } from "./lines";
 
@@ -61,6 +62,9 @@ export async function createTableEggLot(input: unknown, session: Session): Promi
     throw new ConflictError(`Une collecte est déjà enregistrée pour ${lot.code} le ${new Date(data.collectedOn).toLocaleDateString("fr-FR")} : corrigez-la plutôt que d'en créer une seconde.`);
   }
 
+  // Eggs laid inside a treatment's egg withdrawal window are recorded, but never offered for sale.
+  const withdrawals = await eggWithdrawalsOn(lot.id, data.collectedOn);
+
   const eggs = await repositories.tableEggLots.create({
     code: data.code,
     lotId: lot.id,
@@ -71,7 +75,7 @@ export async function createTableEggLot(input: unknown, session: Session): Promi
     cracked: data.cracked,
     dirty: data.dirty,
     small: data.small,
-    status: "EN_STOCK",
+    status: withdrawals.length > 0 ? "RETIRE" : "EN_STOCK",
     sourceType: data.sourceType,
     sourceId: null,
     actorId: session.userId,
@@ -90,7 +94,7 @@ export async function createTableEggLot(input: unknown, session: Session): Promi
     field: null,
     oldValue: null,
     newValue: `${eggs.quantity} œufs ${eggType.toLowerCase()} (${eggs.saleable} vendables, déclassement ${(downgradeRate(eggs) * 100).toFixed(1)} %)`,
-    reason: "Collecte d'œufs de consommation",
+    reason: withdrawals.length > 0 ? `Collecte d'œufs de consommation, retirée de la vente : ${withdrawals[0].product} en délai d'attente` : "Collecte d'œufs de consommation",
     relatedLotId: lot.id,
     relatedEventId: null,
   });
@@ -102,6 +106,7 @@ const NEXT_STATUS: Record<TableEggLot["status"], TableEggLot["status"][]> = {
   CONDITIONNE: ["EXPEDIE", "DETRUIT"],
   EXPEDIE: [],
   DETRUIT: [],
+  RETIRE: ["DETRUIT"],
 };
 
 export const tableEggStatusSchema = z.object({ id: z.string().min(1), status: z.enum(TABLE_EGG_LOT_STATUS), reason: z.string().trim().max(500).optional().nullable() });

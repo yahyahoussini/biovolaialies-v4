@@ -330,7 +330,8 @@ export type PhasePlanCheck = (typeof PHASE_PLAN_CHECK)[number];
 export const EGG_TYPE = ["BLANC", "PISTACHE", "AUTRE"] as const;
 export type EggType = (typeof EGG_TYPE)[number];
 
-export const TABLE_EGG_LOT_STATUS = ["EN_STOCK", "CONDITIONNE", "EXPEDIE", "DETRUIT"] as const;
+/** RETIRE: laid inside a treatment's egg withdrawal window — off sale, may only be destroyed. */
+export const TABLE_EGG_LOT_STATUS = ["EN_STOCK", "CONDITIONNE", "EXPEDIE", "DETRUIT", "RETIRE"] as const;
 export type TableEggLotStatus = (typeof TABLE_EGG_LOT_STATUS)[number];
 
 /** What a movement carries from one site to another. */

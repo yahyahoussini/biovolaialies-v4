@@ -85,7 +85,8 @@ const PERMISSIONS: Record<Role, Partial<Record<Module, readonly Action[]>>> = {
     ACTIONS: ["VIEW", "CREATE"],
     EVENTS: ["VIEW", "CREATE"],
     PRODUCTS: READ_ONLY,
-    SANITARY: READ_ONLY,
+    /** The farmer records the vaccinations and treatments given on the farm (document 3, ch. 05). */
+    SANITARY: ["VIEW", "CREATE"],
     TRACEABILITY: ["VIEW", "CREATE", "EDIT"],
     QUALITY: READ_ONLY,
     HATCHERY: READ_ONLY,

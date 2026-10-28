@@ -1,4 +1,5 @@
 import type { Session } from "../../../services/auth/session";
+import { recordObservation, recordTreatment, recordVaccination, reviewObservation } from "../../../services/sanitary/health";
 import { createChickLot, createEggLot, createHatchCycle, createParentFlock, importParentStock, recordCandling, recordHatch } from "../../../services/hatchery/hatchery";
 import { transitionLotStatus } from "../../../services/production/lot-lifecycle";
 import { createLot } from "../../../services/production/lot";
@@ -100,6 +101,8 @@ export async function seedProductionFlow(input: { hierarchy: SeededHierarchy; ad
     coop.session
   );
   await createMortalityRecord(imported.lotId!, { occurredAt: "2026-03-17T07:00:00.000Z", count: 61, suspectedCause: "Mortalité de démarrage", ...SIM }, coop.session);
+  await recordVaccination(imported.lotId!, { vaccine: "Nobilis Ma5 + Clone 30", disease: "Newcastle et bronchite infectieuse", route: "NEBULISATION", batchNumber: "A091B11", headcount: 5400, administeredAt: "2026-03-16T07:00:00.000Z" }, admin);
+  await recordVaccination(imported.lotId!, { vaccine: "Nobilis Gumboro 228E", disease: "Gumboro", route: "EAU_DE_BOISSON", batchNumber: "G228-0326", headcount: 5380, administeredAt: "2026-03-24T07:00:00.000Z" }, admin);
   await startLotPhase({ lotId: imported.lotId!, phase: "ELEVAGE_SOL", startedAt: "2026-04-21T08:00:00.000Z", buildingId: floor.id, notes: "Sortie des cages à 6 semaines" }, coop.session);
   await startLotPhase({ lotId: imported.lotId!, phase: "PRODUCTION_OAC", startedAt: "2026-10-08T08:00:00.000Z", notes: "Début de ponte à 7 mois" }, coop.session);
   const ringed = await registerSubjects(
@@ -160,6 +163,13 @@ export async function seedProductionFlow(input: { hierarchy: SeededHierarchy; ad
     }
   }
 
+  // A respiratory alert on the "Pistache" flock, confirmed, then treated: the eggs laid inside the
+  // egg withdrawal window come off sale (five collections), the later ones stay on sale.
+  const alarm = await recordObservation(pistache.id, { status: "ALERTE", signs: "Râles respiratoires sur plusieurs groupes, chute de ponte de 6 % en trois jours", affectedCount: 180, observedAt: "2026-10-13T08:30:00.000Z" }, nadia.session);
+  await reviewObservation({ observationId: alarm.observation.id, decision: "VALIDE", comment: "Confirmé à la visite ; prélèvements envoyés au laboratoire" }, admin);
+  await recordTreatment(pistache.id, { product: "Oxytétracycline 20 %", activeSubstance: "Oxytétracycline", indication: "Mycoplasmose respiratoire suspectée", prescriptionRef: "ORD-2026-0952", prescriber: "Dr Hicham Alaoui", route: "EAU_DE_BOISSON", dose: "40 mg/kg/j", startedAt: "2026-10-14T08:00:00.000Z", durationDays: 5, withdrawalMeatDays: 7, withdrawalEggDays: 7, headcount: 1650 }, nadia.session);
+  await recordVaccination(white.id, { vaccine: "Nobilis IB 4-91", disease: "Bronchite infectieuse (rappel)", route: "NEBULISATION", batchNumber: "A118C02", headcount: 2300, administeredAt: "2026-09-02T07:30:00.000Z" }, rachid.session);
+
   // --- Spent hens: a 2024 white flock reformed at 29.8 months, slaughtered through a collection ----
   const old = await createLot({ code: "FAS-2024-PB0", buildingId: building(hierarchy, "Ferme Fassi", "BAT-01").buildingId, species: "Poulet", breed: "Dekalb White", initialPopulation: 2100, plannedStartAt: "2024-05-13", dataStatus: "SIMULATION", productionLine: "PONDEUSE_BLANC", hatchedAt: "2024-04-01T00:00:00.000Z" }, admin);
   await transitionLotStatus(old.id, "CREE", admin);
@@ -169,6 +179,8 @@ export async function seedProductionFlow(input: { hierarchy: SeededHierarchy; ad
   await createMortalityRecord(old.id, { occurredAt: "2026-08-30T07:00:00.000Z", count: 150, suspectedCause: "Mortalité cumulée en ponte", ...SIM }, rachid.session);
   await startLotPhase({ lotId: old.id, phase: "REFORME", startedAt: "2026-09-25T07:00:00.000Z", notes: "Fin de ponte économique, réforme vers l'abattoir" }, rachid.session);
   await createWeightMeasurementRecord(old.id, { occurredAt: "2026-09-26T07:00:00.000Z", averageWeight: 1.62, unit: "KG", sampleCount: 60, measurementMethod: "Pesée d'échantillon avant enlèvement", ...SIM }, rachid.session);
+  // Treated three weeks before reform: both withdrawal windows closed before the slaughter date.
+  await recordTreatment(old.id, { product: "Amoxicilline 70 %", activeSubstance: "Amoxicilline", indication: "Colibacillose en fin de ponte", prescriptionRef: "ORD-2026-0871", prescriber: "Dr Hicham Alaoui", route: "EAU_DE_BOISSON", dose: "15 mg/kg/j", startedAt: "2026-09-01T07:00:00.000Z", durationDays: 5, withdrawalMeatDays: 10, withdrawalEggDays: 7, headcount: 1950 }, rachid.session);
   const pickup = await createCollection({ code: "COL-2026-REF1", lotId: old.id, quantity: 3150, unit: "KG", collectedAt: "2026-09-28T05:00:00.000Z", measurementMethod: "Pont-bascule", ...SIM }, admin);
   await createSlaughterBatch({ code: "AB-2026-REF1", sourceLotId: old.id, sourceCollectionId: pickup.id, quantityIn: 3150, quantityOut: 2140, losses: 1010, slaughteredAt: "2026-09-28T10:00:00.000Z", measurementMethod: "Registre d'abattage", ...SIM }, admin);
   await transitionLotStatus(old.id, "ABATTU", admin, "Poules de réforme abattues (AB-2026-REF1)", "2026-09-28T10:00:00.000Z");
@@ -191,6 +203,9 @@ export async function seedProductionFlow(input: { hierarchy: SeededHierarchy; ad
   await transitionLotStatus(late.id, "CREE", salma.session);
   await transitionLotStatus(late.id, "ACTIF", salma.session, "Mise en place", "2026-04-03T08:00:00.000Z");
   await startLotPhase({ lotId: late.id, phase: "ELEVAGE_PARTENAIRE", startedAt: "2026-04-03T08:00:00.000Z" }, salma.session);
+  await recordVaccination(late.id, { vaccine: "Avinew", disease: "Newcastle", route: "EAU_DE_BOISSON", batchNumber: "L2604A", headcount: 1800, administeredAt: "2026-04-05T07:00:00.000Z" }, salma.session);
+  await recordTreatment(late.id, { product: "Toltrazuril 2,5 %", activeSubstance: "Toltrazuril", indication: "Coccidiose", prescriptionRef: "ORD-2026-0410", prescriber: "Dr Hicham Alaoui", route: "EAU_DE_BOISSON", dose: "7 mg/kg/j", startedAt: "2026-05-12T07:00:00.000Z", durationDays: 2, withdrawalMeatDays: 14, headcount: 1770 }, salma.session);
+  await recordObservation(late.id, { status: "SURVEILLANCE", signs: "Boiteries sur quelques sujets âgés, litière humide près des abreuvoirs", affectedCount: 25, observedAt: "2026-10-20T09:00:00.000Z" }, salma.session);
 
   // --- Hatching eggs counted on both sides, and chicks of this week still on the road ----------------
   const recent = await createEggLot({ code: "OAC-2026-0920", parentFlockId: breederFlock.id, collectedAt: "2026-09-20T07:00:00.000Z", quantity: 6500, storageBuildingId: breederStore.id, ...SIM }, admin);
