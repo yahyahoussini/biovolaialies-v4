@@ -218,7 +218,8 @@ export async function recordResults(input: unknown, session: Session, now = new 
     entityType: "lab_sample",
     entityId: sample.id,
     field: "results",
-    oldValue: sample.status,
+    // Results are added beside the earlier ones, never in their place: there is no "before".
+    oldValue: null,
     newValue: results.map((r) => `${r.analyte} : ${r.value} (${RESULT_INTERPRETATION_LABEL[r.interpretation].toLowerCase()})`).join(" ; "),
     reason: adverse.length ? `Résultat défavorable : ${adverse.map((r) => r.analyte).join(", ")}` : "Résultats du laboratoire",
     relatedLotId: object?.lotId ?? null,

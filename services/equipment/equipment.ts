@@ -7,7 +7,7 @@ import { can } from "../../domain/shared/permissions";
 import { isGlobalScope } from "../../domain/shared/scope";
 import { recordAudit } from "../audit/record";
 import type { Session } from "../auth/session";
-import { csvField } from "../leads/leads";
+import { csvField } from "../../lib/csv";
 import equipmentReference from "../../data/seed/reference/equipment.json";
 import { COMMISSIONING_REFERENCE } from "../../data/seed/reference/commissioning";
 

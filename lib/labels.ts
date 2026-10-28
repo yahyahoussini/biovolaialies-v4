@@ -77,6 +77,7 @@ export const AUDIT_ENTITY_TYPE_LABEL: Record<string, string> = {
   egg_marking_run: "Campagne de marquage",
   lab_sample: "Prélèvement de laboratoire",
   lab_result: "Résultat de laboratoire",
+  export: "Export",
 };
 
 export function auditEntityTypeLabel(entityType: string): string {

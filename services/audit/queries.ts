@@ -36,3 +36,22 @@ export async function searchAuditLog(filters: AuditLogFilters, session: Session,
 
   return entries.filter((e) => e.relatedLotId !== null && inScopeLotIds.has(e.relatedLotId));
 }
+
+export interface LotChange extends AuditLogEntry {
+  actorName: string;
+}
+
+/**
+ * A lot's own change history (document 3, lot 12: "qui a modifié quoi, quand, valeur avant et
+ * après"), for whoever may see the lot — its farmer included. Entries are those the audit trail
+ * ties to this lot; nothing about other lots or about user administration is ever in it.
+ */
+export async function lotChangeHistory(lotId: string, session: Session, limit = 200): Promise<LotChange[]> {
+  if (!can(session, "VIEW", "LOTS")) throw new AuthorizationError();
+  if (!isGlobalScope(session) && !isWithinScope(session, await resolveLotHierarchy(lotId))) {
+    throw new AuthorizationError("Cette ressource n'appartient pas à votre périmètre.");
+  }
+  const [entries, users] = await Promise.all([repositories.auditLog.search({ relatedLotId: lotId }, limit), repositories.users.list()]);
+  const nameOf = new Map(users.map((u) => [u.id, u.fullName]));
+  return entries.map((e) => ({ ...e, actorName: e.actorId ? (nameOf.get(e.actorId) ?? "—") : "Système" }));
+}

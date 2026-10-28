@@ -1,4 +1,6 @@
 import {
+  FileDown,
+  KeyRound,
   Activity,
   AlertTriangle,
   Bird,
@@ -35,6 +37,8 @@ const ENTRIES: { section: string; items: AdminEntry[] }[] = [
     items: [
       { label: "Utilisateurs", description: "Comptes, rôles et périmètres d'accès.", href: "/utilisateurs", icon: UserCog, module: "USERS" },
       { label: "Audit", description: "Journal complet des mutations importantes.", href: "/audit", icon: History, module: "AUDIT" },
+      { label: "Connexions", description: "Journal des connexions, échecs et blocages.", href: "/administration/connexions", icon: KeyRound, module: "AUDIT" },
+      { label: "Exports", description: "Exports enregistrés avec leur empreinte, et vérification d'un fichier.", href: "/exports", icon: FileDown, module: "AUDIT" },
       { label: "Intégrité", description: "Preuve de cohérence de la plateforme.", href: "/integrite", icon: ShieldCheck, module: "INTEGRITY" },
       { label: "Paramètres", description: "Règles d'alerte et informations système.", href: "/parametres", icon: Settings, module: "SETTINGS" },
       {

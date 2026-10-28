@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { resetRateLimits } from "../../lib/rate-limit";
 import { createTestSession } from "../production/test-support";
-import { csvField, exportLeadsCsv, listLeads, submitLead, updateLead } from "./leads";
+import { csvField } from "../../lib/csv";
+import { exportLeadsCsv, listLeads, submitLead, updateLead } from "./leads";
 
 const form = {
   company: "Abattoir du Saïss",

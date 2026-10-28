@@ -27,6 +27,7 @@ import { LotStatusMenu } from "./LotStatusMenu";
 import { LotFlowSection } from "./LotFlowSection";
 import { LotHealthSection } from "./LotHealthSection";
 import { LotLabSection } from "./LotLabSection";
+import { LotHistorySection } from "./LotHistorySection";
 import { LotTabs } from "./LotTabs";
 import type { PassportTabData } from "./PassportTab";
 
@@ -227,6 +228,7 @@ export default async function LotDetailPage({ params }: PageProps<"/lots/[lotId]
       <LotFlowSection lot={lot} session={session} />
       <LotHealthSection lot={lot} session={session} />
       <LotLabSection lotId={lot.id} session={session} />
+      <LotHistorySection lotId={lot.id} session={session} />
 
       <LotTabs
         lot={lot}

@@ -1,5 +1,6 @@
 import { z } from "../../lib/zod";
 import { repositories } from "../../data/repositories";
+import { csvField } from "../../lib/csv";
 import type { Lead } from "../../domain/leads/types";
 import { CONSENT_VERSION, leadSubmissionSchema } from "../../domain/leads/validation";
 import { LEAD_STATUS } from "../../domain/shared/enums";
@@ -121,12 +122,6 @@ export async function updateLead(input: unknown, session: Session): Promise<Lead
   return updated;
 }
 
-/** RFC 4180 field quoting, plus a leading quote on values a spreadsheet would run as a formula. */
-export function csvField(value: string | null | undefined): string {
-  let text = value ?? "";
-  if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`;
-  return /[",\n\r;]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
-}
 
 export async function exportLeadsCsv(session: Session): Promise<string> {
   assertCanManageLeads(session, "EXPORT");

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { repositories } from "../../data/repositories";
 import { AppError } from "../../domain/shared/errors";
 import type { Session } from "../auth/session";
+import { lotChangeHistory } from "../audit/queries";
 import { getRoleFocus } from "../dashboard/role-focus";
 import { getFieldActivity } from "../field/activity";
 import { buildFieldSnapshot } from "../field/snapshot";
@@ -71,6 +72,10 @@ describe("isolation between farms", () => {
     expect(await refused(getLotHealth(b.lot.id, reader))).toBe(true);
     expect(await refused(getMarkingRun(run.id, reader))).toBe(true);
     expect(await refused(getLabSample(sample.id, reader))).toBe(true);
+    expect(await refused(lotChangeHistory(b.lot.id, reader))).toBe(true);
+    await expect(lotChangeHistory(a.lot.id, reader)).resolves.toBeInstanceOf(Array);
+    // The neighbour's own history holds the marking run he started on his collection.
+    expect((await lotChangeHistory(b.lot.id, b.farmer)).some((c) => c.entityType === "egg_marking_run")).toBe(true);
 
     // Lists: the neighbour's rows are not in them.
     expect((await listTableEggLots(reader)).map((e) => e.id)).not.toContain(b.eggs.id);

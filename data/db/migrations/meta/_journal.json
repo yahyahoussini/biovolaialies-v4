@@ -85,6 +85,13 @@
       "when": 1793229093295,
       "tag": "0011_laboratory",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1793230935847,
+      "tag": "0012_auth_journal_exports",
+      "breakpoints": true
     }
   ]
 }

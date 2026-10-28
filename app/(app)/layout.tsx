@@ -5,6 +5,7 @@ import { canAccessModule } from "@/domain/shared/permissions";
 import { env } from "@/lib/env";
 import { ROLE_LABEL } from "@/lib/labels";
 import { getCurrentSession } from "@/services/auth/session";
+import { datasetsFor } from "@/services/exports/exports";
 import { resolveScopeDescriptor } from "@/services/identity/scope-label";
 import type { NavSection } from "@/components/layout/Sidebar";
 import { Sidebar } from "@/components/layout/Sidebar";
@@ -81,6 +82,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           },
           canAccessModule(session, "USERS") && { label: "Utilisateurs", href: "/utilisateurs", icon: "users" },
           canAccessModule(session, "AUDIT") && { label: "Audit", href: "/audit", icon: "audit" },
+          datasetsFor(session).length > 0 && { label: "Exports", href: "/exports", icon: "exports" },
           canAccessModule(session, "INTEGRITY") && { label: "Intégrité", href: "/integrite", icon: "integrity" },
           canAccessModule(session, "INTEGRITY") && { label: "Journal chaîné", href: "/journal", icon: "ledger" },
           canAccessModule(session, "API_CLIENTS") && { label: "Accès API", href: "/acces-api", icon: "apiClients" },

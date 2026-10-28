@@ -6,7 +6,7 @@ import { isEntityType, type EntityType } from "../../domain/traceability/entity-
 import { ENTITY_TYPE_LABEL } from "../../lib/labels";
 import type { Session } from "../auth/session";
 import { isWithinScope } from "../identity/scope-check";
-import { csvField } from "../leads/leads";
+import { csvField } from "../../lib/csv";
 import { resolveNode, type ChainNode } from "../traceability/entity-resolver";
 import { collectAncestors, collectDescendants } from "../traceability/genealogy";
 import { resolveEntityHierarchy } from "./holds";

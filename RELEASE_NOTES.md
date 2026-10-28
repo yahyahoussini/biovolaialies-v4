@@ -72,6 +72,10 @@ vérifiée"**. The public verification status is computed from real system state
 - Sanitary observation was a modelled table only in this release. It has since become a
   capability: vaccinations, treatments with withdrawal periods and reviewed observations on
   every lot page (see BVU_TECH.md, "Santé").
+- Sign-in had no throttle and left no trace. It now has both: an authentication journal, and a
+  refusal after 5 failures per account or 20 per device in 15 minutes (see BVU_TECH.md).
+- Exports are now registered with their SHA-256 in the chained ledger and can be verified later
+  ("Exports" page), as document 3 asks of an export that must be opposable.
 - Egg marking was absent from this release. It has since been built (document 3, lot 15): code
   sequence per line, camera read-back guard that stops the line, trays with their own identifier
   and QR, candling rejects named by their code, and a public egg page with its own rate limit.

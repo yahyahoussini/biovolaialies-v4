@@ -1,6 +1,6 @@
 "use server";
 
-import { headers } from "next/headers";
+import { clientKey } from "@/lib/client-info";
 import { handleActionError } from "@/lib/handle-error";
 import { submitLead } from "@/services/leads/leads";
 
@@ -8,19 +8,6 @@ export interface ContactFormState {
   status: "idle" | "success" | "error";
   message: string | null;
   fieldErrors: Record<string, string>;
-}
-
-/**
- * Client identity for rate limiting. `x-real-ip` is set by the hosting platform (Vercel) and
- * cannot be forged by the caller; failing that, the LAST X-Forwarded-For hop is the one our own
- * proxy appended. The first hop is never used — the client writes it.
- */
-async function clientKey(): Promise<string> {
-  const h = await headers();
-  const realIp = h.get("x-real-ip")?.trim();
-  if (realIp) return realIp;
-  const hops = h.get("x-forwarded-for")?.split(",").map((s) => s.trim()).filter(Boolean) ?? [];
-  return hops.at(-1) ?? "inconnu";
 }
 
 /**

@@ -18,6 +18,9 @@ const DELETION_ORDER = [
   schema.ledgerEvents,
   schema.qualityHoldItems,
   schema.qualityCases,
+  // Sign-ins and exports point at users.
+  schema.authEvents,
+  schema.exportRecords,
   // Laboratory: results point at samples, samples at observations and users.
   schema.labResults,
   schema.labSamples,

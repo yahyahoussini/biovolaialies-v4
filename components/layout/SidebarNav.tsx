@@ -14,6 +14,7 @@ import {
   ScanLine,
   Printer,
   FlaskConical,
+  FileDown,
   Smartphone,
   Truck,
   Inbox,
@@ -75,6 +76,7 @@ const ICONS: Record<string, LucideIcon> = {
   field: Smartphone,
   marking: Printer,
   lab: FlaskConical,
+  exports: FileDown,
 };
 export type NavIconName = keyof typeof ICONS;
 

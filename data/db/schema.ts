@@ -55,6 +55,7 @@ import {
 import { DISCREPANCY_STATUS, FIELD_KIND, FIELD_STATUS } from "../../domain/field/field";
 import { EGG_EXCEPTION, MARKING_ROUTE, MARKING_RUN_STATUS, MARKING_SOURCE, type MarkingRoute } from "../../domain/marking/marking";
 import { RESULT_INTERPRETATION, SAMPLE_MATRIX, SAMPLE_OBJECT, SAMPLE_REASON, SAMPLE_STATUS } from "../../domain/lab/lab";
+import { AUTH_OUTCOME } from "../../domain/governance/governance";
 
 /**
  * Drizzle schema — mirrors domain/*\/types.ts 1:1 (same fields, camelCase JS <-> snake_case columns).
@@ -1563,4 +1564,46 @@ export const labResults = sqliteTable(
     reviewNote: text("review_note"),
   },
   (t) => [index("lab_results_sample_idx").on(t.sampleId)]
+);
+
+// ---------------------------------------------------------------------------
+// Authentication journal and export register (document 3, ch. 08 and lot 12)
+// ---------------------------------------------------------------------------
+
+/**
+ * Every sign-in attempt, sign-out and demo switch. The client is kept as a keyed hash, never as an
+ * address: enough to throttle and to tell two devices apart, not to locate anyone.
+ */
+export const authEvents = sqliteTable(
+  "auth_events",
+  {
+    id: id(),
+    at: text("at").notNull(),
+    email: text("email").notNull(),
+    userId: text("user_id").references(() => users.id),
+    outcome: text("outcome", { enum: AUTH_OUTCOME }).notNull(),
+    clientHash: text("client_hash"),
+    userAgent: text("user_agent"),
+    detail: text("detail"),
+  },
+  (t) => [index("auth_events_email_idx").on(t.email, t.at), index("auth_events_client_idx").on(t.clientHash, t.at), index("auth_events_at_idx").on(t.at)]
+);
+
+/** Each export produced, with the SHA-256 of the exact file served: anyone holding the file can check it later. */
+export const exportRecords = sqliteTable(
+  "export_records",
+  {
+    id: id(),
+    dataset: text("dataset").notNull(),
+    filename: text("filename").notNull(),
+    filters: text("filters", { mode: "json" }).$type<Record<string, string>>().notNull(),
+    rows: integer("rows").notNull(),
+    bytes: integer("bytes").notNull(),
+    sha256: text("sha256").notNull(),
+    createdBy: text("created_by")
+      .notNull()
+      .references(() => users.id),
+    createdAt: text("created_at").notNull(),
+  },
+  (t) => [index("export_records_sha_idx").on(t.sha256), index("export_records_created_idx").on(t.createdAt)]
 );

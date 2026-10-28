@@ -183,6 +183,7 @@ Le parcours de 5 minutes, plus :
 - **Intégrité** — `/integrite` : 473/477 contrôles passés, **0 critique** (voir §8).
 - **Marquage** — `/marquage` : lever l'arrêt de MQ-FA-20261018-1, simuler une tête encrassée, puis ouvrir un plateau sur le téléphone (page publique).
 - **Six vues** — sélecteur de rôle : Direction, Responsable coopérative (production), Responsable couvoir, Vétérinaire, Producteur (éleveur), Technicien. Chaque tableau de bord s'ouvre sur sa question et ce qui attend cette personne.
+- **Exports opposables** — `/exports` : télécharger « Lots », puis glisser le fichier dans « Vérifier un fichier » (identique) ; modifier une cellule dans un tableur, enregistrer et revérifier (inconnu). Le journal des connexions est sous Administration.
 - **Laboratoire** — `/laboratoire` avec le vétérinaire : la mycoplasmose confirmée sur ELA-2025-PP1 (lue, avec la conduite à tenir), le prélèvement de OUA-2026-CF0 encore au laboratoire.
 
 ---

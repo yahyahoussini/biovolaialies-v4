@@ -59,6 +59,7 @@ import { DrizzleSanitaryObservationRepository } from "./sanitary-observation.rep
 import { DrizzleFieldDiscrepancyRepository, DrizzleFieldEntryRepository } from "./field.repository";
 import { DrizzleMarkingRepository } from "./marking.repository";
 import { DrizzleLabRepository } from "./lab.repository";
+import { DrizzleAuthEventRepository, DrizzleExportRecordRepository } from "./governance.repository";
 import { DrizzleOrganizationRepository } from "./organization.repository";
 import { DrizzleProducerRepository } from "./producer.repository";
 import { DrizzleProductRepository } from "./product.repository";
@@ -148,4 +149,6 @@ export const repositories = {
   fieldDiscrepancies: new DrizzleFieldDiscrepancyRepository(),
   marking: new DrizzleMarkingRepository(),
   lab: new DrizzleLabRepository(),
+  authEvents: new DrizzleAuthEventRepository(),
+  exportRecords: new DrizzleExportRecordRepository(),
 };

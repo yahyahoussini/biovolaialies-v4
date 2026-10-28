@@ -1,6 +1,6 @@
 import { Egg, ShieldAlert, ShieldCheck, ShieldQuestion } from "lucide-react";
 import type { Metadata } from "next";
-import { headers } from "next/headers";
+import { clientKey } from "@/lib/client-info";
 import { rateLimit } from "@/lib/rate-limit";
 import { resolvePublicEgg, type PublicEggResult, type PublicEggTone } from "@/services/public/egg";
 import { EggLookupForm } from "../EggLookupForm";
@@ -13,13 +13,6 @@ export const metadata: Metadata = {
 
 /** Codes are sequential: a brake on one address trying codes one after another. */
 const LOOKUPS_PER_MINUTE = 30;
-
-async function clientKey(): Promise<string> {
-  const h = await headers();
-  const realIp = h.get("x-real-ip")?.trim();
-  if (realIp) return realIp;
-  return h.get("x-forwarded-for")?.split(",").map((s) => s.trim()).filter(Boolean).at(-1) ?? "inconnu";
-}
 
 const TONE: Record<PublicEggTone, { box: string; text: string; Icon: typeof ShieldCheck }> = {
   ok: { box: "border-bio-green/30", text: "text-deep-forest", Icon: ShieldCheck },
