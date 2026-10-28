@@ -14,7 +14,8 @@ import { can } from "@/domain/shared/permissions";
 import { day } from "@/lib/flow-labels";
 import { ENTITY_TYPE_LABEL } from "@/lib/labels";
 import { requireModuleAccess } from "@/services/auth/guard";
-import { resolveIdentifier, type ResolvedIdentifier } from "@/services/identity/bvu-ids";
+import { type ResolvedIdentifier } from "@/services/identity/bvu-ids";
+import { resolveIdentifierInScope } from "@/services/identity/resolve-scoped";
 import { addAliasAction, retireAliasAction } from "../lots/flow-actions";
 
 const SCHEME_LABEL: Record<string, string> = { FOURNISSEUR: "Code fournisseur", RFID: "Puce RFID", BAGUE: "Bague", ANCIEN_CODE: "Ancien code", EAN: "Code EAN", AUTRE: "Autre" };
@@ -65,7 +66,7 @@ export default async function IdentifiersPage({ searchParams }: PageProps<"/iden
   let error: string | null = null;
   if (q) {
     try {
-      results = await resolveIdentifier(q);
+      results = await resolveIdentifierInScope(q, session);
     } catch (e) {
       if (e instanceof ValidationError) error = e.message;
       else throw e;

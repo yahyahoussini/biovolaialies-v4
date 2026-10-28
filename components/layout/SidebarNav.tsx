@@ -13,6 +13,7 @@ import {
   GitBranch,
   ScanLine,
   Printer,
+  FlaskConical,
   Smartphone,
   Truck,
   Inbox,
@@ -73,6 +74,7 @@ const ICONS: Record<string, LucideIcon> = {
   identifiers: ScanLine,
   field: Smartphone,
   marking: Printer,
+  lab: FlaskConical,
 };
 export type NavIconName = keyof typeof ICONS;
 

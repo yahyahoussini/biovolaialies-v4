@@ -18,6 +18,9 @@ const DELETION_ORDER = [
   schema.ledgerEvents,
   schema.qualityHoldItems,
   schema.qualityCases,
+  // Laboratory: results point at samples, samples at observations and users.
+  schema.labResults,
+  schema.labSamples,
   // Egg marking: everything hangs off runs, runs off lines; exceptions point at hatch cycles.
   schema.eggReadStops,
   schema.eggTrays,

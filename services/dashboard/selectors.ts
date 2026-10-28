@@ -21,7 +21,8 @@ import type {
  * every number here be unit-tested without a database (phase-5 brief §17).
  */
 
-const OCCUPIED_LOT_STATUSES: readonly LotStatus[] = ["ACTIF", "EN_TRANSFERT", "SUSPENDU", "BLOQUE", "LIBERE"];
+/** Lots with birds in them — a created lot has none yet. Shared with the role views so a page never shows two headcounts. */
+export const OCCUPIED_LOT_STATUSES: readonly LotStatus[] = ["ACTIF", "EN_TRANSFERT", "SUSPENDU", "BLOQUE", "LIBERE"];
 const ATTENTION_LOT_STATUSES: readonly LotStatus[] = ["SUSPENDU", "BLOQUE"];
 
 function matchesScope(farmId: string, buildingId: string, filters: DashboardFilters): boolean {

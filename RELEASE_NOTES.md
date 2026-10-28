@@ -17,7 +17,7 @@ something is simulated or absent, this document says so plainly.
 | Capability | State |
 |---|---|
 | Authentication (encrypted cookie sessions) | Implemented |
-| 6 roles + hierarchical data scoping, enforced server-side | Implemented |
+| 10 roles (incl. the six views of document 3: direction, production, hatchery, veterinarian, farmer, technician) + hierarchical data scoping, enforced server-side | Implemented |
 | Organization → cooperative → producer → farm → building → lot | Implemented |
 | Structured production data (feed, water, weight, mortality, environment) | Implemented |
 | Data-status vocabulary on every value (Real / Simulation / Calculated / Estimated / To confirm / Validated / Missing) | Implemented |

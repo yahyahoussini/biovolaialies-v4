@@ -43,7 +43,7 @@ Tout autre résultat = ne pas présenter avant d'avoir réamorcé.
 
 ## 1. Comptes de démonstration
 
-Mot de passe **identique pour les sept comptes** : `Demo1234!`
+Mot de passe **identique pour les dix comptes** : `Demo1234!`
 
 | Rôle | Email | Périmètre |
 |---|---|---|
@@ -54,6 +54,9 @@ Mot de passe **identique pour les sept comptes** : `Demo1234!`
 | Technicien | `technicien@biovolailles.demo` | Ferme Al Baraka |
 | Auditeur | `auditeur@biovolailles.demo` | Global (lecture seule) |
 | Responsable qualité | `qualite@biovolailles.demo` | Global — seul rôle (avec l'administrateur) habilité à lever un blocage qualité |
+| Direction | `direction@biovolailles.demo` | Global, lecture seule — vue consolidée |
+| Responsable couvoir | `couvoir@biovolailles.demo` | Couvoir Al Baraka |
+| Vétérinaire | `veterinaire@biovolailles.demo` | Global — santé, laboratoire, lecture des résultats |
 
 Les comptes ont été testés : mot de passe correct accepté, mot de passe erroné refusé.
 
@@ -179,6 +182,8 @@ Le parcours de 5 minutes, plus :
 - **Audit** — `/audit`, filtrer par lot : chaque mutation avec acteur, avant/après, motif.
 - **Intégrité** — `/integrite` : 473/477 contrôles passés, **0 critique** (voir §8).
 - **Marquage** — `/marquage` : lever l'arrêt de MQ-FA-20261018-1, simuler une tête encrassée, puis ouvrir un plateau sur le téléphone (page publique).
+- **Six vues** — sélecteur de rôle : Direction, Responsable coopérative (production), Responsable couvoir, Vétérinaire, Producteur (éleveur), Technicien. Chaque tableau de bord s'ouvre sur sa question et ce qui attend cette personne.
+- **Laboratoire** — `/laboratoire` avec le vétérinaire : la mycoplasmose confirmée sur ELA-2025-PP1 (lue, avec la conduite à tenir), le prélèvement de OUA-2026-CF0 encore au laboratoire.
 
 ---
 

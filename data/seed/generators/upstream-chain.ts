@@ -10,7 +10,9 @@ import {
 } from "../../../services/hatchery/hatchery";
 import { decideHold, openHold } from "../../../services/quality/holds";
 import { createShipment } from "../../../services/traceability/shipment";
+import { hashPassword } from "../../../lib/password";
 import { repositories } from "../../repositories";
+import { DEMO_ACCOUNT_EMAIL, DEMO_PASSWORD } from "./hierarchy";
 
 /**
  * The upstream half of the client's chain (genetics → parent flock → eggs → hatchery → chicks)
@@ -44,6 +46,8 @@ export async function seedUpstreamChain(input: {
   });
   const reproBuilding = await repositories.buildings.create({ farmId: hatcheryFarm.id, code: "REPRO-01", name: "Reproducteurs", capacity: 10000, zoneType: "ELEVAGE" });
   const hatcheryBuilding = await repositories.buildings.create({ farmId: hatcheryFarm.id, code: "COUV-01", name: "Salle d'incubation", capacity: 60000, zoneType: "COUVOIR" });
+  // The hatchery's own manager, limited to this site (document 3, ch. 07: the "couvoir" view).
+  await repositories.users.create({ email: DEMO_ACCOUNT_EMAIL.HATCHERY_MANAGER, passwordHash: hashPassword(DEMO_PASSWORD), fullName: "Abdelkader Chraïbi", role: "HATCHERY_MANAGER", scopeType: "FARM", scopeId: hatcheryFarm.id, active: true });
 
   const flock = await createParentFlock(
     {

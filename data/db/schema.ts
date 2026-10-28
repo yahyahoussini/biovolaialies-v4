@@ -54,6 +54,7 @@ import {
 } from "../../domain/shared/enums";
 import { DISCREPANCY_STATUS, FIELD_KIND, FIELD_STATUS } from "../../domain/field/field";
 import { EGG_EXCEPTION, MARKING_ROUTE, MARKING_RUN_STATUS, MARKING_SOURCE, type MarkingRoute } from "../../domain/marking/marking";
+import { RESULT_INTERPRETATION, SAMPLE_MATRIX, SAMPLE_OBJECT, SAMPLE_REASON, SAMPLE_STATUS } from "../../domain/lab/lab";
 
 /**
  * Drizzle schema — mirrors domain/*\/types.ts 1:1 (same fields, camelCase JS <-> snake_case columns).
@@ -1505,4 +1506,61 @@ export const eggReadStops = sqliteTable(
     liftNote: text("lift_note"),
   },
   (t) => [index("egg_read_stops_run_idx").on(t.runId)]
+);
+
+// ---------------------------------------------------------------------------
+// Laboratory (document 3, data sources: analyses, results, sampling dates)
+// ---------------------------------------------------------------------------
+
+/** A sample taken on a flock, eggs, a hatch cycle or a building's water, and where it went. */
+export const labSamples = sqliteTable(
+  "lab_samples",
+  {
+    id: id(),
+    code: text("code").notNull().unique(),
+    objectType: text("object_type", { enum: SAMPLE_OBJECT }).notNull(),
+    objectId: text("object_id").notNull(),
+    matrix: text("matrix", { enum: SAMPLE_MATRIX }).notNull(),
+    reason: text("reason", { enum: SAMPLE_REASON }).notNull(),
+    observationId: text("observation_id").references(() => sanitaryObservations.id),
+    sampledAt: text("sampled_at").notNull(),
+    sampledBy: text("sampled_by")
+      .notNull()
+      .references(() => users.id),
+    sampleCount: integer("sample_count"),
+    laboratory: text("laboratory").notNull(),
+    sentAt: text("sent_at"),
+    status: text("status", { enum: SAMPLE_STATUS }).notNull(),
+    notes: text("notes"),
+    dataStatus: text("data_status", { enum: DATA_STATUS }).notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index("lab_samples_object_idx").on(t.objectType, t.objectId), index("lab_samples_status_idx").on(t.status)]
+);
+
+/** One analysis of a sample, as the laboratory reported it, and the veterinarian's reading of it. */
+export const labResults = sqliteTable(
+  "lab_results",
+  {
+    id: id(),
+    sampleId: text("sample_id")
+      .notNull()
+      .references(() => labSamples.id),
+    analyte: text("analyte").notNull(),
+    method: text("method"),
+    value: text("value").notNull(),
+    numericValue: real("numeric_value"),
+    unit: text("unit"),
+    interpretation: text("interpretation", { enum: RESULT_INTERPRETATION }).notNull(),
+    resultAt: text("result_at").notNull(),
+    reportRef: text("report_ref"),
+    recordedBy: text("recorded_by")
+      .notNull()
+      .references(() => users.id),
+    recordedAt: text("recorded_at").notNull(),
+    reviewedBy: text("reviewed_by").references(() => users.id),
+    reviewedAt: text("reviewed_at"),
+    reviewNote: text("review_note"),
+  },
+  (t) => [index("lab_results_sample_idx").on(t.sampleId)]
 );

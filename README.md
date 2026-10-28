@@ -75,7 +75,7 @@ again after each deploy.
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
-Every visitor to the link gets the complete demo dataset — the seven accounts in
+Every visitor to the link gets the complete demo dataset — the ten accounts in
 [DEMO_RUNBOOK.md](DEMO_RUNBOOK.md) §1, 12 lots, the IoT history, the anomaly scenario, the public QR
 passports — and can sign in.
 

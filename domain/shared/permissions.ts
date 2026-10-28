@@ -31,6 +31,8 @@ export const MODULE = [
   "API_CLIENTS",
   /** Egg-marking lines and runs (document 3, lot 15). VALIDATE = the read-back threshold, a quality decision. */
   "MARKING",
+  /** Laboratory samples and results (document 3, data sources). VALIDATE = interpreting a result, the veterinarian's call. */
+  "LAB",
 ] as const;
 export type Module = (typeof MODULE)[number];
 
@@ -77,6 +79,7 @@ const PERMISSIONS: Record<Role, Partial<Record<Module, readonly Action[]>>> = {
     HATCHERY: ["VIEW", "CREATE", "EDIT"],
     EQUIPMENT: READ_ONLY,
     MARKING: ["VIEW", "CREATE", "EDIT"],
+    LAB: ["VIEW", "CREATE"],
   },
 
   PRODUCER: {
@@ -96,6 +99,8 @@ const PERMISSIONS: Record<Role, Partial<Record<Module, readonly Action[]>>> = {
     HATCHERY: READ_ONLY,
     /** The line usually stands on the farm: the farmer runs it and cleans the head when the guard stops it. */
     MARKING: ["VIEW", "CREATE", "EDIT"],
+    /** The farmer sees the results of his own flocks' samples. */
+    LAB: READ_ONLY,
   },
 
   FARM_MANAGER: {
@@ -114,6 +119,7 @@ const PERMISSIONS: Record<Role, Partial<Record<Module, readonly Action[]>>> = {
     HATCHERY: ["VIEW", "CREATE", "EDIT"],
     EQUIPMENT: READ_ONLY,
     MARKING: ["VIEW", "CREATE", "EDIT"],
+    LAB: ["VIEW", "CREATE"],
   },
 
   TECHNICIAN: {
@@ -131,6 +137,8 @@ const PERMISSIONS: Record<Role, Partial<Record<Module, readonly Action[]>>> = {
     HATCHERY: ["VIEW", "CREATE"],
     EQUIPMENT: READ_ONLY,
     MARKING: ["VIEW", "CREATE", "EDIT"],
+    /** The technician takes samples on the farm. */
+    LAB: ["VIEW", "CREATE"],
   },
 
   AUDITOR: {
@@ -154,6 +162,7 @@ const PERMISSIONS: Record<Role, Partial<Record<Module, readonly Action[]>>> = {
     HATCHERY: READ_ONLY,
     EQUIPMENT: READ_ONLY,
     MARKING: READ_ONLY,
+    LAB: READ_ONLY,
   },
 
   /**
@@ -183,6 +192,76 @@ const PERMISSIONS: Record<Role, Partial<Record<Module, readonly Action[]>>> = {
     EQUIPMENT: READ_ONLY,
     /** VALIDATE: the read-back threshold below which a marking stops counting as proof. */
     MARKING: ["VIEW", "VALIDATE"],
+    /** EDIT: records the results of product controls the laboratory sends back. */
+    LAB: ["VIEW", "CREATE", "EDIT"],
+  },
+
+  /**
+   * Direction (document 3, ch. 07): the consolidated view across every site. Reads everything,
+   * exports, operates nothing — a decision taken at the top goes through the person responsible.
+   */
+  DIRECTION: {
+    ORGANIZATIONS: READ_ONLY,
+    COOPERATIVES: READ_ONLY,
+    PRODUCERS: READ_ONLY,
+    FARMS: READ_ONLY,
+    BUILDINGS: READ_ONLY,
+    LOTS: READ_ONLY,
+    IOT: READ_ONLY,
+    ANOMALIES: READ_ONLY,
+    ALERTS: READ_ONLY,
+    ACTIONS: READ_ONLY,
+    EVENTS: READ_ONLY,
+    PRODUCTS: READ_ONLY,
+    SANITARY: READ_ONLY,
+    TRACEABILITY: READ_ONLY,
+    AUDIT: ["VIEW", "EXPORT"],
+    INTEGRITY: READ_ONLY,
+    QUALITY: ["VIEW", "EXPORT"],
+    HATCHERY: READ_ONLY,
+    EQUIPMENT: READ_ONLY,
+    MARKING: READ_ONLY,
+    LAB: READ_ONLY,
+  },
+
+  /** Responsable couvoir: the hatchery site — parent flocks, egg room, incubation, hatching-egg marking. */
+  HATCHERY_MANAGER: {
+    FARMS: READ_ONLY,
+    BUILDINGS: ["VIEW", "EDIT"],
+    LOTS: ["VIEW", "CREATE", "EDIT"],
+    IOT: ["VIEW", "EDIT"],
+    ANOMALIES: READ_ONLY,
+    ALERTS: ["VIEW", "ACKNOWLEDGE"],
+    ACTIONS: ["VIEW", "CREATE"],
+    EVENTS: ["VIEW", "CREATE"],
+    SANITARY: ["VIEW", "CREATE"],
+    TRACEABILITY: ["VIEW", "CREATE", "EDIT"],
+    QUALITY: ["VIEW", "CREATE"],
+    HATCHERY: ["VIEW", "CREATE", "EDIT"],
+    EQUIPMENT: READ_ONLY,
+    MARKING: ["VIEW", "CREATE", "EDIT"],
+    LAB: ["VIEW", "CREATE"],
+  },
+
+  /**
+   * Vétérinaire: the health of every flock. Records treatments and vaccinations, reviews the
+   * observations made by others, interprets laboratory results, and may place a hold on a
+   * sanitary suspicion — lifting it stays with the quality manager.
+   */
+  VETERINARIAN: {
+    FARMS: READ_ONLY,
+    BUILDINGS: READ_ONLY,
+    LOTS: READ_ONLY,
+    IOT: READ_ONLY,
+    ANOMALIES: READ_ONLY,
+    ALERTS: ["VIEW", "ACKNOWLEDGE"],
+    ACTIONS: ["VIEW", "CREATE"],
+    EVENTS: READ_ONLY,
+    SANITARY: ["VIEW", "CREATE", "EDIT", "VALIDATE"],
+    TRACEABILITY: READ_ONLY,
+    QUALITY: ["VIEW", "CREATE"],
+    HATCHERY: READ_ONLY,
+    LAB: ["VIEW", "CREATE", "EDIT", "VALIDATE"],
   },
 };
 

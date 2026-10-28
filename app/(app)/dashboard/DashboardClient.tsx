@@ -46,9 +46,12 @@ const SECTION_ORDER: Record<Role, SectionKey[]> = {
   TECHNICIAN: ["alerts", "iot", "performance", "attention", "chart", "quality", "activity"],
   AUDITOR: ["alerts", "quality", "attention", "chart", "performance", "iot", "activity"],
   QUALITY_MANAGER: ["alerts", "quality", "attention", "chart", "performance", "iot", "activity"],
+  DIRECTION: ["performance", "quality", "chart", "alerts", "activity"],
+  HATCHERY_MANAGER: ["alerts", "iot", "attention", "activity"],
+  VETERINARIAN: ["alerts", "attention", "performance", "activity"],
 };
 
-export function DashboardClient({ overview }: { overview: DashboardOverview }) {
+export function DashboardClient({ overview, lead }: { overview: DashboardOverview; lead?: ReactNode }) {
   const now = useMemo(() => new Date(overview.generatedAt), [overview.generatedAt]);
   const [filters, setFilters] = useState<DashboardFilters>(DEFAULT_DASHBOARD_FILTERS);
 
@@ -211,6 +214,8 @@ export function DashboardClient({ overview }: { overview: DashboardOverview }) {
         meta={<DataStatusBadge status="SIMULATION" />}
         actions={<DashboardClock initialIso={overview.generatedAt} />}
       />
+
+      {lead}
 
       <div className="flex flex-wrap items-center gap-2 sm:gap-3" role="group" aria-label="Filtres du tableau de bord">
         {overview.farms.length > 1 ? (

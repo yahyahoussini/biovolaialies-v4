@@ -66,6 +66,12 @@ export const ROLE = [
   "AUDITOR",
   /** Holds the RELEASE decision on quality holds (client spec R10 / RELEASE_ROLES). */
   "QUALITY_MANAGER",
+  /** Document 3, ch. 07 — the six views: direction (reads everything, operates nothing)… */
+  "DIRECTION",
+  /** …the hatchery (incubation, candling, hatch, hatching-egg marking on its own site)… */
+  "HATCHERY_MANAGER",
+  /** …and the veterinarian (health records, observation reviews and lab results on every farm). */
+  "VETERINARIAN",
 ] as const;
 export type Role = (typeof ROLE)[number];
 

@@ -12,6 +12,9 @@ export const DEMO_ACCOUNT_EMAIL: Record<Role, string> = {
   TECHNICIAN: "technicien@biovolailles.demo",
   AUDITOR: "auditeur@biovolailles.demo",
   QUALITY_MANAGER: "qualite@biovolailles.demo",
+  DIRECTION: "direction@biovolailles.demo",
+  HATCHERY_MANAGER: "couvoir@biovolailles.demo",
+  VETERINARIAN: "veterinaire@biovolailles.demo",
 };
 
 export interface DemoUserSpec {
@@ -303,5 +306,8 @@ export function buildDemoUserSpecs(hierarchy: SeededHierarchy): DemoUserSpec[] {
       scopeType: "GLOBAL",
       scopeId: null,
     },
+    { email: DEMO_ACCOUNT_EMAIL.DIRECTION, fullName: "Leïla Bennani", role: "DIRECTION", scopeType: "GLOBAL", scopeId: null },
+    // The prescriber named on the seeded treatments: the same person, now with an account.
+    { email: DEMO_ACCOUNT_EMAIL.VETERINARIAN, fullName: "Dr Hicham Alaoui", role: "VETERINARIAN", scopeType: "GLOBAL", scopeId: null },
   ];
 }

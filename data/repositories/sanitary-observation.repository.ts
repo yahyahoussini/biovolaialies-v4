@@ -18,6 +18,13 @@ export class DrizzleSanitaryObservationRepository implements SanitaryObservation
     });
   }
 
+  async listPending(): Promise<SanitaryObservation[]> {
+    return db.query.sanitaryObservations.findMany({
+      where: eq(sanitaryObservations.validationStatus, "EN_ATTENTE"),
+      orderBy: (t, { asc }) => asc(t.observedAt),
+    });
+  }
+
   async create(input: NewSanitaryObservation): Promise<SanitaryObservation> {
     const [row] = await db.insert(sanitaryObservations).values(input).returning();
     return row;

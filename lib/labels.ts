@@ -19,6 +19,9 @@ export const ROLE_LABEL: Record<Role, string> = {
   TECHNICIAN: "Technicien",
   AUDITOR: "Auditeur",
   QUALITY_MANAGER: "Responsable qualité",
+  DIRECTION: "Direction",
+  HATCHERY_MANAGER: "Responsable couvoir",
+  VETERINARIAN: "Vétérinaire",
 };
 
 export const SCOPE_TYPE_LABEL: Record<ScopeType, string> = {
@@ -72,6 +75,8 @@ export const AUDIT_ENTITY_TYPE_LABEL: Record<string, string> = {
   field_discrepancy: "Écart de saisie terrain",
   egg_marking_line: "Ligne de marquage",
   egg_marking_run: "Campagne de marquage",
+  lab_sample: "Prélèvement de laboratoire",
+  lab_result: "Résultat de laboratoire",
 };
 
 export function auditEntityTypeLabel(entityType: string): string {

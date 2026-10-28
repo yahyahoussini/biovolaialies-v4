@@ -9,6 +9,8 @@ import type { NewSanitaryObservation, SanitaryObservation } from "./types";
 export interface SanitaryObservationRepository {
   findById(id: string): Promise<SanitaryObservation | null>;
   listByLot(lotId: string): Promise<SanitaryObservation[]>;
+  /** Observations nobody has reviewed yet, oldest first: the veterinarian's queue. */
+  listPending(): Promise<SanitaryObservation[]>;
   create(input: NewSanitaryObservation): Promise<SanitaryObservation>;
   /** Compare-and-set on EN_ATTENTE: a review is decided once. */
   review(id: string, validatedBy: string, status: Exclude<ValidationStatus, "EN_ATTENTE">): Promise<SanitaryObservation | null>;
