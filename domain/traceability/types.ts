@@ -71,6 +71,11 @@ export interface PublicPassport {
   scope: QrScope;
   productName: string | null;
   publicProductCode: string | null;
+  /**
+   * The BIOVOLAILLES identifier of what was scanned — the product's, or the lot's for a lot
+   * passport (document 3, ch. 2: "ce à quoi toutes les données se rattachent").
+   */
+  bvuId: string | null;
   lotCode: string;
   originFarmName: string;
   originCity: string;

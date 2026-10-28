@@ -83,7 +83,7 @@ vérifiée"**. The public verification status is computed from real system state
 | Limitation | Impact |
 |---|---|
 | The FCR (feed conversion) KPI reports "Donnée insuffisante" on the hero lot | Deliberate: the engine refuses to publish an indicator it cannot justify. 5 of 6 KPIs compute. |
-| The seeded scenario is anchored to fixed dates around 2026-08-16 | Guarantees determinism, but the dataset visibly ages as real time passes. Re-date the seed if demoing months from now. |
+| The seeded scenario is anchored to fixed dates: telemetry and the hero lots around 2026-08-16, the production flow (field app, health, marking, laboratory) up to 2026-10-28 | Guarantees determinism, but the dataset visibly ages as real time passes ("nothing entered today", telemetry offline). Re-dating means moving about 180 date literals and the codes built from them (OEB-20261018, MQ-FA-…) through one scenario clock; not done yet. |
 | The hero farm shows "0 active lots" | Correct, not a bug — the hero lot is `CLOTURE`, which is *why* it has a product and a passport. See `DEMO_RUNBOOK.md` §2 for how to open the demo. |
 | `notFound()` pages return HTTP 200 with correct "Introuvable" content | Next.js streams after the shell starts; content and UX are correct, the status code is not. |
 | `npm run db:reset` fails with `EBUSY` while the server is running | Windows file lock. Use the in-app reset during a demo. Documented. |

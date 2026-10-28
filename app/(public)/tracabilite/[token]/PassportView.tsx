@@ -75,7 +75,7 @@ export function PassportView({ passport }: { passport: PublicPassport }) {
 
         <section className="flex flex-col rounded-xl border border-border bg-surface px-5 py-1">
           <h2 className="sr-only">Informations produit</h2>
-          {passport.publicProductCode ? <Fact label="Code produit" value={passport.publicProductCode} /> : null}
+          {passport.bvuId ? <Fact label="Identifiant BIOVOLAILLES" value={passport.bvuId} mono /> : null}
           <Fact label="Lot" value={passport.lotCode} />
           <Fact label="Ferme d'origine" value={passport.originFarmName} />
           <Fact label="Ville" value={passport.originCity} />
@@ -153,11 +153,11 @@ export function PassportView({ passport }: { passport: PublicPassport }) {
   );
 }
 
-function Fact({ label, value, last }: { label: string; value: string; last?: boolean }) {
+function Fact({ label, value, last, mono }: { label: string; value: string; last?: boolean; mono?: boolean }) {
   return (
     <div className={`flex items-start justify-between gap-4 py-3 ${last ? "" : "border-b border-border"}`}>
       <span className="shrink-0 text-caption text-secondary">{label}</span>
-      <span className="text-right text-sm font-semibold text-text">{value}</span>
+      <span className={`text-right text-sm font-semibold text-text ${mono ? "break-all font-mono tracking-wide" : ""}`}>{value}</span>
     </div>
   );
 }

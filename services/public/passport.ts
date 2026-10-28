@@ -3,6 +3,7 @@ import { isEntityType, type EntityType } from "../../domain/traceability/entity-
 import type { PublicLineageStage, PublicPassport, PublicTimelineEntry, Product } from "../../domain/traceability/types";
 import type { Lot } from "../../domain/production/types";
 import type { DataStatus, LotStatus } from "../../domain/shared/enums";
+import { assignBvuId } from "../identity/bvu-ids";
 import { activeHoldsOn } from "../quality/holds";
 import { resolveNode, type ChainNode } from "../traceability/entity-resolver";
 
@@ -49,6 +50,7 @@ export async function resolvePublicPassport(token: string): Promise<PublicPasspo
     scope: qrToken.scope,
     productName: product?.name ?? null,
     publicProductCode: product?.code ?? null,
+    bvuId: product ? await assignBvuId("PRODUCT", product.id) : await assignBvuId("LOT", lot.id),
     lotCode: lot.code,
     originFarmName: farm.name,
     originCity: farm.city,

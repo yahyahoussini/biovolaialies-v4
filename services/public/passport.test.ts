@@ -177,6 +177,7 @@ describe("resolvePublicPassport — public/private separation", () => {
     const passport = await resolvePublicPassport(token.token);
     expect(Object.keys(passport!).sort()).toEqual(
       [
+        "bvuId",
         "certifications",
         "geneticOrigin",
         "isDemoData",
@@ -264,6 +265,8 @@ describe("resolvePublicPassport — product passport, lineage and data status", 
     const passport = await resolvePublicPassport(token.token);
     expect(passport!.productName).toBe("Poulet découpé");
     expect(passport!.publicProductCode).toBe("PRD-PP11");
+    // What the consumer reads is our identifier, with its check digit — not the internal product code.
+    expect(passport!.bvuId).toMatch(/^BVU-PRO-[0-9A-F]{14}$/);
     expect(passport!.lineage.map((s) => s.name)).toEqual([
       `${farm.name}, Kénitra`,
       lot.code,
