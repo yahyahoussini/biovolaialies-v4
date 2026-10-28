@@ -23,6 +23,7 @@ The `/programme` screen shows, test by test, what is automated, partial, or can 
 | Commissioning | `/equipements/recette` | Commissioning table | 20 procedures; a result exists only once recorded with evidence. |
 | Programme | `/programme` | Roadmap, gates, risks, R01–R15, T01–T40 | Client's tables plus an honest coverage status for each rule and test. |
 | Telemetry | `/telemetrie` | Documents 2 and 3 | See the next section. |
+| Field app (Terrain) | `/terrain` (phone), `/saisies-terrain` (office) | Document 3, ch. 05, lot 10 | Installable web app. Opens and records without network: mortality, weighing, feed, water, vaccination, treatment, observation and transfer reception, each stamped with its author and time, kept in IndexedDB (survives closing the app, a restart, a flat battery) and sent back in the phone's order when the network returns. Each entry carries its own id: sending it twice applies it once. Shows the last values with their age and marks those older than a day. Reads codes offline with the camera (built-in reader on Android, bundled QR decoder on iPhone) or typed; a BIOVOLAILLES id with a wrong check character is refused. Conflict rule of ch. 05 for daily mortality: both declarations kept, the latest shown, the gap flagged, the population unchanged until a manager arbitrates; the system never gives birds back on its own (a lower count needs a signed counter-entry). |
 | Health (Santé) | lot page, "Santé" section | Document 3, ch. 02 and 05 | Vaccinations, treatments and observations, dated when they happened. A treatment carries its withdrawal periods and they act: slaughter is refused inside the meat window, and eggs collected inside the egg window are recorded as "Retiré de la vente" (only destruction is allowed). The farmer records; an observation is reviewed by the technician, never by the person who made it. |
 
 ## Telemetry (client documents 2 and 3)
@@ -61,7 +62,16 @@ Population reconciliation (T17) now counts the birds that left by transfer.
 
 ## Known gaps (also listed on `/programme`)
 
-- No offline mobile app: the server side (idempotent replay) is ready, the client app is not.
+- Field app: a web app, not a store app. Entries are sent while the app is open (at start, on
+  reconnection, every minute): there is no background sync, which iPhones do not offer to web apps.
+  Phones cannot read UHF or LF poultry RFID themselves; a reader paired as a Bluetooth keyboard types
+  into the code field. Dispatching a transfer stays in the office app; receiving one works offline.
+- Field conflict rule and correction window are defaults awaiting the owner's written decision
+  (document 3, annex): both declarations kept, the latest shown, a manager arbitrates within 30 days,
+  then only the administrator.
+- A server crash between writing a field entry's record and storing the entry could apply it twice on
+  the phone's retry; every record carries the entry's id as its source, so such a duplicate is
+  detectable, but it is not prevented by a single transaction.
 - No egg-marking line yet (document 3, lot 15): table-egg collections exist, codes per tray or egg do not.
 - Open questions on the diagram, taken with a default until the client answers: "Pistache" is kept as an
   egg type, "Agrégés" are treated as partner farms, the growing phase ends at 6 weeks (step 8 is

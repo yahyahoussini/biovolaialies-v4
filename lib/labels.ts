@@ -69,6 +69,7 @@ export const AUDIT_ENTITY_TYPE_LABEL: Record<string, string> = {
   api_client: "Client API",
   lead: "Prospect",
   demo_scenario: "Scénario de démonstration",
+  field_discrepancy: "Écart de saisie terrain",
 };
 
 export function auditEntityTypeLabel(entityType: string): string {

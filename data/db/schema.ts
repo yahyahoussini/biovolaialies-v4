@@ -52,6 +52,7 @@ import {
   SENSOR_TYPE,
   VALIDATION_STATUS,
 } from "../../domain/shared/enums";
+import { DISCREPANCY_STATUS, FIELD_KIND, FIELD_STATUS } from "../../domain/field/field";
 
 /**
  * Drizzle schema — mirrors domain/*\/types.ts 1:1 (same fields, camelCase JS <-> snake_case columns).
@@ -1279,4 +1280,69 @@ export const identifierAliases = sqliteTable(
     createdAt: createdAt(),
   },
   (t) => [index("identifier_aliases_value_idx").on(t.scheme, t.value), index("identifier_aliases_bvu_idx").on(t.bvuId)]
+);
+
+// ---------------------------------------------------------------------------
+// Field app (document 3, ch. 05)
+// ---------------------------------------------------------------------------
+
+/**
+ * Every entry a phone sends, kept whatever became of it: applied, confirming, flagged or refused.
+ * op_id makes a replay harmless; (device_id, device_seq) keeps each phone's order.
+ */
+export const fieldEntries = sqliteTable(
+  "field_entries",
+  {
+    id: id(),
+    opId: text("op_id").notNull().unique(),
+    deviceId: text("device_id").notNull(),
+    deviceSeq: integer("device_seq").notNull(),
+    authorId: text("author_id")
+      .notNull()
+      .references(() => users.id),
+    kind: text("kind", { enum: FIELD_KIND }).notNull(),
+    lotId: text("lot_id").references(() => lots.id),
+    transferId: text("transfer_id").references(() => transfers.id),
+    payload: text("payload", { mode: "json" }).notNull(),
+    /** When the person entered it, by the phone's clock. */
+    capturedAt: text("captured_at").notNull(),
+    /** When it reached the server. */
+    receivedAt: text("received_at").notNull(),
+    status: text("status", { enum: FIELD_STATUS }).notNull(),
+    message: text("message"),
+    /** The record the entry produced (mortality_record, lot_event, transfer…), when it produced one. */
+    resultType: text("result_type"),
+    resultId: text("result_id"),
+    /** Daily mortality only: lot and farm day, and how many birds this entry added to the lot. */
+    dayKey: text("day_key"),
+    appliedCount: integer("applied_count").notNull().default(0),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex("field_entries_device_seq_idx").on(t.deviceId, t.deviceSeq),
+    index("field_entries_day_idx").on(t.dayKey),
+    index("field_entries_author_idx").on(t.authorId, t.receivedAt),
+  ]
+);
+
+/** A day of mortality whose declarations disagree: kept open until a manager arbitrates it. */
+export const fieldDiscrepancies = sqliteTable(
+  "field_discrepancies",
+  {
+    id: id(),
+    dayKey: text("day_key").notNull().unique(),
+    lotId: text("lot_id")
+      .notNull()
+      .references(() => lots.id),
+    day: text("day").notNull(),
+    status: text("status", { enum: DISCREPANCY_STATUS }).notNull(),
+    reason: text("reason").notNull(),
+    openedAt: text("opened_at").notNull(),
+    resolvedBy: text("resolved_by").references(() => users.id),
+    resolvedAt: text("resolved_at"),
+    /** The day's mortality the manager settled on, and why. */
+    resolvedCount: integer("resolved_count"),
+    resolutionNote: text("resolution_note"),
+  },
+  (t) => [index("field_discrepancies_lot_idx").on(t.lotId, t.status)]
 );

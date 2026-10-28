@@ -18,6 +18,9 @@ const DELETION_ORDER = [
   schema.ledgerEvents,
   schema.qualityHoldItems,
   schema.qualityCases,
+  // Field app entries point at transfers, lots and users.
+  schema.fieldDiscrepancies,
+  schema.fieldEntries,
   // Production flow: aliases point at identifiers; events at subjects; all of them at lots.
   schema.identifierAliases,
   schema.bvuIds,

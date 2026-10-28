@@ -20,7 +20,11 @@ const nextConfig: NextConfig = {
   // with inline scripts, and nonces would force every page, static ones included, to render
   // per request. Nothing is loaded from another origin (next/font self-hosts Inter).
   async headers() {
-    return [{ source: "/(.*)", headers: SECURITY_HEADERS }];
+    return [
+      { source: "/(.*)", headers: SECURITY_HEADERS },
+      // The field app's worker must never be served stale, or a fix would not reach the phones.
+      { source: "/sw.js", headers: [{ key: "Cache-Control", value: "no-cache, no-store, must-revalidate" }] },
+    ];
   },
 };
 

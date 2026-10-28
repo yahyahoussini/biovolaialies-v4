@@ -57,6 +57,15 @@ Mot de passe **identique pour les sept comptes** : `Demo1234!`
 
 Les comptes ont été testés : mot de passe correct accepté, mot de passe erroné refusé.
 
+**Éleveurs partenaires** (même mot de passe), utiles pour l'application terrain et les réceptions :
+`partenaire.ouazzani@`, `aide.ouazzani@` (son aide, Hamid), `partenaire.cherkaoui@`, `partenaire.fassi@`,
+`partenaire.elamrani@` — tous en `biovolailles.demo`, chacun limité à sa ferme.
+
+**Application terrain** : `/terrain`, sur un téléphone (ou la vue mobile du navigateur). Se connecter une
+fois avec du réseau ; ensuite elle s'ouvre et enregistre hors ligne, et envoie les saisies dans l'ordre au
+retour du réseau. Le menu « Saisies terrain » montre côté bureau ce qui est arrivé, les refus avec leur
+raison et le jour en écart sur OUA-2026-CF1 (Salma a compté 4 morts, Hamid 6) à arbitrer.
+
 ---
 
 ## 2. ⚠ Le point à connaître avant de commencer

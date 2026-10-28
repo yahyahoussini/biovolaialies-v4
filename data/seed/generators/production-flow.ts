@@ -1,4 +1,7 @@
+import { randomUUID } from "node:crypto";
+import type { FieldKind } from "../../../domain/field/field";
 import type { Session } from "../../../services/auth/session";
+import { syncFieldOps } from "../../../services/field/sync";
 import { recordObservation, recordTreatment, recordVaccination, reviewObservation } from "../../../services/sanitary/health";
 import { createChickLot, createEggLot, createHatchCycle, createParentFlock, importParentStock, recordCandling, recordHatch } from "../../../services/hatchery/hatchery";
 import { transitionLotStatus } from "../../../services/production/lot-lifecycle";
@@ -195,6 +198,43 @@ export async function seedProductionFlow(input: { hierarchy: SeededHierarchy; ad
   const toOuazzani = await dispatchTransfer({ objectType: "LOT", objectId: growingFermier.id, destinationBuildingId: ouazzani.buildingId, destinationLotCode: "OUA-2026-CF1", phaseOnArrival: "ELEVAGE_PARTENAIRE", quantity: 2000, sentAt: "2026-08-05T05:30:00.000Z", documentRef: "BL-P-2026-0412", transporter: "Transports Gharb", vehicle: "30914-A-7", crates: 50, signerName: producer.name }, producer.session);
   await receiveTransfer({ transferId: toOuazzani.id, quantityReceived: 1994, deadOnArrival: 2, receivedAt: "2026-08-05T09:45:00.000Z", discrepancyReason: "Quatre sujets de moins que le bon de livraison — caisse 31 incomplète", signerName: salma.name }, salma.session);
   await disputeTransfer({ transferId: toOuazzani.id, reason: "Le transporteur affirme avoir chargé 50 caisses pleines : comptage contesté, vidéo du quai demandée" }, salma.session);
+
+  // Field app (document 3, ch. 05): three days of entries from two phones on the Ouazzani farm,
+  // sent in one batch when the network came back. The farmer and her farm hand counted the same
+  // day's dead differently: both declarations are kept and the day waits for a manager.
+  const hamid = await partnerAccount("aide.ouazzani@biovolailles.demo", "Hamid Ouazzani", ouazzani.producerId);
+  const ouazzaniLot = (await repositories.lots.findByCode("OUA-2026-CF1"))!;
+  const fieldPhone = (who: { session: Session }, deviceId: string) => {
+    let seq = 0;
+    return (kind: FieldKind, capturedAt: string, payload: Record<string, unknown>) => ({ opId: randomUUID(), deviceId, seq: ++seq, authorId: who.session.userId, kind, lotId: ouazzaniLot.id, transferId: null, capturedAt, payload });
+  };
+  const salmaPhone = fieldPhone(salma, "tel-demo-salma-ouazzani");
+  const hamidPhone = fieldPhone(hamid, "tel-demo-hamid-ouazzani");
+  await syncFieldOps(
+    {
+      ops: [
+        salmaPhone("MORTALITE", "2026-10-25T07:20:00.000Z", { count: 3, cause: "Inconnue" }),
+        salmaPhone("PESEE", "2026-10-25T08:05:00.000Z", { averageWeightKg: 1.64, sampleCount: 40 }),
+        salmaPhone("ALIMENT", "2026-10-25T08:30:00.000Z", { quantityKg: 205, feedType: "Finition" }),
+        salmaPhone("EAU", "2026-10-25T18:00:00.000Z", { quantityL: 655 }),
+        salmaPhone("MORTALITE", "2026-10-26T07:15:00.000Z", { count: 2 }),
+        salmaPhone("ALIMENT", "2026-10-26T08:20:00.000Z", { quantityKg: 210, feedType: "Finition" }),
+        salmaPhone("EAU", "2026-10-26T18:05:00.000Z", { quantityL: 672 }),
+        salmaPhone("MORTALITE", "2026-10-27T07:10:00.000Z", { count: 4, cause: "Chaleur" }),
+      ],
+    },
+    salma.session
+  );
+  await syncFieldOps(
+    {
+      ops: [
+        hamidPhone("MORTALITE", "2026-10-27T09:40:00.000Z", { count: 6, cause: "Chaleur" }),
+        hamidPhone("PESEE", "2026-10-27T10:10:00.000Z", { averageWeightKg: 17.2, sampleCount: 30 }),
+        hamidPhone("PESEE", "2026-10-27T10:12:00.000Z", { averageWeightKg: 1.72, sampleCount: 30 }),
+      ],
+    },
+    hamid.session
+  );
   const toCherkaoui = await dispatchTransfer({ objectType: "LOT", objectId: growingFermier.id, destinationBuildingId: cherkaoui.buildingId, destinationLotCode: "CHE-2026-CF1", phaseOnArrival: "ELEVAGE_PARTENAIRE", quantity: growingFermier.currentPopulation - 2000, sentAt: "2026-08-05T06:15:00.000Z", documentRef: "BL-P-2026-0413", transporter: "Transports Gharb", vehicle: "30914-A-7", crates: 55, signerName: producer.name }, producer.session);
   await receiveTransfer({ transferId: toCherkaoui.id, quantityReceived: growingFermier.currentPopulation - 2000, deadOnArrival: 0, receivedAt: "2026-08-05T11:30:00.000Z", signerName: karim.name }, karim.session);
 

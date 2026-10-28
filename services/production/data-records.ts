@@ -346,6 +346,71 @@ export async function createMortalityRecord(
   return { record, quality };
 }
 
+/**
+ * A counter-entry for mortality recorded in excess — a manager's arbitration of a disputed field
+ * day. A mortality record with a negative count keeps every sum right, and the birds return to the
+ * lot's population. Nothing already recorded is edited: the correction is a new, signed record.
+ */
+export async function recordMortalityCorrection(
+  lotId: string,
+  count: number,
+  reason: string,
+  session: Session,
+  sourceId: string | null = null,
+  occurredAt: string = new Date().toISOString()
+): Promise<MortalityRecord> {
+  if (!can(session, "VALIDATE", "EVENTS")) throw new AuthorizationError("Seul un responsable corrige une mortalité enregistrée.");
+  const lot = await getLotOrThrow(lotId);
+  assertInScope(session, await resolveLotHierarchy(lotId));
+  if (!Number.isInteger(count) || count <= 0) throw new ValidationError("Une correction porte sur un nombre entier positif de sujets.");
+  const recorded = (await repositories.mortalityRecords.listByLot(lotId)).reduce((sum, r) => sum + r.count, 0);
+  if (count > recorded) throw new ValidationError(`La correction (${count}) dépasse la mortalité enregistrée sur ce lot (${recorded}).`);
+  const method = "Correction de mortalité (contre-passation)";
+  const newPopulation = lot.currentPopulation + count;
+  const { record } = await recordMortalityWithPopulationUpdate(
+    {
+      lotId,
+      occurredAt,
+      count: -count,
+      suspectedCause: reason.slice(0, 200),
+      causeValidated: true,
+      sourceType: "MANUEL",
+      sourceId,
+      actorId: session.userId,
+      dataStatus: lot.dataStatus,
+      measurementMethod: method,
+      deviceId: null,
+      documentId: null,
+      validationStatus: "VALIDE",
+    },
+    {
+      lotId,
+      eventType: "MORTALITE",
+      payload: { quantity: -count, cause: "Correction de mortalité" },
+      occurredAt,
+      actorId: session.userId,
+      dataStatus: lot.dataStatus,
+      sourceType: "MANUEL",
+      deviceId: null,
+      measurementMethod: method,
+      validationStatus: "VALIDE",
+    },
+    newPopulation
+  );
+  await recordAudit({
+    actorId: session.userId,
+    entityType: "lot",
+    entityId: lotId,
+    field: "currentPopulation",
+    oldValue: String(lot.currentPopulation),
+    newValue: String(newPopulation),
+    reason: `Correction de mortalité (+${count} sujets) : ${reason}`,
+    relatedLotId: lotId,
+    relatedEventId: null,
+  });
+  return record;
+}
+
 // ---------------------------------------------------------------------------
 // Environment
 // ---------------------------------------------------------------------------

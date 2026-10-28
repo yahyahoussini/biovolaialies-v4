@@ -66,7 +66,8 @@ const PERMISSIONS: Record<Role, Partial<Record<Module, readonly Action[]>>> = {
     ANOMALIES: READ_ONLY,
     ALERTS: ["VIEW", "ACKNOWLEDGE"],
     ACTIONS: ["VIEW", "CREATE"],
-    EVENTS: ["VIEW", "CREATE"],
+    /** VALIDATE: arbitrate a disputed field day and correct past mortality (document 3, annex — default pending the owner's decision). */
+    EVENTS: ["VIEW", "CREATE", "VALIDATE"],
     PRODUCTS: READ_ONLY,
     SANITARY: READ_ONLY,
     TRACEABILITY: ["VIEW", "CREATE", "EDIT"],
@@ -100,7 +101,8 @@ const PERMISSIONS: Record<Role, Partial<Record<Module, readonly Action[]>>> = {
     ANOMALIES: READ_ONLY,
     ALERTS: ["VIEW", "ACKNOWLEDGE"],
     ACTIONS: ["VIEW", "CREATE"],
-    EVENTS: ["VIEW", "CREATE"],
+    /** VALIDATE: arbitrate a disputed field day and correct past mortality (document 3, annex — default pending the owner's decision). */
+    EVENTS: ["VIEW", "CREATE", "VALIDATE"],
     SANITARY: ["VIEW", "CREATE"],
     TRACEABILITY: ["VIEW", "CREATE", "EDIT"],
     QUALITY: ["VIEW", "CREATE"],
