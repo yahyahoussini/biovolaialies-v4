@@ -264,9 +264,12 @@ export async function seedTelemetry(input: { heroProducerId: string; adminSessio
   // Band learning over the three finished lots: proposals wait for the technician's decision.
   await proposeLearnedBands(admin);
 
-  // Demo-size trim: keep 6 hours of raw readings; 15-minute and hourly buckets keep the rest.
+  // Demo-size trim: keep 6 hours of the catalogue channels' raw readings; their 15-minute and hourly
+  // buckets keep the rest. The hero lot's own sensors (no catalogue reference) are shown from their
+  // raw series, so it stays whole.
   const cutoff = bucketStart(NOW - DEMO_RAW_HOURS * HOUR, "1h");
-  const removed = await repositories.readings.purgeBefore(cutoff);
+  const channels = (await repositories.telemetrySensors.listAll()).filter((s) => s.catalogRef !== null).map((s) => s.id);
+  const removed = await repositories.readings.purgeBefore(cutoff, channels);
   await recordAudit({
     actorId: null,
     entityType: "telemetry_retention",

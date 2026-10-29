@@ -226,9 +226,10 @@ export class DrizzleTelemetryReadingRepository {
     return db.query.measurements.findMany({ where: eq(measurements.sensorId, sensorId), orderBy: (t, { desc }) => desc(t.capturedAt), limit });
   }
 
-  /** Deletes raw readings older than `before` — only call once their 15-minute buckets are stored. */
-  async purgeBefore(before: string): Promise<number> {
-    const r = await db.delete(measurements).where(lt(measurements.capturedAt, before)).returning({ id: measurements.id });
+  /** Deletes raw readings older than `before`, of the given sensors only if any — only call once their 15-minute buckets are stored. */
+  async purgeBefore(before: string, sensorIds?: string[]): Promise<number> {
+    const old = lt(measurements.capturedAt, before);
+    const r = await db.delete(measurements).where(sensorIds ? and(old, inArray(measurements.sensorId, sensorIds)) : old).returning({ id: measurements.id });
     return r.length;
   }
 

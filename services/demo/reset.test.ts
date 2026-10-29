@@ -84,6 +84,13 @@ describe("resetDemoScenario — on the seeded scenario", () => {
     expect(tokens.filter((t) => t.active).length).toBeGreaterThanOrEqual(2);
     expect(result.anomalyCount).toBeGreaterThan(0);
 
+    // The hero building's sensors keep their 26 days (5 × 105 readings): the demo-size trim of the
+    // gateway's raw readings must not reach them, they have no aggregates to fall back on.
+    const heroDevice = await repositories.devices.findByCode("DEV-B01-001");
+    let heroReadings = 0;
+    for (const sensor of await repositories.sensors.listByDevice(heroDevice!.id)) heroReadings += (await repositories.measurements.listBySensor(sensor.id)).length;
+    expect(heroReadings).toBe(525);
+
     // The reset itself is the first entry of the fresh audit log.
     const audit = await repositories.auditLog.search({ entityType: "demo_scenario" });
     expect(audit.length).toBeGreaterThanOrEqual(1);
