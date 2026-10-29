@@ -61,6 +61,25 @@ describe("getPerformanceSnapshot", () => {
     const snapshot = await getPerformanceSnapshot(lot.id, "AVERAGE_WEIGHT", new Date("2026-08-16T00:00:00.000Z"), 7);
     expect(snapshot.trend.direction).toBe("INSUFFICIENT_DATA");
   });
+
+  it("reads a lot that has ended at its end: its last week stays, compared with the week before", async () => {
+    const { lot } = await seedLot("PERF5");
+    await repositories.feedUsage.create({ lotId: lot.id, occurredAt: "2026-08-04T00:00:00.000Z", quantity: 100, unit: "KG", feedType: "x", feedSource: null, ...PROVENANCE, dataStatus: "SIMULATION" });
+    await repositories.feedUsage.create({ lotId: lot.id, occurredAt: "2026-08-12T00:00:00.000Z", quantity: 300, unit: "KG", feedType: "x", feedSource: null, ...PROVENANCE, dataStatus: "SIMULATION" });
+    await repositories.lots.updateStatus(lot.id, "CLOTURE", { endedAt: "2026-08-16T00:00:00.000Z" });
+
+    // Read two months later, as a finished lot's archive is.
+    const later = new Date("2026-10-29T00:00:00.000Z");
+    const snapshot = await getPerformanceSnapshot(lot.id, "FEED_CONSUMPTION", later, 7);
+    expect(snapshot.current.value).toBe(300);
+    expect(snapshot.previous.value).toBe(100);
+    expect(snapshot.trend.direction).toBe("INCREASING");
+    expect(snapshot.current.period).toMatchObject({ to: new Date("2026-08-16T00:00:00.000Z"), label: "7 derniers jours avant la clôture" });
+    expect(snapshot.current.calculatedAt).toBe(later.toISOString());
+
+    const population = (await getLotPerformanceOverview(lot.id, later)).find((o) => o.code === "CURRENT_POPULATION")!;
+    expect(population.result.period.label).toBe("À la clôture");
+  });
 });
 
 describe("getLotPerformanceOverview", () => {

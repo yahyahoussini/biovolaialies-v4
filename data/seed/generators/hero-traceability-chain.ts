@@ -13,7 +13,8 @@ import type { Session } from "../../../services/auth/session";
  * so the exact-equality checks in domain/production/quantity-integrity.ts (reused, not
  * re-implemented) pass with no floating-point surprises. This is the natural conclusion of
  * the lot's own lifecycle (ACTIF → ABATTU → TRANSFORME → CLOTURE via the existing,
- * validated transition table) — not a status fabricated for the demo.
+ * validated transition table) — not a status fabricated for the demo. Each change is dated when
+ * it happens in the scenario (16 August), not when the seed runs.
  */
 export async function seedHeroTraceabilityChain(
   heroLotId: string,
@@ -42,7 +43,7 @@ export async function seedHeroTraceabilityChain(
     validationStatus: null,
   });
 
-  await transitionLotStatus(heroLotId, "ABATTU", adminSession, "Fin de cycle — départ vers abattage.");
+  await transitionLotStatus(heroLotId, "ABATTU", adminSession, "Fin de cycle — départ vers abattage.", "2026-08-16T10:00:00.000Z");
 
   // Quantity is tracked in kg of live weight from the collection onward (11920 sujets × 1.15kg
   // = 13708) — one consistent unit through Collection → Slaughter → Transformation, so
@@ -81,7 +82,7 @@ export async function seedHeroTraceabilityChain(
     adminSession
   );
 
-  await transitionLotStatus(heroLotId, "TRANSFORME", adminSession, "Lot transformé après abattage.");
+  await transitionLotStatus(heroLotId, "TRANSFORME", adminSession, "Lot transformé après abattage.", "2026-08-16T14:00:00.000Z");
 
   // 90% output / 10% rejects: 8636 + 0 + 960 = 9596 exactly.
   const transformationBatch = await createTransformationBatch(
@@ -124,7 +125,7 @@ export async function seedHeroTraceabilityChain(
     adminSession
   );
 
-  await transitionLotStatus(heroLotId, "CLOTURE", adminSession, "Cycle complet — traçabilité aval enregistrée.");
+  await transitionLotStatus(heroLotId, "CLOTURE", adminSession, "Cycle complet — traçabilité aval enregistrée.", "2026-08-16T16:30:00.000Z");
 
   return { productId: product.id };
 }

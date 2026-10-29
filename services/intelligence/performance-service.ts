@@ -34,7 +34,8 @@ export async function getPerformanceSnapshot(
   }
   const records = preFetchedRecords ?? (await fetchLotRecords(lotId));
   const current = await computeKpi(lotId, code, now, periodDays, records);
-  const previousReferenceNow = rollingPeriod(now, periodDays, periodDays).to;
+  // The reference period precedes the current one wherever that ends: now, or a closed lot's end.
+  const previousReferenceNow = rollingPeriod(current.period.to, periodDays, periodDays).to;
   const previous = await computeKpi(lotId, code, previousReferenceNow, periodDays, records);
   const observationCount = current.sourceCount + previous.sourceCount;
   const trend = computeTrend(current.value, previous.value, observationCount);

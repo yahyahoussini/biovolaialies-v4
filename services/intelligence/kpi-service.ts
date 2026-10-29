@@ -105,7 +105,13 @@ export async function computeKpi(
 ): Promise<KpiResult> {
   const lot = await getLotOrThrow(lotId);
   const { mortality, weight, feed, water } = records ?? (await fetchLotRecords(lotId));
-  const period = rollingPeriod(now, periodDays);
+  // A lot that has ended is read at its end: its figures stay those of its last days instead of
+  // emptying a week after it closes (document 3 keeps an archive of finished lots).
+  const endedAt = lot.endedAt ? Date.parse(lot.endedAt) : null;
+  const reference = endedAt !== null && endedAt < now.getTime() ? new Date(endedAt) : now;
+  const ended = reference !== now;
+  const rolling = rollingPeriod(reference, periodDays);
+  const period = ended ? { ...rolling, label: `${rolling.label} avant la clôture` } : rolling;
   const calculatedAt = now.toISOString();
 
   switch (code) {
@@ -123,7 +129,7 @@ export async function computeKpi(
         lot.currentPopulation,
         reconciliation.consistent ? "AVAILABLE" : "LIMITED",
         reconciliation.consistent ? null : `Écart de ${reconciliation.difference} sujet(s) avec la population attendue d'après l'historique.`,
-        { from: now, to: now, label: "Instantané" },
+        { from: reference, to: reference, label: ended ? "À la clôture" : "Instantané" },
         calculatedAt,
         mortality.length,
         reconciliation
