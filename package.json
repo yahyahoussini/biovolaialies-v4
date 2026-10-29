@@ -19,6 +19,7 @@
     "db:deploy": "tsx scripts/deploy-db.ts",
     "db:backup": "tsx scripts/db-backup.ts",
     "db:restore-check": "tsx scripts/db-restore-check.ts",
+    "db:restore": "tsx scripts/db-restore.ts",
     "check:contrast": "tsx scripts/check-contrast.ts",
     "demo:verified": "tsx scripts/demo-verified.ts",
     "demo:snapshot": "tsx scripts/build-snapshot.ts",

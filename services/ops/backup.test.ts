@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { appendFileSync, rmSync } from "node:fs";
+import { appendFileSync, copyFileSync, existsSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { createClient } from "@libsql/client";
@@ -7,7 +7,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import { dbClient } from "../../data/db/client";
 import { repositories } from "../../data/repositories";
 import { recordAudit } from "../audit/record";
-import { createBackup, readManifest, sha256File, verifyBackup, type BackupManifest } from "./backup";
+import { createBackup, readManifest, restoreFileDatabase, sha256File, verifyBackup, type BackupManifest } from "./backup";
 
 const files: string[] = [];
 const scratch = () => {
@@ -15,7 +15,7 @@ const scratch = () => {
   files.push(file, `${file}.manifest.json`);
   return file;
 };
-afterAll(() => files.forEach((f) => rmSync(f, { force: true })));
+afterAll(() => files.forEach((f) => rmSync(f, { force: true, recursive: true })));
 
 /** Edits the backup file behind the manifest's back, then re-signs the bytes so only the content check can object. */
 async function tamper(file: string, manifest: BackupManifest, sql: string): Promise<BackupManifest> {
@@ -75,5 +75,36 @@ describe("backup and verified restore", () => {
     const m3 = await createBackup(dbClient, third);
     appendFileSync(third, Buffer.from([0]));
     expect((await verifyBackup(third, m3)).checks[0]).toMatchObject({ label: "Empreinte du fichier", ok: false });
+  });
+
+  it("restores a file database without letting a leftover write-ahead log replay over it", async () => {
+    const backup = scratch();
+    const manifest = await createBackup(dbClient, backup);
+    // A live database in WAL mode whose last writes still sit in its -wal file, as a stopped server leaves it.
+    const running = mkdtempSync(path.join(tmpdir(), "biovolailles-en-service-"));
+    const stopped = mkdtempSync(path.join(tmpdir(), "biovolailles-arretee-"));
+    files.push(running, stopped);
+    const live = path.join(running, "biovolailles.db");
+    copyFileSync(backup, live);
+    const server = createClient({ url: `file:${live.replace(/\\/g, "/")}` });
+    await server.execute("PRAGMA journal_mode = WAL");
+    await server.execute("INSERT INTO organizations (id, name, type, created_at) VALUES ('apres-sauvegarde', 'Saisie après la sauvegarde', 'INTERNAL', '2026-10-29T03:00:00.000Z')");
+    for (const suffix of ["", "-wal", "-shm"]) if (existsSync(`${live}${suffix}`)) copyFileSync(`${live}${suffix}`, path.join(stopped, `biovolailles.db${suffix}`));
+    server.close();
+    const target = path.join(stopped, "biovolailles.db");
+    expect(existsSync(`${target}-wal`)).toBe(true);
+
+    const { asideDir, checks } = await restoreFileDatabase(backup, manifest, target, new Date("2026-10-29T03:10:00.000Z"));
+    expect(checks.every((c) => c.ok)).toBe(true);
+    // The restored database holds the backup, not the replayed log…
+    const restored = createClient({ url: `file:${target.replace(/\\/g, "/")}` });
+    expect((await restored.execute("SELECT count(*) AS n FROM organizations WHERE id = 'apres-sauvegarde'")).rows[0].n).toBe(0);
+    expect(Number((await restored.execute("SELECT count(*) AS n FROM organizations")).rows[0].n)).toBe(manifest.tables.organizations);
+    restored.close();
+    // …and the replaced one is kept whole, its log beside it.
+    expect(readdirSync(asideDir).sort()).toEqual(["biovolailles.db", "biovolailles.db-shm", "biovolailles.db-wal"]);
+    const aside = createClient({ url: `file:${path.join(asideDir, "biovolailles.db").replace(/\\/g, "/")}` });
+    expect((await aside.execute("SELECT count(*) AS n FROM organizations WHERE id = 'apres-sauvegarde'")).rows[0].n).toBe(1);
+    aside.close();
   });
 });

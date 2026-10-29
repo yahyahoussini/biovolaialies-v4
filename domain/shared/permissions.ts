@@ -25,7 +25,10 @@ export const MODULE = [
   "QUALITY",
   /** Upstream chain: parent flocks, egg lots, incubation cycles, chick lots. */
   "HATCHERY",
-  /** Equipment register per unit and commissioning checklist. */
+  /**
+   * Equipment register per unit, the purchasing nomenclature and the commissioning screens. Recording a
+   * commissioning test is validating an installation: it takes IOT VALIDATE (the technician), not EQUIPMENT EDIT.
+   */
   "EQUIPMENT",
   /** Machine API clients (keys and scopes) for /api/v1. */
   "API_CLIENTS",

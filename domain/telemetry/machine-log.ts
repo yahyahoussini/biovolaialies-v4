@@ -160,23 +160,40 @@ function zoneOffsetMs(utcMs: number, timeZone: string): number {
   return Date.UTC(get("year"), get("month") - 1, get("day"), get("hour"), get("minute"), get("second")) - Math.floor(utcMs / 1000) * 1000;
 }
 
-/** A wall-clock time in a zone, as an instant. Morocco moves its clock during Ramadan: the zone data knows when. */
-export function zonedToUtc(y: number, mo: number, d: number, h: number, mi: number, s: number, timeZone: string): number {
+const DAY_MS = 86_400_000;
+
+/**
+ * The instants a wall-clock time stands for in a zone, earliest first: usually one; two in the hour
+ * repeated when the clock goes back (Morocco, the Sunday before Ramadan: 03:00 becomes 02:00); none
+ * in the hour skipped when it goes forward again after Ramadan. The zone data knows the dates.
+ */
+export function zonedCandidates(y: number, mo: number, d: number, h: number, mi: number, s: number, timeZone: string): number[] {
   const wall = Date.UTC(y, mo - 1, d, h, mi, s);
-  const first = zoneOffsetMs(wall - zoneOffsetMs(wall, timeZone), timeZone);
-  return wall - first;
+  const out: number[] = [];
+  // The offsets in force a day either side cover both sides of any change near this time.
+  for (const offset of new Set([zoneOffsetMs(wall - DAY_MS, timeZone), zoneOffsetMs(wall + DAY_MS, timeZone)])) {
+    const t = wall - offset;
+    if (zoneOffsetMs(t, timeZone) === offset && !out.includes(t)) out.push(t);
+  }
+  return out.sort((a, b) => a - b);
+}
+
+/** A wall-clock time in a zone, as an instant — the earlier one in a repeated hour; null when the time never happened. */
+export function zonedToUtc(y: number, mo: number, d: number, h: number, mi: number, s: number, timeZone: string): number | null {
+  return zonedCandidates(y, mo, d, h, mi, s, timeZone)[0] ?? null;
 }
 
 /** A date that exists in the calendar: 31/02 is refused, never rolled over to 3 March. */
 const valid = (y: number, mo: number, d: number, h: number, mi: number, s: number) =>
   y >= 2000 && y <= 2100 && mo >= 1 && mo <= 12 && d >= 1 && new Date(Date.UTC(y, mo - 1, d)).getUTCDate() === d && h <= 23 && mi <= 59 && s <= 59;
 
-export function parseTime(raw: string, format: TimeFormat, timeZone: string): number | null {
+/** Every instant a time written in the log can stand for; null when it cannot be read at all. */
+export function parseTimeCandidates(raw: string, format: TimeFormat, timeZone: string): number[] | null {
   const v = raw.trim();
   if (format === "ISO") {
     if (/[zZ]|[+-]\d{2}:?\d{2}$/.test(v)) {
       const t = Date.parse(v.replace(" ", "T"));
-      return Number.isNaN(t) ? null : t;
+      return Number.isNaN(t) ? null : [t];
     }
     format = "AAAA-MM-JJ HH:MM";
   }
@@ -189,7 +206,12 @@ export function parseTime(raw: string, format: TimeFormat, timeZone: string): nu
   const [y, mo, d] = format === "AAAA-MM-JJ HH:MM" ? [n[0], n[1], n[2]] : format === "JJ/MM/AAAA HH:MM" ? [n[2], n[1], n[0]] : [n[2], n[0], n[1]];
   const [h, mi, s] = [n[3], n[4], n[5] || 0];
   if (!valid(y, mo, d, h, mi, s)) return null;
-  return zonedToUtc(y, mo, d, h, mi, s, timeZone);
+  return zonedCandidates(y, mo, d, h, mi, s, timeZone);
+}
+
+/** The instant a time stands for — the earlier one in a repeated hour; null when unreadable or when that time never happened. */
+export function parseTime(raw: string, format: TimeFormat, timeZone: string): number | null {
+  return parseTimeCandidates(raw, format, timeZone)?.[0] ?? null;
 }
 
 /**
@@ -255,13 +277,30 @@ export function parseLog(text: string, profile: LogProfile): ParsedLog {
   for (const [channel, i] of channelIdx) if (i < 0) report(headerIndex + 1, `Colonne « ${profile.channels[channel]} » introuvable dans l'en-tête.`);
 
   let count = 0;
+  let previous = Number.NEGATIVE_INFINITY;
+  const seen = new Map<number, number>();
   for (let n = headerIndex + 1; n < all.length; n++) {
     if (!all[n].trim()) continue;
     count++;
     const cells = splitLine(all[n], profile.delimiter);
-    const t = parseTime(timeIdx.map((i) => cells[i] ?? "").join(" "), profile.timeFormat, profile.timeZone);
-    if (t === null) {
-      report(n + 1, `Horodatage illisible : « ${timeIdx.map((i) => cells[i] ?? "").join(" ")} ».`);
+    const stamp = timeIdx.map((i) => cells[i] ?? "").join(" ");
+    const candidates = parseTimeCandidates(stamp, profile.timeFormat, profile.timeZone);
+    if (candidates === null) {
+      report(n + 1, `Horodatage illisible : « ${stamp} ».`);
+      continue;
+    }
+    if (candidates.length === 0) {
+      report(n + 1, `Heure qui n'existe pas ce jour-là, l'heure légale ayant avancé : « ${stamp} ». L'horloge de la machine suit-elle l'heure légale ?`);
+      continue;
+    }
+    // In the hour repeated when the clock goes back, a time stands for two instants: the log's own order says which.
+    const t = candidates.find((c) => c >= previous) ?? candidates[candidates.length - 1];
+    previous = t;
+    // One value per instant: a second line with the same stamp (logging faster than the minute it
+    // writes, or a repeated line) is reported, never stored over the first.
+    const first = seen.get(t);
+    if (first !== undefined) {
+      report(n + 1, `Même horodatage que la ligne ${first} (« ${stamp} ») : ligne non lue.`);
       continue;
     }
     const values: Record<string, number> = {};
@@ -272,7 +311,10 @@ export function parseLog(text: string, profile: LogProfile): ParsedLog {
       if (v === null) report(n + 1, `Valeur illisible pour ${profile.channels[channel]} : « ${raw} ».`);
       else values[channel] = v;
     }
-    if (Object.keys(values).length) rows.push({ line: n + 1, at: new Date(t).toISOString(), values });
+    if (Object.keys(values).length) {
+      rows.push({ line: n + 1, at: new Date(t).toISOString(), values });
+      seen.set(t, n + 1);
+    }
   }
   const times = rows.map((r) => r.at).sort();
   return { header, preamble, rows, errors, lines: count, from: times[0] ?? null, to: times[times.length - 1] ?? null };

@@ -36,9 +36,9 @@ async function hatchery(suffix: string) {
   const devices = await repositories.devices.listByBuilding(building.id);
   const sensors = (await repositories.telemetrySensors.listByDevices(devices.map((d) => d.id))) as Sensor[];
   const zoneCodes = new Map((await repositories.zones.listByFarm(farm.id)).map((z) => [z.id, z.code]));
-  /** The probes only: once the machine is read from its log, the gateway no longer speaks for it. */
-  const probes = async (from: number, to: number) => {
-    const channels = sensors.filter((s) => s.catalogRef === "H06").map((s) => ({ code: s.code!, ref: s.catalogRef!, type: s.sensorType, position: s.position ?? null, zoneCode: s.zoneId ? (zoneCodes.get(s.zoneId) ?? null) : null }));
+  /** The probes only by default: once the machine is read from its log, the gateway no longer speaks for it. */
+  const probes = async (from: number, to: number, refs: string[] = ["H06"]) => {
+    const channels = sensors.filter((s) => refs.includes(s.catalogRef ?? "")).map((s) => ({ code: s.code!, ref: s.catalogRef!, type: s.sensorType, position: s.position ?? null, zoneCode: s.zoneId ? (zoneCodes.get(s.zoneId) ?? null) : null }));
     const messages = simulateGateway({ gateway: provisioned.gatewayCode, channels, devices: [], from, to, lotStartedAt: null, population: 0, scenarios: [], startSeq: 1 });
     // Sent as one catch-up, stamped when sent: the gateway's clock is right.
     await ingestGatewayBatch(messages.map((m) => ({ ...m, sentAt: new Date(to + MIN).toISOString() })), principal, new Date(to + MIN));
@@ -109,6 +109,55 @@ describe("incubator log import", () => {
     const integrity = await runIntegrityChecks(h.admin);
     expect(integrity.issues.some((i) => i.code === "T21_DEVICE_STALE_OFFLINE" && i.entityId === machine.deviceId)).toBe(false);
     expect((await getMachineImport(result.record.id, h.manager)).row.importedByName).toMatch(/mi-manager-a/);
+  });
+
+  it("stores one value per instant, so a log with a repeated stamp still verifies intact", async () => {
+    const h = await hatchery("dup");
+    const text = ["Date;Heure;T air (°C)", "22/09/2026;08:00;37,6", "22/09/2026;08:00;37,9", "22/09/2026;08:01;37,6"].join("\n");
+    const { profile } = guessProfile(text);
+    const r = await importMachineLog({ zoneId: h.zone.id, fileName: "doublon.csv", dataStatus: "TEST", profile }, new TextEncoder().encode(text), h.manager, new Date(T0 + 4 * HOUR));
+    expect(r.record).toMatchObject({ lines: 3, accepted: 2, duplicates: 0, rejected: 1 });
+    expect(r.record.errors).toEqual([expect.objectContaining({ line: 3 })]);
+    expect(await verifyMachineImport(r.record.id, h.manager)).toBe("INTACT");
+  });
+
+  it("never lets an imported log carry the building's rules past what the gateway has delivered", async () => {
+    const h = await hatchery("wm");
+    await setMachineFeed(h.zone.id, "FICHIER", h.manager);
+    // The gateway delivers the probes up to T0+1h, then goes quiet.
+    await h.probes(T0, T0 + HOUR);
+    const before = await repositories.ruleWatermarks.get(h.building.id);
+    expect(before).not.toBeNull();
+    const log = fileOf(buildSampleLog({ machine: "INC-1", from: T0, to: T0 + 3 * HOUR, marker: false }));
+    const { profile } = guessProfile(new TextDecoder("windows-1252").decode(log.bytes));
+    await importMachineLog({ zoneId: h.zone.id, fileName: log.name, dataStatus: "SIMULATION", profile }, log.bytes, h.manager, new Date(T0 + 3 * HOUR + MIN));
+    // The machine's log reaches T0+3h: the rules stay where the gateway is…
+    expect(await repositories.ruleWatermarks.get(h.building.id)).toBe(before);
+    // …so that when the gateway's buffer arrives, the hours in between are judged.
+    await h.probes(T0 + HOUR, T0 + 3 * HOUR);
+    expect(Date.parse((await repositories.ruleWatermarks.get(h.building.id))!)).toBeGreaterThan(T0 + 2.5 * HOUR);
+  });
+
+  it("closes the silence of a machine channel once it is read from its log", async () => {
+    const h = await hatchery("sil");
+    // Read over Modbus at first: the machine channel reports, then its link fails while the probes go on.
+    await h.probes(T0, T0 + 10 * MIN, ["H06", "PLC"]);
+    await h.probes(T0 + 10 * MIN, T0 + 3 * HOUR);
+    await runSilenceCheck(new Date(T0 + 3 * HOUR));
+    const machine = h.sensors.find((s) => s.catalogRef === "PLC")!;
+    const state = async () => (await repositories.ruleStates.listByRule("CAPTEUR_SILENCIEUX")).find((s) => s.subjectKey === `sensor:${machine.id}`)?.state;
+    expect(["ALERTE", "CRITIQUE"]).toContain(await state());
+    // The incubator is switched to file reading: the next check closes the silence.
+    await setMachineFeed(h.zone.id, "FICHIER", h.manager);
+    await runSilenceCheck(new Date(T0 + 3 * HOUR + 5 * MIN));
+    expect(await state()).toBe("NORMAL");
+  });
+
+  it("judges nothing ahead of the server's clock", async () => {
+    const h = await hatchery("fut");
+    const now = Date.now();
+    await h.probes(now - HOUR, now + 2 * HOUR);
+    expect(Date.parse((await repositories.ruleWatermarks.get(h.building.id))!)).toBeLessThanOrEqual(Date.now());
   });
 
   it("flags lines dated ahead of the server, and refuses the example as real data", async () => {

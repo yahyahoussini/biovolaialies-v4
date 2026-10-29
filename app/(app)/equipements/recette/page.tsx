@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { RECEPTION_RULE } from "@/domain/equipment/recipes";
 import { can } from "@/domain/shared/permissions";
 import { cn } from "@/lib/cn";
+import { moroccoDate } from "@/lib/dates";
 import { requireModuleAccess } from "@/services/auth/guard";
 import { buildingCommissioning, commissioningOverview } from "@/services/equipment/commissioning";
 import { recordCommissioningAction } from "../actions";
@@ -23,7 +24,7 @@ export default async function CommissioningPage({ searchParams }: PageProps<"/eq
   const selectedId = typeof batiment === "string" && overview.some((b) => b.buildingId === batiment) ? batiment : overview[0]?.buildingId;
   const selected = selectedId ? await buildingCommissioning(selectedId, session) : null;
   const canRecord = can(session, "VALIDATE", "IOT");
-  const today = new Date().toISOString().slice(0, 10);
+  const today = moroccoDate();
 
   return (
     <div className="flex flex-col gap-6">

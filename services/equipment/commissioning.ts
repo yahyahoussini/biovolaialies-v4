@@ -3,6 +3,7 @@ import type { Device } from "../../domain/iot/types";
 import { COMMISSIONING_RECIPES, receptionStatus, recipeFor, type CommissioningRecipe, type CommissioningRecord, type ReceptionStatus } from "../../domain/equipment/recipes";
 import { AuthorizationError, NotFoundError, ValidationError } from "../../domain/shared/errors";
 import { can } from "../../domain/shared/permissions";
+import { moroccoDate } from "../../lib/dates";
 import { parseInput, z } from "../../lib/zod";
 import { recordAudit } from "../audit/record";
 import type { Session } from "../auth/session";
@@ -20,7 +21,7 @@ function applicableCodes(devices: Device[]): string[] {
   return COMMISSIONING_RECIPES.filter((r) => refs.has(r.code)).map((r) => r.code);
 }
 
-/** The latest record of each test: records come newest first. */
+/** The current result of each test: records come latest run first. */
 function latestByCode(records: CommissioningRecord[]): Map<string, CommissioningRecord> {
   const out = new Map<string, CommissioningRecord>();
   for (const r of records) if (!out.has(r.code)) out.set(r.code, r);
@@ -122,7 +123,8 @@ export async function recordCommissioning(input: unknown, session: Session, now 
   assertInScope(session, await resolveBuildingHierarchy(building.id));
   const devices = (await repositories.devices.list()).filter((d) => d.buildingId === building.id);
   if (!applicableCodes(devices).includes(data.code)) throw new ValidationError(`La recette ${data.code} ne s'applique à aucun équipement de ce bâtiment.`);
-  if (data.performedAt > now.toISOString().slice(0, 10)) throw new ValidationError("La date d'exécution ne peut pas être dans le futur.");
+  // Compared with the day in Morocco: at 00:30 local time the UTC date is still yesterday.
+  if (data.performedAt > moroccoDate(now)) throw new ValidationError("La date d'exécution ne peut pas être dans le futur.");
   const previous = (await commissioningResults(building.id)).latest.get(data.code) ?? null;
   const record = await repositories.commissioning.create({ ...data, performedAt: data.performedAt, recordedBy: session.userId, recordedAt: now.toISOString() });
   await recordAudit({

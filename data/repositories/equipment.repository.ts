@@ -50,11 +50,15 @@ export class DrizzleCommissioningRepository implements CommissioningRepository {
     const [row] = await db.insert(commissioningRecords).values(record).returning();
     return row;
   }
-  /** Newest first: the first row of a test is its current result. */
+  /**
+   * Latest run first — by the day the test was run, then by the order it was typed in — so the first
+   * row of a test is its current result. A report typed in late for an older run never overrides a
+   * newer one.
+   */
   async listByBuilding(buildingId: string): Promise<CommissioningRecord[]> {
-    return db.query.commissioningRecords.findMany({ where: eq(commissioningRecords.buildingId, buildingId), orderBy: (t) => [desc(t.recordedAt)] });
+    return db.query.commissioningRecords.findMany({ where: eq(commissioningRecords.buildingId, buildingId), orderBy: (t) => [desc(t.performedAt), desc(t.recordedAt)] });
   }
   async listAll(): Promise<CommissioningRecord[]> {
-    return db.query.commissioningRecords.findMany({ orderBy: (t) => [desc(t.recordedAt)] });
+    return db.query.commissioningRecords.findMany({ orderBy: (t) => [desc(t.performedAt), desc(t.recordedAt)] });
   }
 }

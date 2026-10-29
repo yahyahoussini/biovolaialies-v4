@@ -7,7 +7,7 @@ import { EVALUATION_STEP_SECONDS } from "../../domain/telemetry/rules/index";
 import { runRules, stateKey, type SubjectState, type Transition } from "../../domain/telemetry/rules/runner";
 import type { ChannelSeries } from "../../domain/telemetry/rules/series";
 import { mergeParams } from "../../domain/telemetry/rules/settings";
-import { silenceVerdicts, type SilenceInput } from "../../domain/telemetry/rules/site";
+import { silenceVerdicts, type SilenceInput, type SilenceVerdict } from "../../domain/telemetry/rules/site";
 import type { OccupantInfo, RuleParams, SiteEventPoint } from "../../domain/telemetry/rules/types";
 import type { RuleStateRow, RuleTransition, Zone, ZoneOccupation } from "../../domain/telemetry/types";
 import type { RuleState } from "../../domain/shared/enums";
@@ -55,6 +55,8 @@ interface Topology {
   zones: Map<string, Zone>;
   deviceCode: Map<string, string>;
   deviceOfSensor: Map<string, string>;
+  /** Channels a gateway delivers, in time order: the ones that say how far the building's time has gone. */
+  liveSensorIds: Set<string>;
 }
 
 /** The building's own channels, plus its farm's site-level channels as context. */
@@ -72,6 +74,7 @@ async function loadTopology(buildingId: string): Promise<Topology | null> {
     zones: new Map(farmZones.map((z) => [z.id, z])),
     deviceCode: new Map(devices.map((d) => [d.id, d.code])),
     deviceOfSensor: new Map([...own, ...site].map((s) => [s.id, s.deviceId])),
+    liveSensorIds: new Set(own.filter((s) => devices.some((d) => d.id === s.deviceId && (d.type === "PASSERELLE" || !!d.gatewayId))).map((s) => s.id)),
   };
 }
 
@@ -243,10 +246,15 @@ export async function evaluateBuilding(buildingId: string, opts: { until?: numbe
     const report: EvaluationReport = { buildingId, from: null, to: null, steps: 0, transitions: 0, alertsRaised: 0, caughtUp: true };
     const topology = await loadTopology(buildingId);
     if (!topology || topology.sensors.length === 0) return report;
-    const ownIds = topology.sensors.filter((s) => !s.contextOnly).map((s) => s.id);
-    const range = await repositories.readings.rangeOf(ownIds);
+    // Time moves on with the channels the gateway delivers in order. A machine log imported from a
+    // file can run ahead of them (gateway down, machine clock fast): letting it set the horizon would
+    // push the watermark past readings still to come from the gateway's buffer, and they would never
+    // be judged. For the same reason nothing is judged ahead of the server's clock.
+    const own = topology.sensors.filter((s) => !s.contextOnly);
+    const live = own.filter((s) => topology.liveSensorIds.has(s.id));
+    const range = await repositories.readings.rangeOf((live.length ? live : own).map((s) => s.id));
     if (!range.last) return report;
-    const until = Math.min(opts.until ?? Date.parse(range.last), Date.parse(range.last));
+    const until = Math.min(opts.until ?? Number.POSITIVE_INFINITY, Date.parse(range.last), Date.now());
 
     let watermark = await repositories.ruleWatermarks.get(buildingId);
     const step = EVALUATION_STEP_SECONDS * 1000;
@@ -363,14 +371,19 @@ export async function runSilenceCheck(now = new Date()): Promise<{ transitions: 
   const last = await repositories.readings.lastReadingPerSensor();
   const buildings = new Map((await repositories.buildings.list()).map((b) => [b.id, `${b.name} (${b.code})`]));
   const inputs: SilenceInput[] = [];
+  const unread: SilenceVerdict[] = [];
   for (const s of sensors) {
     const spec = sensorSpec(s.catalogRef);
     const device = deviceById.get(s.deviceId);
     if (!spec || !device) continue;
     const gateway = device.type === "PASSERELLE" ? device : device.gatewayId ? deviceById.get(device.gatewayId) : undefined;
     // A channel no gateway reads (an incubator whose log is imported from a file) cannot fall
-    // silent: its data arrives when someone imports it, not on the gateway's clock.
-    if (!gateway) continue;
+    // silent: its data arrives when someone imports it, not on the gateway's clock. A silence it
+    // had while the gateway still read it is closed, or it would stay raised for good.
+    if (!gateway) {
+      unread.push({ subjectKey: `sensor:${s.id}`, subjectLabel: `${s.code ?? s.id} (${spec.ref} ${spec.label})`, buildingId: device.buildingId, state: "NORMAL", silentMinutes: 0, diagnosis: "Voie lue par fichier : elle n'est plus jugée sur l'horloge de la passerelle." });
+      continue;
+    }
     inputs.push({
       sensorId: s.id,
       label: `${s.code ?? s.id} (${spec.ref} ${spec.label})`,
@@ -384,7 +397,7 @@ export async function runSilenceCheck(now = new Date()): Promise<{ transitions: 
     });
   }
   const settings = await repositories.ruleSettings.listAll();
-  const verdicts = silenceVerdicts(inputs, now.getTime(), mergeParams(rule, settings.find((x) => x.ruleCode === rule && x.buildingId === null)?.params));
+  const verdicts = [...silenceVerdicts(inputs, now.getTime(), mergeParams(rule, settings.find((x) => x.ruleCode === rule && x.buildingId === null)?.params)), ...unread];
   const stored = new Map((await repositories.ruleStates.listByRule(rule)).map((r) => [r.subjectKey, r]));
   let transitions = 0;
   let alertsRaised = 0;

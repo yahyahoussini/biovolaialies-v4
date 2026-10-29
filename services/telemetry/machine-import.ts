@@ -226,7 +226,8 @@ export async function importMachineLog(raw: unknown, bytes: Uint8Array, session:
     }
 
     const inserted = new Set((await repositories.readings.insertIgnoringDuplicates(rows)).map((i) => `${i.sensorId}|${i.capturedAt}`));
-    const stored = rows.filter((r) => inserted.has(`${r.sensorId}|${r.capturedAt}`));
+    // Exactly the rows written, each once: the count reported and the hash anchored are those of the database.
+    const stored = rows.filter((r) => inserted.delete(`${r.sensorId}|${r.capturedAt}`));
     const flagged: Partial<Record<ReadingFlag, number>> = {};
     for (const r of stored) if (r.qualityFlag && r.qualityFlag !== "OK") flagged[r.qualityFlag] = (flagged[r.qualityFlag] ?? 0) + 1;
     const storedFrom = stored.length ? stored[0].capturedAt : null;

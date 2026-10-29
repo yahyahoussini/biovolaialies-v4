@@ -57,6 +57,7 @@ it from scratch.
 | `npm run db:deploy`  | Migrate **and** seed a hosted database in one step (refuses `file:`) |
 | `npm run db:backup`  | Consistent backup + manifest, then a test restore of it (EXPLOITATION.md §5) |
 | `npm run db:restore-check -- <file>` | Restore a backup into a scratch copy and prove it |
+| `npm run db:restore -- <file> --confirm` | Put a proven backup in place of the local file database (app stopped); the old one goes aside with its WAL files |
 
 ---
 

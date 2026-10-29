@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { copyFileSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { createClient, type Client, type InValue } from "@libsql/client";
@@ -172,6 +172,40 @@ export async function verifyBackup(file: string, manifest: BackupManifest): Prom
     for (const suffix of ["", "-wal", "-shm"]) rmSync(`${scratch}${suffix}`, { force: true });
   }
   return { ok: checks.every((c) => c.ok), checks };
+}
+
+/**
+ * Puts a proven backup in place of a file database (the application stopped). The live file goes
+ * aside with its -wal and -shm files: a write-ahead log left next to the restored file would be
+ * replayed onto it at the next opening, silently bringing back the state being replaced. Nothing is
+ * deleted; the set aside can be put back by hand.
+ */
+export async function restoreFileDatabase(backupFile: string, manifest: BackupManifest, liveFile: string, now = new Date()): Promise<{ asideDir: string; checks: RestoreCheck[] }> {
+  const proof = await verifyBackup(backupFile, manifest);
+  if (!proof.ok) throw new Error(`La sauvegarde ne passe pas la restauration d'essai (${proof.checks.filter((c) => !c.ok).map((c) => c.label).join(", ")}) : restauration refusée.`);
+  const asideDir = path.join(path.dirname(liveFile), `avant-restauration-${now.toISOString().replace(/[-:]/g, "").replace("T", "-").slice(0, 15)}`);
+  mkdirSync(asideDir, { recursive: true });
+  for (const suffix of ["", "-wal", "-shm"]) {
+    const f = `${liveFile}${suffix}`;
+    if (existsSync(f)) renameSync(f, path.join(asideDir, path.basename(f)));
+  }
+  copyFileSync(backupFile, liveFile);
+
+  const checks: RestoreCheck[] = [];
+  const client = createClient({ url: fileUrl(liveFile) });
+  try {
+    await migrate(drizzle(client), { migrationsFolder: MIGRATIONS_FOLDER });
+    const integrity = String((await client.execute("PRAGMA integrity_check")).rows[0]?.[0] ?? "");
+    checks.push({ label: "Intégrité SQLite", ok: integrity === "ok", detail: `PRAGMA integrity_check : ${integrity}.` });
+    const chain = verifyChain((await drizzle(client).select().from(ledgerEvents).orderBy(asc(ledgerEvents.seq))) as LedgerEvent[]);
+    const headMatches = manifest.ledgerHead === null ? chain.count === 0 : chain.headSeq === manifest.ledgerHead.seq && chain.headHash === manifest.ledgerHead.hash;
+    checks.push({ label: "Journal chaîné", ok: chain.ok && headMatches, detail: chain.ok ? `${chain.count} événements, tête n° ${chain.headSeq}${headMatches ? ", celle de la sauvegarde." : `, au lieu du n° ${manifest.ledgerHead?.seq}.`}` : `Chaîne rompue au n° ${chain.brokenAtSeq}.` });
+    const applied = await migrationsApplied(client);
+    checks.push({ label: "Migrations", ok: applied === knownMigrations(), detail: `${applied} migrations appliquées sur ${knownMigrations()}.` });
+  } finally {
+    client.close();
+  }
+  return { asideDir, checks };
 }
 
 export function readManifest(file: string): BackupManifest {

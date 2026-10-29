@@ -145,4 +145,22 @@ describe("commissioning per building", () => {
     const admin = await createTestSession("SUPER_ADMIN", "GLOBAL", null, "rc-admin");
     expect((await buildingCommissioning(hatchery.building.id, admin)).items.map((i) => i.recipe.code)).toEqual(["H06", "H03", "H06b", "L01", "O01"]);
   });
+
+  it("lets the latest run decide, whatever the order reports are typed in, on the Moroccan calendar day", async () => {
+    const b = await building("r3", "ELEVAGE");
+    const technician = await createTestSession("TECHNICIAN", "FARM", b.farm.id, "rc-tech-3");
+    const run = (result: "CONFORME" | "NON_CONFORME", performedAt: string, recordedAt: string) =>
+      recordCommissioning({ buildingId: b.building.id, code: "A03", result, performedAt, performedBy: "Y. Amrani (installateur)", measured: null, evidence: `PV-A03-${performedAt}`, notes: null }, technician, new Date(recordedAt));
+    // Run on 10/10, failed, typed in on 12/10; an older pass (05/10) typed in on 13/10 does not release the building.
+    await run("NON_CONFORME", "2025-10-10", "2025-10-12T09:00:00.000Z");
+    await run("CONFORME", "2025-10-05", "2025-10-13T09:00:00.000Z");
+    const a03 = (await buildingCommissioning(b.building.id, technician)).items.find((i) => i.recipe.code === "A03")!;
+    expect(a03.latest).toMatchObject({ result: "NON_CONFORME", performedAt: "2025-10-10" });
+    expect(a03.history.map((h) => h.performedAt)).toEqual(["2025-10-10", "2025-10-05"]);
+
+    // 23:30 UTC on 14/10 is already 15/10 in Morocco: that day is accepted, the next one is not.
+    const lateEvening = "2025-10-14T23:30:00.000Z";
+    await expect(run("CONFORME", "2025-10-15", lateEvening)).resolves.toMatchObject({ performedAt: "2025-10-15" });
+    expect(await refused(run("CONFORME", "2025-10-16", lateEvening), "VALIDATION")).toMatch(/futur/);
+  });
 });

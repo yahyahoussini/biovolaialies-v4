@@ -69,6 +69,27 @@ describe("incubator log import", () => {
     expect(parseLog(text, { ...profile, timeZone: "UTC" }).rows[0].at).toBe("2026-03-01T10:00:00.000Z");
   });
 
+  it("tells the two passes of the hour repeated when the clock goes back, and reports the hour that never was", () => {
+    // 15/02/2026, before Ramadan: at 03:00 legal time the clock went back to 02:00 (UTC+1 → UTC+0).
+    const times = ["01:59", "02:00", "02:30", "02:59", "02:00", "02:30", "02:59", "03:00"];
+    const text = ["Date;Heure;T air (°C)", ...times.map((t, i) => `15/02/2026;${t};37,${i}`)].join("\n");
+    const { profile } = guessProfile(text);
+    const log = parseLog(text, profile);
+    expect(log.errors).toEqual([]);
+    expect(log.rows.map((r) => r.at.slice(11, 16))).toEqual(["00:59", "01:00", "01:30", "01:59", "02:00", "02:30", "02:59", "03:00"]);
+    // 22/03/2026, after Ramadan: the clock went from 02:00 to 03:00, so a machine writing 02:30 is not on legal time.
+    const gap = parseLog("Date;Heure;T air (°C)\n22/03/2026;01:59;37,5\n22/03/2026;02:30;37,5\n22/03/2026;03:00;37,5", profile);
+    expect(gap.rows.map((r) => r.at.slice(11, 16))).toEqual(["01:59", "02:00"]);
+    expect(gap.errors).toEqual([expect.objectContaining({ line: 3, message: expect.stringContaining("n'existe pas") })]);
+  });
+
+  it("reports a line stamped like the one before instead of keeping two values for one instant", () => {
+    const text = "Date;Heure;T air (°C)\n22/09/2026;10:00;37,6\n22/09/2026;10:00;37,7\n22/09/2026;10:01;37,6";
+    const log = parseLog(text, guessProfile(text).profile);
+    expect(log.rows.map((r) => r.values.TEMPERATURE_MACHINE)).toEqual([37.6, 37.6]);
+    expect(log.errors).toEqual([{ line: 3, message: expect.stringContaining("ligne 2") }]);
+  });
+
   it("produces an example the reader recognises as such, with its faults reported", () => {
     const to = Date.parse("2026-08-16T12:00:00.000Z");
     const sample = buildSampleLog({ machine: "COUV01-INC-1", from: to - 3_600_000, to, driftFrom: to - 1_800_000, faultMinutes: [5], marker: true });
