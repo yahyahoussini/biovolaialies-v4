@@ -1,5 +1,6 @@
 import {
   FileDown,
+  Gauge,
   KeyRound,
   Activity,
   AlertTriangle,
@@ -41,6 +42,7 @@ const ENTRIES: { section: string; items: AdminEntry[] }[] = [
       { label: "Exports", description: "Exports enregistrés avec leur empreinte, et vérification d'un fichier.", href: "/exports", icon: FileDown, module: "AUDIT" },
       { label: "Intégrité", description: "Preuve de cohérence de la plateforme.", href: "/integrite", icon: ShieldCheck, module: "INTEGRITY" },
       { label: "Paramètres", description: "Règles d'alerte et informations système.", href: "/parametres", icon: Settings, module: "SETTINGS" },
+      { label: "Exploitation", description: "Schéma, journal chaîné, tâches planifiées, rétention, silences : ce qu'un exploitant surveille.", href: "/administration/exploitation", icon: Gauge, module: "SETTINGS" },
       {
         label: "Démonstration",
         description: "État du système et réinitialisation du scénario héros.",

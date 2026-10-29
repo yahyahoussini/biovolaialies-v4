@@ -91,6 +91,12 @@ vérifiée"**. The public verification status is computed from real system state
   "Commissioning"). Two gaps in the document are shown rather than smoothed over: its ch. 11 totals do
   not follow from its ch. 09 table for the Moroccan and European blocks, and cabling weighs less than
   the share it calls usual.
+- There was no operations manual and no backup that had ever been restored. EXPLOITATION.md now covers
+  variables, release procedure, scheduled jobs, monitoring, incidents and secret rotation;
+  `npm run db:backup` copies the database consistently and restores the copy at once, and
+  `npm run db:restore-check` proves any backup later (fingerprint, SQLite integrity, references,
+  rows, hash-chained ledger, current migrations). Administration → Exploitation shows what has
+  quietly stopped: schema behind, ledger broken, rules lagging the readings, purge not running.
 
 ## 4. Known limitations
 

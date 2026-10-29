@@ -10,6 +10,8 @@ libSQL/SQLite, Tailwind CSS v4, and `iron-session` cookie auth.
 - **[DEMO_RUNBOOK.md](DEMO_RUNBOOK.md)** — running the demo scenario end to end.
 - **[BVU_TECH.md](BVU_TECH.md)** — the BVU Tech extension: public site, hatchery chain, quality holds and
   recall, hash-chained ledger, API v1, equipment register, and how each maps to the client's specification.
+- **[EXPLOITATION.md](EXPLOITATION.md)** — manuel d'exploitation (en français) : variables, mise en service
+  d'une version, tâches planifiées, sauvegardes vérifiées et restauration, surveillance, incidents.
 
 ---
 
@@ -53,6 +55,8 @@ it from scratch.
 | `npm run db:seed`    | Load the demo dataset                                               |
 | `npm run db:reset`   | Delete the local database file, re-migrate, re-seed (local only)    |
 | `npm run db:deploy`  | Migrate **and** seed a hosted database in one step (refuses `file:`) |
+| `npm run db:backup`  | Consistent backup + manifest, then a test restore of it (EXPLOITATION.md §5) |
+| `npm run db:restore-check -- <file>` | Restore a backup into a scratch copy and prove it |
 
 ---
 
