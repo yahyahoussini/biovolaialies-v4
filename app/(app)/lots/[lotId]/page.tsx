@@ -35,9 +35,11 @@ async function latestProvenance(fields: ProvenanceFields | undefined, context: P
   return fields ? describeProvenance(fields, context) : null;
 }
 
-function formatAge(startedAt: string | null): string | null {
+/** A lot's age today, or at its end once it has ended: a closed lot stops ageing. */
+function formatAge(startedAt: string | null, endedAt: string | null): string | null {
   if (!startedAt) return null;
-  const days = Math.floor((Date.now() - new Date(startedAt).getTime()) / (1000 * 60 * 60 * 24));
+  const until = endedAt ? Math.min(Date.parse(endedAt), Date.now()) : Date.now();
+  const days = Math.floor((until - new Date(startedAt).getTime()) / (1000 * 60 * 60 * 24));
   if (days < 0) return null;
   return `${days} jour${days > 1 ? "s" : ""}`;
 }
@@ -81,7 +83,7 @@ export default async function LotDetailPage({ params }: PageProps<"/lots/[lotId]
   const canEdit = can(session, "EDIT", "LOTS");
   const canCreateEvent = can(session, "CREATE", "EVENTS");
   const canRunDetection = can(session, "VALIDATE", "ANOMALIES");
-  const age = formatAge(lot.startedAt);
+  const age = formatAge(lot.startedAt, lot.endedAt);
   const lost = lot.initialPopulation - lot.currentPopulation;
   const mortalityHint =
     lot.initialPopulation > 0 && lost > 0
@@ -215,7 +217,7 @@ export default async function LotDetailPage({ params }: PageProps<"/lots/[lotId]
           value={lot.startedAt ? new Date(lot.startedAt).toLocaleDateString("fr-FR") : lot.plannedStartAt ? "Prévue" : "—"}
           hint={!lot.startedAt && lot.plannedStartAt ? lot.plannedStartAt : undefined}
         />
-        <Stat label="Âge du lot" value={age ?? "—"} hint={building?.code ? `Bâtiment ${building.code}` : undefined} />
+        <Stat label={lot.endedAt ? "Âge à la clôture" : "Âge du lot"} value={age ?? "—"} hint={building?.code ? `Bâtiment ${building.code}` : undefined} />
       </StatGrid>
 
       {canEdit ? (
