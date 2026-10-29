@@ -46,6 +46,7 @@ The `/programme` screen shows, test by test, what is automated, partial, or can 
 | Reference bands | `/telemetrie/bandes` | Wide starting bands (to be replaced by the poultry technician's), learned bands proposed from finished lots (5th–95th percentiles, ≥ 3 lots, hours of justified alerts excluded), put in force only by a technician; every version kept. |
 | Alerts and escalation | `/alertes/[id]` | Level 1 at once, then up the policy if nobody acknowledges; a level with nobody in scope is recorded and skipped. Closing a sensor alert requires the intervention and whether the alert was right. E-mail through Resend if configured; no SMS/voice provider — each notification says so. |
 | Calibration register | `/telemetrie/etalonnage` | Result computed against the tolerance; non-conforming sensor out of service; drift over successive checks flagged. |
+| Incubator logs | `/telemetrie/journaux-machine`, `POST /api/journaux-machine`, `services/telemetry/machine-import.ts` | Document 3, lot 13. Per incubator, the machine is read either by the gateway (controller channel, Modbus RTU when the plate shows a port) or from the log it exports on a USB key; the switch is audited and takes the channel off the gateway's configuration and the silence check. The file is read in the browser with the same reader as the server (separator, decimal mark, date and time columns, header below the machine's own lines, UTF-8 or Windows-1252, Moroccan legal time or a clock left on UTC+1 through Ramadan) and confirmed before anything is stored; the last profile of a machine is offered again. Unreadable lines are reported with their number; readings are classified like a gateway's (clock ahead of the server, before installation, physical range, calibration due). The same file twice is refused (SHA-256 of the bytes received); an overlapping export only adds what is missing. Stored readings are anchored in the chained ledger and can be re-checked. Rules only move forward, so a log imported after the fact is compared hour by hour with the independent probes, with the rule's own tolerance, on the import's page. An example file, marked as such, can only be imported as simulation. |
 | Simulators | `services/telemetry/simulator.ts`, `npm run gateway:simulate` | A gateway, simulated, posting to a running platform over HTTP, with an outage and its catch-up. Every reading it sends is stored as SIMULATION. |
 | Scheduled jobs | `GET /api/cron/telemetry` (with `CRON_SECRET`), `npm run telemetry:jobs` | Rules left behind by a backlog, silence check, escalation, retention. |
 
@@ -86,7 +87,11 @@ Population reconciliation (T17) now counts the birds that left by transfer.
 - Open questions on the diagram, taken with a default until the client answers: "Pistache" is kept as an
   egg type, "Agrégés" are treated as partner farms, the growing phase ends at 6 weeks (step 8 is
   crossed out), individual identity is used for breeders and birds under observation only.
-- No PLC / Modbus / OPC UA connectors: they depend on the machines actually installed (K01).
+- No PLC / Modbus / OPC UA connectors of the platform's own: the gateway reads the controllers and
+  sends their values as channels; the register map of each machine depends on the machines actually
+  installed (K01). Incubators: the vendor API is unknown until the plates are read (document 2, ch. 07);
+  the file import is built and tested on a French-format log (semicolons, decimal commas, Windows-1252),
+  and must be checked against a real export of each machine before go-live.
 - A transformation has a single source; multi-parent products (T34) are not modelled.
 - No versioned multi-site template (T35): buildings are equipped from the reference case, not from a versioned configuration.
 - Telemetry runs on simulated gateway traffic. No real gateway, PLC or sensor has been connected; the

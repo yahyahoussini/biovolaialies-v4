@@ -185,6 +185,7 @@ Le parcours de 5 minutes, plus :
 - **Six vues** — sélecteur de rôle : Direction, Responsable coopérative (production), Responsable couvoir, Vétérinaire, Producteur (éleveur), Technicien. Chaque tableau de bord s'ouvre sur sa question et ce qui attend cette personne.
 - **Exports opposables** — `/exports` : télécharger « Lots », puis glisser le fichier dans « Vérifier un fichier » (identique) ; modifier une cellule dans un tableur, enregistrer et revérifier (inconnu). Le journal des connexions est sous Administration.
 - **Laboratoire** — `/laboratoire` avec le vétérinaire : la mycoplasmose confirmée sur ELA-2025-PP1 (lue, avec la conduite à tenir), le prélèvement de OUA-2026-CF0 encore au laboratoire.
+- **Journal d'incubateur** — avec le responsable couvoir, Télémétrie → **Journaux machine**. INC-1 n'a pas de sortie de communication : son journal de la veille a été importé depuis une clé USB (machine et sondes concordent). Télécharger « Exemple de journal » sur la ligne INC-1, le glisser dans « Importer un journal » : l'aperçu montre les lignes lues, les 3 lignes « ERR » signalées, l'horloge de la machine ; la nature est forcée à Simulation. Importer : 2 heures au-delà de 0,5 °C — l'affichage de la machine dérive vers le haut alors que les sondes indépendantes restent à 37,6 °C. Ouvrir l'import : comparaison heure par heure, puis « Vérifier » (Intact). Réimporter le même fichier : refusé. L'import de la veille affiche « Brut purgé » : le fichier de démonstration ne garde que 6 h de mesures brutes.
 
 ---
 

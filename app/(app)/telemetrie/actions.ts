@@ -8,6 +8,7 @@ import { requireSession } from "@/services/auth/session";
 import { decideBandProposal, proposeLearnedBands, saveTechnicianBand, type LearningReport } from "@/services/telemetry/bands";
 import { recordCalibration } from "@/services/telemetry/calibration";
 import { verifyIngestMessage } from "@/services/telemetry/ingest";
+import { setMachineFeed, verifyMachineImport, type MachineFeed } from "@/services/telemetry/machine-import";
 import { endOccupation, startOccupation } from "@/services/telemetry/occupation";
 import { provisionBuilding } from "@/services/telemetry/provisioning";
 import { saveRuleSettings } from "@/services/telemetry/settings";
@@ -139,4 +140,24 @@ export async function verifyMessageAction(messageId: string): Promise<{ status: 
   const session = await requireSession();
   if (!can(session, "VIEW", "INTEGRITY") && !can(session, "VIEW", "IOT")) return { status: "INTERDIT" };
   return { status: (await verifyIngestMessage(messageId)).status };
+}
+
+export async function setMachineFeedAction(v: Record<string, string>): Promise<FormActionResult> {
+  try {
+    const session = await requireSession();
+    await setMachineFeed(v.zoneId, v.feed as MachineFeed, session);
+    revalidatePath("/telemetrie/journaux-machine");
+    return { ok: true };
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+export async function verifyMachineImportAction(importId: string): Promise<{ status: string }> {
+  try {
+    const session = await requireSession();
+    return { status: await verifyMachineImport(importId, session) };
+  } catch (error) {
+    return { status: handleActionError("server-action", error).kind === "AUTHORIZATION" ? "INTERDIT" : "INCONNU" };
+  }
 }

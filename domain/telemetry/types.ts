@@ -3,6 +3,7 @@ import type {
   BandSource,
   BandStatus,
   CalibrationResult,
+  DataStatus,
   ReadingAttribution,
   ReadingFlag,
   RuleState,
@@ -157,4 +158,30 @@ export interface TelemetryReading {
   flag: ReadingFlag;
   lotId: string | null;
   attribution: ReadingAttribution;
+}
+
+/** One incubator log imported from a file: what it held, what was stored, and the file's fingerprint. */
+export interface MachineImport {
+  id: string;
+  buildingId: string;
+  zoneId: string;
+  fileName: string;
+  /** SHA-256 of the exact bytes received. */
+  sha256: string;
+  bytes: number;
+  encoding: string;
+  profile: Record<string, unknown>;
+  dataStatus: DataStatus;
+  /** Data lines in the file, read or not. */
+  lines: number;
+  accepted: number;
+  duplicates: number;
+  rejected: number;
+  flagged: number;
+  /** Lines that could not be read, with their number (capped). */
+  errors: { line: number; message: string }[];
+  fromAt: string | null;
+  toAt: string | null;
+  importedBy: string;
+  importedAt: string;
 }

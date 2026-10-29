@@ -1,14 +1,7 @@
 import { toPublicError } from "@/domain/shared/errors";
 import { getCurrentSession } from "@/services/auth/session";
 import { syncFieldOps } from "@/services/field/sync";
-
-/** A cross-site page cannot make the phone send entries: the request must come from this origin. */
-function sameOrigin(request: Request): boolean {
-  const site = request.headers.get("sec-fetch-site");
-  if (site) return site === "same-origin";
-  const origin = request.headers.get("origin");
-  return !!origin && origin === new URL(request.url).origin;
-}
+import { sameOrigin } from "@/lib/same-origin";
 
 /** Entries queued on a phone, in its order. Each comes back with what became of it. */
 export async function POST(request: Request) {

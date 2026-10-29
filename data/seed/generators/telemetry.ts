@@ -7,6 +7,7 @@ import { seedStartingBands, proposeLearnedBands } from "../../../services/teleme
 import { recordCalibration } from "../../../services/telemetry/calibration";
 import { runSilenceCheck } from "../../../services/telemetry/evaluate";
 import { ingestGatewayBatch } from "../../../services/telemetry/ingest";
+import { importMachineLog, setMachineFeed } from "../../../services/telemetry/machine-import";
 import { startOccupation } from "../../../services/telemetry/occupation";
 import { provisionBuildingUnchecked } from "../../../services/telemetry/provisioning";
 import { simulateControlWeighing, simulateGateway, type Scenario, type SimChannel, type SimDevice } from "../../../services/telemetry/simulator";
@@ -14,6 +15,9 @@ import { saveRuleSettings } from "../../../services/telemetry/settings";
 import { recordAudit } from "../../../services/audit/record";
 import { repositories } from "../../repositories";
 import { bucketStart } from "../../../domain/telemetry/aggregate";
+import { guessProfile } from "../../../domain/telemetry/machine-log";
+import { buildSampleLog, toWindows1252 } from "../../../domain/telemetry/machine-sample";
+import { DEMO_ACCOUNT_EMAIL } from "./hierarchy";
 import { logger } from "../../../lib/logger";
 
 const NOW = Date.parse("2026-08-16T12:00:00.000Z");
@@ -24,8 +28,9 @@ const DEMO_RAW_HOURS = 6;
 
 export const BELDI_LOT_CODE = "BV-BEL-2026-03";
 
+/** What the gateway reads: its own equipment only (an incubator whose log is imported from a file is not on it). */
 async function simTopology(buildingId: string, farmId: string) {
-  const devices = await repositories.devices.listByBuilding(buildingId);
+  const devices = (await repositories.devices.listByBuilding(buildingId)).filter((d) => d.type === "PASSERELLE" || d.gatewayId);
   const sensors = (await repositories.telemetrySensors.listByDevices(devices.map((d) => d.id))) as Sensor[];
   const zones = new Map((await repositories.zones.listByFarm(farmId)).map((z) => [z.id, z.code]));
   const channels: SimChannel[] = sensors.map((s) => ({ code: s.code!, ref: s.catalogRef!, type: s.sensorType, position: s.position ?? null, zoneCode: s.zoneId ? zones.get(s.zoneId) ?? null : null }));
@@ -207,6 +212,13 @@ export async function seedTelemetry(input: { heroProducerId: string; adminSessio
   logger.info("seed", `Telemetry: outage, catch-up of ${during.length} messages and ${after.length} live messages in ${Date.now() - t} ms`);
 
   if (hatchery && hatcheryProvisioned) {
+    // INC-1 is an older machine with no communication output: its log is exported on a USB key and
+    // imported by the hatchery manager (document 3, lot 13). The gateway reads its probes only.
+    const manager = await repositories.users.findByEmail(DEMO_ACCOUNT_EMAIL.HATCHERY_MANAGER);
+    if (!manager) throw new Error("Responsable couvoir de démonstration absent.");
+    const managerSession: Session = { userId: manager.id, role: manager.role, scopeType: manager.scopeType, scopeId: manager.scopeId, isDemoSwitch: false };
+    const inc1 = hatcheryProvisioned.zones.find((z) => z.code.endsWith("INC-1"))!;
+    await setMachineFeed(inc1.id, "FICHIER", managerSession);
     const { key: hk } = await createApiClient({ name: "Passerelle COUV-01", scopes: ["telemetry:write"], gatewayCode: hatcheryProvisioned.gatewayCode }, admin);
     const hp = (await authenticateApiKey(`Bearer ${hk}`))!;
     const ht = await simTopology(hatchery.id, hatchery.farmId);
@@ -227,6 +239,20 @@ export async function seedTelemetry(input: { heroProducerId: string; adminSessio
       startSeq: 9_800,
     });
     await send(hmsgs, hp, 60);
+
+    // The previous day's export of INC-1, imported the next morning: the first half of the window.
+    // The second half is what the "Exemple de journal" download produces, left for the demonstration.
+    const span = (light ? 8 : 24) * HOUR;
+    const logFrom = NOW - span;
+    const text = buildSampleLog({ machine: inc1.code, from: logFrom, to: logFrom + span / 2, faultMinutes: [412, 413, 414], marker: false });
+    const bytes = toWindows1252(text);
+    const stamp = new Date(logFrom).toISOString().slice(0, 10).replace(/-/g, "");
+    await importMachineLog(
+      { zoneId: inc1.id, fileName: `${inc1.code}_journal_${stamp}.csv`, dataStatus: "SIMULATION", profile: guessProfile(new TextDecoder("windows-1252").decode(bytes)).profile },
+      bytes,
+      managerSession,
+      new Date(logFrom + span / 2 + 30 * 60_000)
+    );
   }
 
   // The NH3 alert, handled: litter changed in the back zone, and the alert was right.

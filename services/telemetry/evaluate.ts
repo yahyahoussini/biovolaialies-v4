@@ -368,11 +368,14 @@ export async function runSilenceCheck(now = new Date()): Promise<{ transitions: 
     const device = deviceById.get(s.deviceId);
     if (!spec || !device) continue;
     const gateway = device.type === "PASSERELLE" ? device : device.gatewayId ? deviceById.get(device.gatewayId) : undefined;
+    // A channel no gateway reads (an incubator whose log is imported from a file) cannot fall
+    // silent: its data arrives when someone imports it, not on the gateway's clock.
+    if (!gateway) continue;
     inputs.push({
       sensorId: s.id,
       label: `${s.code ?? s.id} (${spec.ref} ${spec.label})`,
-      gatewayId: gateway?.id ?? null,
-      gatewayLabel: gateway?.code ?? null,
+      gatewayId: gateway.id,
+      gatewayLabel: gateway.code,
       buildingId: device.buildingId,
       // Event-driven channels (a bird on the scale) can be quiet for good reasons; only periodic ones go "silent".
       reportSeconds: spec.acquisitionSeconds ? spec.reportSeconds : null,

@@ -81,6 +81,10 @@ vérifiée"**. The public verification status is computed from real system state
   and QR, candling rejects named by their code, and a public egg page with its own rate limit.
   It runs on a simulated line controller until the supplier documents the machine's command set
   (see BVU_TECH.md, "Marquage").
+- Incubators could only be read by the gateway. Their exported log can now be imported (document 3,
+  lot 13): previewed with the same reader as the server, refused if already imported, anchored in
+  the ledger, and compared hour by hour with the independent probes (see BVU_TECH.md, "Incubator logs").
+  The vendor API remains unknown until the machines' plates are read.
 
 ## 4. Known limitations
 

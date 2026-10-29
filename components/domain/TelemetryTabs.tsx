@@ -8,6 +8,7 @@ const TABS = [
   { href: "/telemetrie/occupation", label: "Occupation" },
   { href: "/telemetrie/etalonnage", label: "Étalonnage" },
   { href: "/telemetrie/ingestion", label: "Ingestion" },
+  { href: "/telemetrie/journaux-machine", label: "Journaux machine" },
   { href: "/telemetrie/catalogue", label: "Catalogue capteurs" },
 ] as const;
 

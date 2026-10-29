@@ -1607,3 +1607,36 @@ export const exportRecords = sqliteTable(
   },
   (t) => [index("export_records_sha_idx").on(t.sha256), index("export_records_created_idx").on(t.createdAt)]
 );
+
+/** Each incubator log imported from a file: what it held, what was stored, and the file's fingerprint. */
+export const machineImports = sqliteTable(
+  "machine_imports",
+  {
+    id: id(),
+    buildingId: text("building_id")
+      .notNull()
+      .references(() => buildings.id),
+    zoneId: text("zone_id")
+      .notNull()
+      .references(() => zones.id),
+    fileName: text("file_name").notNull(),
+    sha256: text("sha256").notNull(),
+    bytes: integer("bytes").notNull(),
+    encoding: text("encoding").notNull(),
+    profile: text("profile", { mode: "json" }).$type<Record<string, unknown>>().notNull(),
+    dataStatus: text("data_status", { enum: DATA_STATUS }).notNull(),
+    lines: integer("lines").notNull(),
+    accepted: integer("accepted").notNull(),
+    duplicates: integer("duplicates").notNull(),
+    rejected: integer("rejected").notNull(),
+    flagged: integer("flagged").notNull(),
+    errors: text("errors", { mode: "json" }).$type<{ line: number; message: string }[]>().notNull(),
+    fromAt: text("from_at"),
+    toAt: text("to_at"),
+    importedBy: text("imported_by")
+      .notNull()
+      .references(() => users.id),
+    importedAt: text("imported_at").notNull(),
+  },
+  (t) => [index("machine_imports_zone_idx").on(t.zoneId, t.sha256)]
+);

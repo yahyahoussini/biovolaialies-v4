@@ -18,6 +18,8 @@ const DELETION_ORDER = [
   schema.ledgerEvents,
   schema.qualityHoldItems,
   schema.qualityCases,
+  // Machine log imports point at zones, buildings and users.
+  schema.machineImports,
   // Sign-ins and exports point at users.
   schema.authEvents,
   schema.exportRecords,

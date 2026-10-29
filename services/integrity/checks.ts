@@ -379,8 +379,10 @@ async function checkDeviceHealth(session: Session, now: string): Promise<Accumul
   const latestArr = await Promise.all(onlineBuildingIds.map((id) => repositories.measurements.latestByBuilding(id)));
   const latestByBuilding = new Map(onlineBuildingIds.map((id, i) => [id, latestArr[i]]));
   const nowDate = new Date(now);
+  // A machine read from its exported log has no live link to judge: it is never "online", by design.
+  const judged = devices.filter((d) => !(d.catalogRef && d.type !== "PASSERELLE" && !d.gatewayId));
 
-  for (const device of devices) {
+  for (const device of judged) {
     const statusIssue = checkDeviceOnline(device.status);
     if (statusIssue) {
       issues.push(
@@ -412,7 +414,7 @@ async function checkDeviceHealth(session: Session, now: string): Promise<Accumul
       );
     }
   }
-  return { issues, checksRun: devices.length };
+  return { issues, checksRun: judged.length };
 }
 
 // ---------------------------------------------------------------------------
