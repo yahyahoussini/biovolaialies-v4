@@ -78,12 +78,22 @@ export async function operationsStatus(session: Session, now = new Date()): Prom
   );
 
   const oldest = await repositories.readings.oldestCapturedAt();
-  const age = oldest ? now.getTime() - Date.parse(oldest) : 0;
+  // A demonstration database is frozen at its scenario date: its ages are measured from its newest
+  // reading, or the purge would look stopped once the scenario is three months old.
+  const frozen = env.DATABASE_SNAPSHOT || env.DEMO_MODE;
+  const newest = frozen ? (await repositories.readings.rangeOf((await repositories.telemetrySensors.listAll()).map((s) => s.id))).last : null;
+  const reference = newest ? Date.parse(newest) : now.getTime();
+  const age = oldest ? reference - Date.parse(oldest) : 0;
+  const from = newest ? " avant la dernière mesure (base de démonstration figée)" : "";
   add(
     "retention",
     "Rétention des mesures brutes",
     oldest && age > (RAW_RETENTION_DAYS + 1) * DAY ? "WARN" : "OK",
-    !oldest ? "Aucune mesure brute." : age > (RAW_RETENTION_DAYS + 1) * DAY ? `Mesure brute la plus ancienne : ${fmtAge(age)}, au-delà des ${RAW_RETENTION_DAYS} jours : la purge planifiée ne tourne pas.` : `Mesure brute la plus ancienne : ${fmtAge(age)} (purge à ${RAW_RETENTION_DAYS} jours).`
+    !oldest
+      ? "Aucune mesure brute."
+      : age > (RAW_RETENTION_DAYS + 1) * DAY
+        ? `Mesure brute la plus ancienne : ${fmtAge(age)}${from}, au-delà des ${RAW_RETENTION_DAYS} jours : la purge planifiée ne tourne pas.`
+        : `Mesure brute la plus ancienne : ${fmtAge(age)}${from} (purge à ${RAW_RETENTION_DAYS} jours).`
   );
 
   const silent = (await repositories.ruleStates.listByRule("CAPTEUR_SILENCIEUX")).filter((s) => s.state !== "NORMAL");
