@@ -101,7 +101,7 @@ export default async function MachineImportPage({ params }: { params: Promise<{ 
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Fichier et lecture</CardTitle>

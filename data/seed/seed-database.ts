@@ -15,6 +15,7 @@ import { seedUpstreamChain } from "./generators/upstream-chain";
 import { seedTelemetry } from "./generators/telemetry";
 import { seedProductionFlow } from "./generators/production-flow";
 import { seedEggMarking } from "./generators/egg-marking";
+import { seedCommissioning } from "./generators/commissioning";
 import { seedLaboratory } from "./generators/laboratory";
 import { ensureDefaultLines } from "../../services/production/lines";
 import { backfillBvuIds } from "../../services/identity/bvu-ids";
@@ -165,8 +166,11 @@ export async function seedDatabase(options: SeedOptions = {}): Promise<SeedResul
     demoPublicToken(`product:${VERIFIED_LOT_CODE}`)
   );
 
-  logger.info("seed", "Loading the client's equipment register (87 lines) and commissioning checklist (20 tests)…");
+  logger.info("seed", "Loading the client's equipment register (87 lines) and document 2's nomenclature (106 articles)…");
   await seedEquipmentReference();
+
+  logger.info("seed", "Recording the commissioning tests of the two instrumented buildings (document 2, annex A)…");
+  await seedCommissioning(adminSession);
 
   const assigned = await backfillBvuIds();
   logger.info("seed", `BIOVOLAILLES identifiers given to ${assigned} object(s) created without one.`);

@@ -226,9 +226,6 @@ export const API_SCOPE = [
 ] as const;
 export type ApiScope = (typeof API_SCOPE)[number];
 
-export const COMMISSIONING_RESULT = ["A_FAIRE", "CONFORME", "NON_CONFORME"] as const;
-export type CommissioningResult = (typeof COMMISSIONING_RESULT)[number];
-
 // ---------------------------------------------------------------------------
 // Telemetry — client documents 2 (hardware) and 3 (software)
 // ---------------------------------------------------------------------------

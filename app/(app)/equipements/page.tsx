@@ -1,5 +1,6 @@
 import { Download } from "lucide-react";
 import { FormDialog } from "@/components/domain/FormDialog";
+import { EquipmentTabs } from "@/components/domain/EquipmentTabs";
 import { PageHeader } from "@/components/domain/PageHeader";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -57,6 +58,7 @@ export default async function EquipmentPage({ searchParams }: PageProps<"/equipe
           </Button>
         }
       />
+      <EquipmentTabs active="/equipements" />
 
       <Card>
         <CardHeader>

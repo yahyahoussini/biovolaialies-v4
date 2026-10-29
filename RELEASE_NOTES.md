@@ -85,6 +85,12 @@ vérifiée"**. The public verification status is computed from real system state
   lot 13): previewed with the same reader as the server, refused if already imported, anchored in
   the ledger, and compared hour by hour with the independent probes (see BVU_TECH.md, "Incubator logs").
   The vendor API remains unknown until the machines' plates are read.
+- Equipment stopped at the client's register. Document 2's purchasing nomenclature is now in the
+  platform (106 articles, the fifteen-field sheet, the budget computed by origin) along with its
+  commissioning tests recorded building by building (see BVU_TECH.md, "Purchasing nomenclature" and
+  "Commissioning"). Two gaps in the document are shown rather than smoothed over: its ch. 11 totals do
+  not follow from its ch. 09 table for the Moroccan and European blocks, and cabling weighs less than
+  the share it calls usual.
 
 ## 4. Known limitations
 

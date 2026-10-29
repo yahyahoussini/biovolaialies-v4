@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { repositories } from "../../data/repositories";
+import { filledCount, NOMENCLATURE_FAMILIES } from "../../domain/equipment/nomenclature";
 import type { ExportRecord } from "../../domain/governance/governance";
 import { RESULT_INTERPRETATION_LABEL, SAMPLE_MATRIX_LABEL, SAMPLE_OBJECT_LABEL, SAMPLE_REASON_LABEL, SAMPLE_STATUS_LABEL } from "../../domain/lab/lab";
 import { MARKING_RUN_STATUS_LABEL } from "../../domain/marking/marking";
@@ -27,7 +28,7 @@ import { listTransfers } from "../production/transfers";
  * platform produced, unchanged — the file itself never needs to be sent back, only its fingerprint.
  */
 
-export const EXPORT_DATASET = ["lots", "mortalite", "oeufs", "sante", "laboratoire", "transferts", "marquage", "saisies-terrain", "audit"] as const;
+export const EXPORT_DATASET = ["lots", "mortalite", "oeufs", "sante", "laboratoire", "transferts", "marquage", "saisies-terrain", "nomenclature", "audit"] as const;
 export type ExportDataset = (typeof EXPORT_DATASET)[number];
 
 export const EXPORT_DATASET_INFO: Record<ExportDataset, { label: string; description: string; right: [Action, Module] }> = {
@@ -39,6 +40,7 @@ export const EXPORT_DATASET_INFO: Record<ExportDataset, { label: string; descrip
   transferts: { label: "Transferts", description: "Chaque mouvement compté et signé des deux côtés, avec ses écarts.", right: ["VIEW", "LOTS"] },
   marquage: { label: "Marquage des œufs", description: "Chaque campagne : codes attribués, imprimés, relus, rejetés.", right: ["VIEW", "MARKING"] },
   "saisies-terrain": { label: "Saisies terrain", description: "Chaque saisie reçue des téléphones, avec son sort et sa raison.", right: ["VIEW", "EVENTS"] },
+  nomenclature: { label: "Nomenclature d'achat", description: "Les articles du document 2 avec leur fiche à quinze champs, leur quantité et leur bande de prix.", right: ["VIEW", "EQUIPMENT"] },
   audit: { label: "Journal d'audit", description: "Qui a modifié quoi, quand, valeur avant et après, et pourquoi.", right: ["EXPORT", "AUDIT"] },
 };
 
@@ -149,6 +151,59 @@ async function build(dataset: ExportDataset, session: Session): Promise<{ header
       return {
         header: ["Reçue le", "Saisie le", "Auteur", "Appareil", "N° sur l'appareil", "Type", "Lot", "Statut", "Message", "Contenu"],
         rows: visible.map((e) => [iso(e.receivedAt), iso(e.capturedAt), users.find((u) => u.id === e.authorId)?.fullName ?? "", e.deviceId, e.deviceSeq, e.kind, e.lotId ? (lotById.get(e.lotId)?.code ?? "") : "", e.status, e.message ?? "", JSON.stringify(e.payload)]),
+      };
+    }
+    case "nomenclature": {
+      const articles = await repositories.nomenclature.list();
+      return {
+        header: [
+          "01 Référence",
+          "Famille",
+          "02 Équipement",
+          "03 Fabricant / type",
+          "04 Quantité",
+          "04 Formule",
+          "05 Emplacement",
+          "06 Fonction",
+          "07 Spécifications",
+          "08 Communication",
+          "09 Alimentation",
+          "10 Connecteurs",
+          "11 Câbles",
+          "12 Prix unitaire bas (MAD)",
+          "12 Prix unitaire haut (MAD)",
+          "12 Confiance",
+          "12 Date de la bande",
+          "13 Installation",
+          "14 Pièces de rechange",
+          "15 Maintenance",
+          "Origine",
+          "Champs renseignés",
+        ],
+        rows: articles.map((a) => [
+          a.ref,
+          NOMENCLATURE_FAMILIES[a.family]?.name ?? a.family,
+          a.designation,
+          a.manufacturer ?? "",
+          a.quantity,
+          a.quantityFormula ?? "",
+          a.location ?? "",
+          a.function ?? "",
+          a.specifications ?? "",
+          a.communication ?? "",
+          a.power ?? "",
+          a.connectors ?? "",
+          a.cables ?? "",
+          a.priceLowMad,
+          a.priceHighMad,
+          a.priceConfidence,
+          a.priceDate ?? "",
+          a.installation ?? "",
+          a.spares ?? "",
+          a.maintenance ?? "",
+          a.origin,
+          `${filledCount(a)}/15`,
+        ]),
       };
     }
     case "audit": {

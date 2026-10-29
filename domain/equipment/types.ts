@@ -1,4 +1,5 @@
-import type { CommissioningResult } from "../shared/enums";
+import type { NomenclatureArticle } from "./nomenclature";
+import type { CommissioningRecord } from "./recipes";
 
 export interface EquipmentItem {
   id: string;
@@ -21,18 +22,6 @@ export interface EquipmentItem {
 
 export type NewEquipmentItem = Omit<EquipmentItem, "id" | "updatedAt" | "updatedBy">;
 
-export interface CommissioningTest {
-  id: string;
-  code: string;
-  equipment: string;
-  procedure: string;
-  result: CommissioningResult;
-  executedBy: string | null;
-  executedAt: string | null;
-  evidence: string | null;
-  notes: string | null;
-}
-
 /** The client's status legend (xlsx "LisezMoi"). */
 export const EQUIPMENT_STATUS_LABEL: Record<string, string> = {
   C: "Conserver",
@@ -50,8 +39,20 @@ export interface EquipmentRepository {
   list(): Promise<EquipmentItem[]>;
   findById(id: string): Promise<EquipmentItem | null>;
   update(id: string, changes: Pick<EquipmentItem, "quantityRef" | "quantityMax" | "status" | "decisionRule" | "updatedAt" | "updatedBy">): Promise<EquipmentItem>;
-  createTests(tests: Omit<CommissioningTest, "id">[]): Promise<void>;
-  listTests(): Promise<CommissioningTest[]>;
-  findTestById(id: string): Promise<CommissioningTest | null>;
-  updateTest(id: string, changes: Pick<CommissioningTest, "result" | "executedBy" | "executedAt" | "evidence" | "notes">): Promise<CommissioningTest>;
+}
+
+export type NewNomenclatureArticle = Omit<NomenclatureArticle, "id" | "updatedAt" | "updatedBy">;
+export type NomenclatureChanges = Partial<Omit<NomenclatureArticle, "id" | "ref" | "family" | "sortOrder" | "origin">> & Pick<NomenclatureArticle, "updatedAt" | "updatedBy">;
+
+export interface NomenclatureRepository {
+  createMany(articles: NewNomenclatureArticle[]): Promise<void>;
+  list(): Promise<NomenclatureArticle[]>;
+  findByRef(ref: string): Promise<NomenclatureArticle | null>;
+  update(id: string, changes: NomenclatureChanges): Promise<NomenclatureArticle>;
+}
+
+export interface CommissioningRepository {
+  create(record: Omit<CommissioningRecord, "id">): Promise<CommissioningRecord>;
+  listByBuilding(buildingId: string): Promise<CommissioningRecord[]>;
+  listAll(): Promise<CommissioningRecord[]>;
 }

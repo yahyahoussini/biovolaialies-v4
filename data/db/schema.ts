@@ -28,7 +28,6 @@ import {
   SEASON,
   SITE_EVENT_KIND,
   ZONE_KIND,
-  COMMISSIONING_RESULT,
   HATCH_CYCLE_STATUS,
   LEAD_ACTIVITY,
   LEAD_STATUS,
@@ -1059,16 +1058,61 @@ export const equipmentItems = sqliteTable("equipment_items", {
   updatedBy: text("updated_by").references(() => users.id),
 });
 
-export const commissioningTests = sqliteTable("commissioning_tests", {
+/**
+ * Commissioning test results per building (document 2, annex A). Append-only: a re-test is a new
+ * row, so the history of a failed test and its correction stays. The latest row of a building and
+ * test decides; no row means the test is still to be run.
+ */
+export const commissioningRecords = sqliteTable(
+  "commissioning_records",
+  {
+    id: id(),
+    buildingId: text("building_id")
+      .notNull()
+      .references(() => buildings.id),
+    code: text("code").notNull(),
+    result: text("result", { enum: ["CONFORME", "NON_CONFORME"] }).notNull(),
+    performedAt: text("performed_at").notNull(),
+    /** The person who ran the test — often the installer's technician, who has no account. */
+    performedBy: text("performed_by").notNull(),
+    measured: text("measured"),
+    evidence: text("evidence").notNull(),
+    notes: text("notes"),
+    recordedBy: text("recorded_by")
+      .notNull()
+      .references(() => users.id),
+    recordedAt: text("recorded_at").notNull(),
+  },
+  (t) => [index("commissioning_records_building_idx").on(t.buildingId, t.code)]
+);
+
+/** Document 2, ch. 09–10: the purchasing nomenclature, one row per article, described by the fifteen-field sheet. */
+export const nomenclatureArticles = sqliteTable("nomenclature_articles", {
   id: id(),
-  code: text("code").notNull().unique(),
-  equipment: text("equipment").notNull(),
-  procedure: text("procedure").notNull(),
-  result: text("result", { enum: COMMISSIONING_RESULT }).notNull(),
-  executedBy: text("executed_by").references(() => users.id),
-  executedAt: text("executed_at"),
-  evidence: text("evidence"),
-  notes: text("notes"),
+  ref: text("ref").notNull().unique(),
+  family: text("family").notNull(),
+  designation: text("designation").notNull(),
+  manufacturer: text("manufacturer"),
+  quantity: real("quantity").notNull(),
+  quantityFormula: text("quantity_formula"),
+  location: text("location"),
+  function: text("function"),
+  specifications: text("specifications"),
+  communication: text("communication"),
+  power: text("power"),
+  connectors: text("connectors"),
+  cables: text("cables"),
+  priceLowMad: real("price_low_mad").notNull(),
+  priceHighMad: real("price_high_mad").notNull(),
+  priceConfidence: text("price_confidence", { enum: ["haute", "moyenne", "faible"] }).notNull(),
+  priceDate: text("price_date"),
+  installation: text("installation"),
+  spares: text("spares"),
+  maintenance: text("maintenance"),
+  origin: text("origin", { enum: ["Chine", "Maroc", "UE"] }).notNull(),
+  sortOrder: integer("sort_order").notNull(),
+  updatedAt: text("updated_at"),
+  updatedBy: text("updated_by").references(() => users.id),
 });
 
 // ---------------------------------------------------------------------------

@@ -6,11 +6,14 @@ import { TelemetryTabs } from "@/components/domain/TelemetryTabs";
 import { Badge } from "@/components/ui/Badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/Table";
+import { recipeFor } from "@/domain/equipment/recipes";
 import { AuthorizationError, NotFoundError } from "@/domain/shared/errors";
+import { canAccessModule } from "@/domain/shared/permissions";
 import { READING_FLAG_LABEL } from "@/domain/telemetry/ingest";
 import { RULE_STATE_LABEL, SENSOR_TYPE_LABEL, SITE_EVENT_LABEL, ZONE_KIND_LABEL, unitLabel } from "@/domain/telemetry/labels";
 import { RULE_LABEL } from "@/domain/telemetry/rules/index";
 import { requireModuleAccess } from "@/services/auth/guard";
+import { commissioningResults } from "@/services/equipment/commissioning";
 import { buildingTelemetry } from "@/services/telemetry/queries";
 
 const when = (v: string | null | undefined) => (v ? new Date(v).toLocaleString("fr-FR", { timeZone: "Africa/Casablanca" }) : "—");
@@ -28,6 +31,13 @@ export default async function BuildingTelemetryPage({ params }: PageProps<"/tele
     throw error;
   }
   const { building, farm, gateway, channels, zoneRows, states, transitions, events, windowEnd, temperatureSeries } = data;
+  // Document 2, annex A: a sensor whose commissioning test is not recorded does not count as installed.
+  const { latest: tests, status: reception } = await commissioningResults(building.id);
+  const receptionBadge = reception.applicable ? (
+    <Badge tone={reception.complete ? "success" : "warning"}>
+      Recettes : {reception.conforming} / {reception.applicable} conformes
+    </Badge>
+  ) : null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -35,6 +45,15 @@ export default async function BuildingTelemetryPage({ params }: PageProps<"/tele
         breadcrumbs={[{ label: "Télémétrie", href: "/telemetrie" }, { label: building.code }]}
         title={`${building.name} (${building.code})`}
         description={`${farm?.name ?? "—"} · passerelle ${gateway?.code ?? "aucune"} · dernière communication ${when(gateway?.lastCommunicationAt)} · horloge ${gateway?.clockOffsetSeconds ?? "—"} s`}
+        meta={
+          receptionBadge && canAccessModule(session, "EQUIPMENT") ? (
+            <Link href={`/equipements/recette?batiment=${building.id}`} className="focus-ring rounded-full">
+              {receptionBadge}
+            </Link>
+          ) : (
+            receptionBadge
+          )
+        }
       />
       <TelemetryTabs active="/telemetrie" />
 
@@ -96,6 +115,7 @@ export default async function BuildingTelemetryPage({ params }: PageProps<"/tele
                 <TableHead>Dernière valeur</TableHead>
                 <TableHead>Moy. · min–max · σ (24 h)</TableHead>
                 <TableHead>Disponibilité</TableHead>
+                <TableHead>Recette</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -130,6 +150,17 @@ export default async function BuildingTelemetryPage({ params }: PageProps<"/tele
                         <span className="text-xs text-secondary">Non périodique</span>
                       ) : (
                         <Badge tone={c.availability24h >= 0.98 ? "success" : c.availability24h >= 0.9 ? "warning" : "critical"}>{fmt(c.availability24h * 100)} %</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {!c.ref || !recipeFor(c.ref) ? (
+                        <span className="text-xs text-secondary">—</span>
+                      ) : tests.get(c.ref)?.result === "CONFORME" ? (
+                        <Badge tone="success">Conforme</Badge>
+                      ) : tests.get(c.ref)?.result === "NON_CONFORME" ? (
+                        <Badge tone="critical">Non conforme</Badge>
+                      ) : (
+                        <Badge tone="warning">Non réceptionné</Badge>
                       )}
                     </TableCell>
                   </TableRow>

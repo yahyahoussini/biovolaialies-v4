@@ -1,7 +1,6 @@
 import { z } from "../../lib/zod";
 import { repositories } from "../../data/repositories";
-import { EQUIPMENT_STATUS_LABEL, type CommissioningTest, type EquipmentItem } from "../../domain/equipment/types";
-import { COMMISSIONING_RESULT } from "../../domain/shared/enums";
+import { EQUIPMENT_STATUS_LABEL, type EquipmentItem } from "../../domain/equipment/types";
 import { AuthorizationError, NotFoundError, ValidationError } from "../../domain/shared/errors";
 import { can } from "../../domain/shared/permissions";
 import { isGlobalScope } from "../../domain/shared/scope";
@@ -9,7 +8,7 @@ import { recordAudit } from "../audit/record";
 import type { Session } from "../auth/session";
 import { csvField } from "../../lib/csv";
 import equipmentReference from "../../data/seed/reference/equipment.json";
-import { COMMISSIONING_REFERENCE } from "../../data/seed/reference/commissioning";
+import { seedNomenclature } from "./nomenclature";
 
 /**
  * The register and the commissioning checklist are company-wide, not tied to one farm, so a
@@ -21,16 +20,12 @@ function assertCanEditRegister(session: Session): void {
   }
 }
 
-/** Loads the client's equipment register and commissioning checklist. Idempotent: does nothing if already loaded. */
+/** Loads the client's equipment register and document 2's nomenclature. Idempotent: what is already loaded stays as it is. */
 export async function seedEquipmentReference(): Promise<void> {
   if ((await repositories.equipment.list()).length === 0) {
     await repositories.equipment.createMany(equipmentReference.items.map((i) => ({ ...i, reference: i.reference ?? null, quantityRef: i.quantityRef ?? null, quantityMax: i.quantityMax ?? null })));
   }
-  if ((await repositories.equipment.listTests()).length === 0) {
-    await repositories.equipment.createTests(
-      COMMISSIONING_REFERENCE.map((t) => ({ ...t, result: "A_FAIRE" as const, executedBy: null, executedAt: null, evidence: null, notes: null }))
-    );
-  }
+  await seedNomenclature();
 }
 
 export interface UnitSummary {
@@ -113,46 +108,4 @@ export async function exportEquipmentCsv(session: Session, filters: { unitCode?:
     [i.unitLabel, i.category, i.reference, i.name, i.quantityRef?.toString() ?? null, i.quantityMax?.toString() ?? null, i.status ? `${i.status} — ${EQUIPMENT_STATUS_LABEL[i.status] ?? ""}` : null, i.function, i.characteristics, i.decisionRule, i.candidates].map(csvField).join(",")
   );
   return "﻿" + [header.join(","), ...rows].join("\r\n");
-}
-
-export async function listCommissioningTests(session: Session): Promise<(CommissioningTest & { executedByName: string | null })[]> {
-  if (!can(session, "VIEW", "EQUIPMENT")) throw new AuthorizationError();
-  const [tests, users] = await Promise.all([repositories.equipment.listTests(), repositories.users.list()]);
-  const name = new Map(users.map((u) => [u.id, u.fullName]));
-  return tests.map((t) => ({ ...t, executedByName: t.executedBy ? (name.get(t.executedBy) ?? null) : null }));
-}
-
-export const recordCommissioningSchema = z.object({
-  id: z.string().min(1),
-  result: z.enum(COMMISSIONING_RESULT).refine((r) => r !== "A_FAIRE", "Indiquez un résultat."),
-  evidence: z.string().trim().min(3, "Une preuve (PV, photo, relevé) est requise.").max(500),
-  notes: z.string().trim().max(1000).nullable(),
-});
-
-/** Records a commissioning result with its evidence. A re-test is a new recorded result, audited, never a silent edit. */
-export async function recordCommissioningResult(input: unknown, session: Session): Promise<CommissioningTest> {
-  assertCanEditRegister(session);
-  const parsed = recordCommissioningSchema.safeParse(input);
-  if (!parsed.success) throw new ValidationError(parsed.error.issues.map((i) => i.message).join(" "));
-  const existing = await repositories.equipment.findTestById(parsed.data.id);
-  if (!existing) throw new NotFoundError("Recette", parsed.data.id);
-  const updated = await repositories.equipment.updateTest(existing.id, {
-    result: parsed.data.result,
-    evidence: parsed.data.evidence,
-    notes: parsed.data.notes,
-    executedBy: session.userId,
-    executedAt: new Date().toISOString(),
-  });
-  await recordAudit({
-    actorId: session.userId,
-    entityType: "commissioning_test",
-    entityId: existing.id,
-    field: "result",
-    oldValue: existing.result,
-    newValue: parsed.data.result,
-    reason: `Recette ${existing.code} (${existing.equipment}) — preuve : ${parsed.data.evidence}`,
-    relatedLotId: null,
-    relatedEventId: null,
-  });
-  return updated;
 }

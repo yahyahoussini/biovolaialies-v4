@@ -21,7 +21,7 @@ import {
 } from "./hatchery.repository";
 import { DrizzleShipmentRepository } from "./shipment.repository";
 import { DrizzleApiClientRepository } from "./api-client.repository";
-import { DrizzleEquipmentRepository } from "./equipment.repository";
+import { DrizzleCommissioningRepository, DrizzleEquipmentRepository, DrizzleNomenclatureRepository } from "./equipment.repository";
 import {
   DrizzleAggregateRepository,
   DrizzleAlertNotificationRepository,
@@ -123,6 +123,8 @@ export const repositories = {
   shipments: new DrizzleShipmentRepository(),
   apiClients: new DrizzleApiClientRepository(),
   equipment: new DrizzleEquipmentRepository(),
+  nomenclature: new DrizzleNomenclatureRepository(),
+  commissioning: new DrizzleCommissioningRepository(),
   zones: new DrizzleZoneRepository(),
   zoneOccupations: new DrizzleZoneOccupationRepository(),
   readings: new DrizzleTelemetryReadingRepository(),

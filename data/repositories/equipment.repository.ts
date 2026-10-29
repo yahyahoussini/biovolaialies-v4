@@ -1,7 +1,17 @@
-import { asc, eq } from "drizzle-orm";
-import type { CommissioningTest, EquipmentItem, EquipmentRepository, NewEquipmentItem } from "../../domain/equipment/types";
+import { asc, desc, eq } from "drizzle-orm";
+import type { NomenclatureArticle } from "../../domain/equipment/nomenclature";
+import type { CommissioningRecord } from "../../domain/equipment/recipes";
+import type {
+  CommissioningRepository,
+  EquipmentItem,
+  EquipmentRepository,
+  NewEquipmentItem,
+  NewNomenclatureArticle,
+  NomenclatureChanges,
+  NomenclatureRepository,
+} from "../../domain/equipment/types";
 import { db } from "../db/client";
-import { commissioningTests, equipmentItems } from "../db/schema";
+import { commissioningRecords, equipmentItems, nomenclatureArticles } from "../db/schema";
 
 export class DrizzleEquipmentRepository implements EquipmentRepository {
   async createMany(items: NewEquipmentItem[]): Promise<void> {
@@ -17,17 +27,34 @@ export class DrizzleEquipmentRepository implements EquipmentRepository {
     const [row] = await db.update(equipmentItems).set(changes).where(eq(equipmentItems.id, id)).returning();
     return row;
   }
-  async createTests(tests: Omit<CommissioningTest, "id">[]): Promise<void> {
-    if (tests.length > 0) await db.insert(commissioningTests).values(tests);
+}
+
+export class DrizzleNomenclatureRepository implements NomenclatureRepository {
+  async createMany(articles: NewNomenclatureArticle[]): Promise<void> {
+    if (articles.length > 0) await db.insert(nomenclatureArticles).values(articles);
   }
-  async listTests(): Promise<CommissioningTest[]> {
-    return db.select().from(commissioningTests).orderBy(asc(commissioningTests.code));
+  async list(): Promise<NomenclatureArticle[]> {
+    return db.select().from(nomenclatureArticles).orderBy(asc(nomenclatureArticles.sortOrder));
   }
-  async findTestById(id: string): Promise<CommissioningTest | null> {
-    return (await db.query.commissioningTests.findFirst({ where: eq(commissioningTests.id, id) })) ?? null;
+  async findByRef(ref: string): Promise<NomenclatureArticle | null> {
+    return (await db.query.nomenclatureArticles.findFirst({ where: eq(nomenclatureArticles.ref, ref) })) ?? null;
   }
-  async updateTest(id: string, changes: Parameters<EquipmentRepository["updateTest"]>[1]): Promise<CommissioningTest> {
-    const [row] = await db.update(commissioningTests).set(changes).where(eq(commissioningTests.id, id)).returning();
+  async update(id: string, changes: NomenclatureChanges): Promise<NomenclatureArticle> {
+    const [row] = await db.update(nomenclatureArticles).set(changes).where(eq(nomenclatureArticles.id, id)).returning();
     return row;
+  }
+}
+
+export class DrizzleCommissioningRepository implements CommissioningRepository {
+  async create(record: Omit<CommissioningRecord, "id">): Promise<CommissioningRecord> {
+    const [row] = await db.insert(commissioningRecords).values(record).returning();
+    return row;
+  }
+  /** Newest first: the first row of a test is its current result. */
+  async listByBuilding(buildingId: string): Promise<CommissioningRecord[]> {
+    return db.query.commissioningRecords.findMany({ where: eq(commissioningRecords.buildingId, buildingId), orderBy: (t) => [desc(t.recordedAt)] });
+  }
+  async listAll(): Promise<CommissioningRecord[]> {
+    return db.query.commissioningRecords.findMany({ orderBy: (t) => [desc(t.recordedAt)] });
   }
 }
