@@ -55,16 +55,16 @@ un affichage conditionnel — le dire.
 
 | MONTRER | DIRE | MESSAGE CLÉ |
 |---|---|---|
-| `/integrite` | « 477 contrôles automatiques tournent sur toute la base : chronologie impossible, quantités non conservées, population non réconciliée, mutation sans audit, incohérence réel/simulation, lot bloqué avec produit libéré. » | Le système se surveille |
-| Pointer le score | « 473 passés, **zéro problème critique**. » | Résultat, pas intention |
-| Pointer les 4 avertissements | « Ces quatre avertissements sont volontaires : nous avons laissé des imperfections de qualité dans le jeu de données pour montrer que le moteur les trouve. Un tableau à 100 % signifierait que le contrôle ne cherche rien. » | Assumé, pas subi |
+| `/integrite` | « 761 contrôles automatiques tournent sur toute la base : chronologie impossible, quantités non conservées, population non réconciliée, mutation sans audit, incohérence réel/simulation, lot bloqué avec produit libéré. » | Le système se surveille |
+| Pointer le score | « 750 passés, **zéro problème critique**. » | Résultat, pas intention |
+| Pointer les 11 avertissements | « Ces onze avertissements sont attendus : une imperfection de qualité laissée volontairement dans le jeu de données, et dix appareils du registre que la simulation laisse hors ligne. Le moteur les trouve. Un tableau à 100 % signifierait que le contrôle ne cherche rien. » | Assumé, pas subi |
 
 ---
 
 ## Clôture (≈ 30 s)
 
 > « Pour résumer : l'application, la base, la logique métier, les rôles, la traçabilité,
-> l'audit et l'intégrité sont réels et testés — 414 tests automatisés. Les données de
+> l'audit et l'intégrité sont réels et testés — 640 tests automatisés. Les données de
 > production et les mesures IoT sont simulées, calibrées sur le standard Ross 308, et
 > étiquetées partout dans l'interface. Ce que ce MVP prouve, c'est qu'une chaîne complète —
 > du bâtiment jusqu'au QR que scanne le consommateur — peut vivre dans un seul système

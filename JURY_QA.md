@@ -44,14 +44,15 @@ Quatre couches, toutes actives :
    à une donnée validée.
 2. **Provenance** : source, acteur, appareil, horodatage, méthode, formule.
 3. **Contrôles qualité** au moment de l'écriture — une pesée datée dans le futur est rejetée.
-4. **Moteur d'intégrité** : 477 contrôles sur toute la base (chronologie, conservation des
+4. **Moteur d'intégrité** : 761 contrôles sur toute la base (chronologie, conservation des
    quantités, réconciliation de population, mutation sans audit, incohérence réel/simulation…).
-   Aujourd'hui : 473 passés, **zéro critique**, 4 avertissements volontaires.
+   Aujourd'hui : 750 passés, **zéro critique**, 11 avertissements attendus.
 
-**Q5 — Pourquoi 4 avertissements d'intégrité ?**
-Ils sont volontaires. Nous avons laissé des imperfections de qualité dans le jeu de données
-pour montrer que le moteur les trouve. Un tableau à 100 % signifierait que le contrôle ne
-cherche rien.
+**Q5 — Pourquoi 11 avertissements d'intégrité ?**
+Ils sont attendus. Un seul vient d'une imperfection de qualité laissée volontairement dans le
+jeu de données ; les dix autres sont des appareils du registre (caméras, alarmes GSM, thermostats
+mécaniques, contrôles d'accès, un capteur dégradé) que la simulation laisse hors ligne. Le moteur
+les trouve. Un tableau à 100 % signifierait que le contrôle ne cherche rien.
 
 ---
 
@@ -68,7 +69,7 @@ page ne modifie jamais la base elle-même (vérifié : zéro appel d'écriture d
 **Q7 — Quelle est l'architecture ?**
 Quatre couches : UI (Server Components React) → Services (cas d'usage) → Domain (règles pures,
 sans dépendance) → Repositories → base. Next.js 16, React 19, TypeScript strict, Drizzle.
-414 tests automatisés, dont un test de bout en bout qui rejoue tout le scénario héros.
+640 tests automatisés, dont un test de bout en bout qui rejoue tout le scénario héros.
 
 **Q8 — Comment les données sont-elles protégées ?**
 Sessions par cookie chiffré et signé (iron-session), mots de passe hachés, autorisation
@@ -152,7 +153,7 @@ croissance chute de 33 %. Un bon indice de consommation contredirait sa propre a
 Tout ce que je vais vous montrer : authentification, rôles et périmètres, ferme/bâtiment/lot,
 données de production avec provenance, IoT (source simulée), KPI, détection d'anomalie,
 alerte → action → événement, traçabilité jusqu'au produit, passeport public QR, audit,
-intégrité. 30 routes, 414 tests.
+intégrité. 104 routes, 640 tests.
 
 **Q20 — Qu'est-ce qui reste à construire ?**
 Capteurs physiques, consignes de température ajustées à l'âge des animaux, entité documents et
@@ -180,7 +181,7 @@ prétendons être **continus**.
 ## Questions pièges — à assumer, pas à esquiver
 
 **« Vous avez juste fait une maquette. »**
-Non. Une maquette n'a pas 31 tables, 414 tests, un moteur de règles ni un contrôle
+Non. Une maquette n'a pas 79 tables, 640 tests, un moteur de règles ni un contrôle
 d'autorisation côté serveur. Ce qui est simulé, ce sont les **données**, pas le système.
 Ouvrez n'importe quel écran et demandez d'où vient une valeur : je vous montre sa provenance.
 

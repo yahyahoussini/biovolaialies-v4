@@ -53,8 +53,8 @@ Ce n'est pas un choix cosmétique : c'est ce qui rend possible la question à la
 classique ne répond pas — *« ce produit dans ma main, qu'a-t-il mangé le 12 août, et qui a
 décidé quoi quand une alerte s'est déclenchée ? »*
 
-31 tables · 6 rôles · 5 règles · 6 KPI · 19 types de contrôle d'intégrité · 30 routes ·
-414 tests automatisés.
+79 tables · 10 rôles · 22 règles · 6 KPI · 19 types de contrôle d'intégrité · 104 routes ·
+640 tests automatisés.
 
 ---
 
@@ -121,7 +121,7 @@ domain/       règles pures — vérifié : 0 import de data/ ou services/
 data/         dépôts Drizzle + schéma + jeu de démonstration déterministe
 ```
 
-**Surface réelle** : 111 fonctions de service exportées. 53 fichiers de test, 414 tests.
+**Surface réelle** : 339 fonctions de service exportées. 87 fichiers de test, 640 tests.
 
 ---
 
@@ -421,9 +421,9 @@ Les rendements — **70 % à l'abattage, 90 % à la découpe** — sont ceux du 
 étape, **ce qui sort plus les pertes égale exactement ce qui est entré**. Rien ne se perd dans
 le calcul.
 
-Le système fait tourner **477 contrôles automatiques** sur toute la base : chronologie
+Le système fait tourner **761 contrôles automatiques** sur toute la base : chronologie
 impossible, quantités non conservées, maillon orphelin, lot bloqué dont le produit serait
-sorti. Résultat aujourd'hui : **473 passés, zéro problème critique.**
+sorti. Résultat aujourd'hui : **750 passés, zéro problème critique.**
 
 ## 🔵 NIVEAU 2
 
@@ -501,11 +501,11 @@ Deux garde-fous que peu de MVP ont :
 avant, valeur après, motif, horodatage. Rien ne se fait en silence.
 
 **Le centre d'intégrité** — le système se contrôle lui-même, en permanence, sur toute la base.
-477 vérifications. Aujourd'hui : 473 passées, **zéro problème critique**, 4 avertissements.
+761 vérifications. Aujourd'hui : 750 passées, **zéro problème critique**, 11 avertissements.
 
-Ces 4 avertissements sont **volontaires** : nous avons laissé des imperfections de qualité dans
-le jeu de démonstration pour prouver que le moteur les trouve. Un tableau affichant 100 %
-signifierait que le contrôle ne cherche rien.
+Ces 11 avertissements sont **attendus** : une imperfection de qualité laissée volontairement dans
+le jeu de démonstration, et dix appareils du registre que la simulation laisse hors ligne. Le
+moteur les trouve. Un tableau affichant 100 % signifierait que le contrôle ne cherche rien.
 
 ## 🔵 NIVEAU 2
 
@@ -539,7 +539,7 @@ C'est la section la plus importante du document. **À présenter avant qu'on ne 
 | Le journal d'audit | | Application mobile |
 | Le moteur d'intégrité | | Multi-langue |
 | Les contrôles de qualité | | Consignes ajustées à l'âge (température) |
-| 414 tests automatisés | | Limitation de débit sur la route publique |
+| 640 tests automatisés | | Limitation de débit sur la route publique |
 
 **La phrase à retenir, mot pour mot :**
 
@@ -561,9 +561,9 @@ C'est la section la plus importante du document. **À présenter avant qu'on ne 
 
 Trois preuves qu'un jury peut vérifier lui-même :
 
-1. **Tout est reproductible.** On efface la base, on rejoue le scénario : on obtient exactement
-   le même résultat. Vérifié trois fois de suite, résultat identique.
-2. **Le système se teste tout seul** — 414 tests automatisés, dont un qui rejoue le scénario
+1. **Tout est reproductible.** On efface la base, on rejoue le scénario : on obtient le même
+   scénario, jusqu'aux œufs illisibles et aux valeurs des capteurs. Vérifié par un test automatique.
+2. **Le système se teste tout seul** — 640 tests automatisés, dont un qui rejoue le scénario
    complet du bâtiment jusqu'au QR.
 3. **Ça marche sans internet.** Débranchez le réseau : la démonstration fonctionne. Aucun
    service externe, aucune API tierce, aucune IA distante.
@@ -574,11 +574,11 @@ Trois preuves qu'un jury peut vérifier lui-même :
 |---|---|
 | `npm run lint` | 0 problème |
 | `npm run typecheck` | propre (TypeScript strict, pas de `any`) |
-| `npm test` | **414 / 414**, 53 fichiers |
-| `npm run build` | propre, 30 routes |
-| Contraste WCAG AA | 21 / 21 paires |
-| Matrice de sécurité | 31 / 31 |
-| Intégrité | 473 / 477, **0 critique** |
+| `npm test` | **640 / 640**, 87 fichiers |
+| `npm run build` | propre, 104 routes |
+| Contraste WCAG AA | 32 / 32 paires |
+| Parcours par rôle | 10 rôles · 226 pages · 0 échec ; 27 / 27 refus des pages d'administration |
+| Intégrité | 750 / 761, **0 critique** |
 | Santé du système | 13 / 13 |
 | Déterminisme | empreinte identique sur 3 réamorçages |
 | Balayage route × rôle | 132 / 132 sans erreur |
@@ -690,9 +690,9 @@ sur des données réelles. **C'est la phase suivante, et nous ne la présentons 
 
 | Chiffre | Vérification |
 |---|---|
-| 30 routes · 31 tables · 6 rôles · 5 règles · 6 KPI · 19 contrôles | code source |
-| 414 tests | `npm test` |
-| 477 contrôles, 473 passés, 0 critique | `/integrite` |
+| 104 routes · 79 tables · 10 rôles · 22 règles · 6 KPI · 19 contrôles | code source |
+| 640 tests | `npm test` |
+| 761 contrôles, 750 passés, 0 critique | `/integrite` |
 | 12 000 → 11 920 sujets · 1,15 kg à j26 | page Lot |
 | aliment +25,3 % · croissance −32,8 % | page Alerte |
 | 13 708 → 9 596 (70 %) → 8 636 (90 %) | page Traçabilité |

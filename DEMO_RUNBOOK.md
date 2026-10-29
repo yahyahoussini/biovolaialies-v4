@@ -30,14 +30,14 @@ Tout autre résultat = ne pas présenter avant d'avoir réamorcé.
 | Vérification | Attendu |
 |---|---|
 | Application démarre | `http://localhost:3000/login` répond |
-| Base de données | 1 organisation · 3 coopératives · 7 producteurs · 8 fermes · 12 bâtiments · 12 lots · 6 utilisateurs |
+| Base de données | 1 organisation · 3 coopératives · 7 producteurs · 11 fermes · 18 bâtiments · 28 lots · 15 utilisateurs |
 | Lot héros | `BU-2026-001` — Ferme Al Baraka / BAT-01 · statut `CLOTURE` · 11 920 sujets |
 | IoT | 1 appareil, 5 capteurs, 525 mesures sur BAT-01 |
 | KPI | 5/6 calculables |
 | Anomalies / alertes | 2 anomalies, 2 alertes `OPEN` sur le lot héros |
-| Traçabilité | 6 nœuds, 5 relations |
+| Traçabilité | 13 nœuds, 14 relations |
 | QR | 2 jetons actifs |
-| Intégrité | 473/477 contrôles · **0 critique** · 4 avertissements volontaires |
+| Intégrité | 750/761 contrôles · **0 critique** · 11 avertissements attendus |
 
 ---
 
@@ -180,7 +180,7 @@ Le parcours de 5 minutes, plus :
 - **Provenance** — onglet Données, ouvrir la provenance d'une mesure (valeur, statut, source, appareil, bâtiment, lot, horodatage, méthode).
 - **Rôles** — sélecteur en haut à droite : **Technicien** (4 modules seulement : Lots, IoT, Anomalies, Alertes) puis **Auditeur** (voit tout, ne peut rien modifier — le bouton de prise en compte disparaît).
 - **Audit** — `/audit`, filtrer par lot : chaque mutation avec acteur, avant/après, motif.
-- **Intégrité** — `/integrite` : 473/477 contrôles passés, **0 critique** (voir §8).
+- **Intégrité** — `/integrite` : 750/761 contrôles passés, **0 critique** (voir §8).
 - **Marquage** — `/marquage` : lever l'arrêt de MQ-FA-20261018-1, simuler une tête encrassée, puis ouvrir un plateau sur le téléphone (page publique).
 - **Six vues** — sélecteur de rôle : Direction, Responsable coopérative (production), Responsable couvoir, Vétérinaire, Producteur (éleveur), Technicien. Chaque tableau de bord s'ouvre sur sa question et ce qui attend cette personne.
 - **Exports opposables** — `/exports` : télécharger « Lots », puis glisser le fichier dans « Vérifier un fichier » (identique) ; modifier une cellule dans un tableur, enregistrer et revérifier (inconnu). Le journal des connexions est sous Administration.
@@ -195,7 +195,7 @@ Le parcours de 5 minutes, plus :
 
 - L'architecture des dépôts, Drizzle, la structure du schéma — sauf question directe.
 - Le détail du moteur de règles (seuils, fenêtres). Dire « règles explicites et versionnées », pas la formule.
-- Le code des contrôles d'intégrité (T01…T27) — parler de « 477 contrôles automatiques ».
+- Le code des contrôles d'intégrité (T01…T27) — parler de « 761 contrôles automatiques ».
 - Ne **jamais** dire « IA » ni « machine learning ». Le système applique des règles explicites,
   et c'est un argument de confiance, pas une faiblesse : chaque alerte est explicable ligne à ligne.
 
@@ -240,14 +240,16 @@ réamorçage : naviguer par clics, ne pas préparer de favoris.
 
 **Deux constats vont apparaître à l'écran. Les connaître à l'avance.**
 
-**a) `/integrite` affiche 0 problème critique et 4 avertissements.**
-C'est l'état attendu de la version candidate : **aucun problème critique nulle part**. Les
-4 avertissements sont volontaires — des imperfections de qualité semées sur `BU-2026-003`
-(pesée à confirmer) et `BU-2026-005` (source d'eau manquante), pour que le moteur ait
-quelque chose de vrai à trouver. Réponse si la question vient :
-> « Zéro problème critique. Les quatre avertissements sont volontaires : nous avons laissé
-> des imperfections de qualité dans le jeu de données pour montrer que le moteur les trouve.
-> Un tableau à 100 % signifierait que le contrôle ne cherche rien. »
+**a) `/integrite` affiche 0 problème critique et 11 avertissements.**
+C'est l'état attendu du jeu de démonstration : **aucun problème critique nulle part**. Les
+11 avertissements sont attendus : une imperfection de qualité semée sur `BU-2026-005` (un relevé
+d'eau « réel » sans sa source), pour que le moteur ait quelque chose de vrai à trouver, et
+10 appareils du registre que la simulation laisse hors ligne — 3 caméras IP, 2 alarmes GSM,
+2 thermostats de sécurité mécaniques, 2 contrôles d'accès, et le capteur `DEV-B03-001`,
+volontairement dégradé. Réponse si la question vient :
+> « Zéro problème critique. Les onze avertissements sont attendus : une imperfection de qualité
+> laissée volontairement dans le jeu de données, et dix appareils que la simulation laisse hors
+> ligne. Le moteur les trouve. Un tableau à 100 % signifierait que le contrôle ne cherche rien. »
 
 **b) Le KPI « Indice de consommation » (FCR) affiche « Donnée insuffisante ».**
 C'est un choix assumé : le système refuse de calculer un indicateur qu'il ne peut pas
@@ -289,7 +291,7 @@ Autres valeurs de référence (identiques à chaque réamorçage) :
 | Anomalie 1 | `Consommation d'aliment anormalement élevée` — Avertissement · 14 844 vs 11 844,7 kg · +25,3 % |
 | Anomalie 2 | `Dégradation de performance` — **Critique** · croissance à −32,8 % (seuil d'escalade : −20 %) |
 | Chaîne de traçabilité | 13 708 kg collectés → 9 596 kg carcasses (rendement 70 %) → 8 636 kg produit (90 %) |
-| Contrôles d'intégrité | 473 / 477 (99 %) · **0 critique** · 4 avertissements volontaires |
+| Contrôles d'intégrité | 750 / 761 (99 %) · **0 critique** · 11 avertissements attendus |
 | Passeport public | « Traçabilité non vérifiée » + « données de démonstration » |
 
 > La page publique affiche **« Traçabilité non vérifiée »**. C'est volontaire et honnête :

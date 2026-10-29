@@ -82,11 +82,11 @@ captures réelles du produit · **pas** de photos génériques, d'imagerie IA, n
 ## SLIDE 4 — La plateforme
 
 **Contenu** — diagramme *Architecture système* (voir `ARCHITECTURE_DIAGRAM_PLAN.md` §1).
-Chiffres discrets en bas : **30 routes · 31 tables · 6 rôles · 5 règles · 6 KPI · 19 types de contrôle d'intégrité**.
+Chiffres discrets en bas : **104 routes · 79 tables · 10 rôles · 22 règles · 6 KPI · 19 types de contrôle d'intégrité**.
 
 **Notes orateur**
 - Pourquoi : montrer que c'est un système, pas une maquette.
-- Dire : « Une application Next.js, une base relationnelle, une couche métier isolée, 414 tests automatisés. »
+- Dire : « Une application Next.js, une base relationnelle, une couche métier isolée, 640 tests automatisés. »
 - Ne pas dire : « scalable », « prêt pour la production » — nous n'avons **pas** fait de test de charge.
 - Question anticipée : « Ça tient à l'échelle ? » → voir `JURY_QA.md` Q6.
 
@@ -186,7 +186,7 @@ BU-2026-001 (11 920 sujets)
 **Notes orateur**
 - Pourquoi : c'est le cœur de la promesse « traçabilité ».
 - Dire : « Le graphe est calculé depuis les relations réelles en base, jamais codé en dur. Le bilan matière est exact à chaque étape, et les rendements — 70 % à l'abattage, 90 % à la découpe — sont ceux du métier. »
-- Ajouter : « 477 contrôles automatiques de cohérence tournent sur toute la base : chronologie, conservation des quantités, maillons orphelins. Résultat aujourd'hui : 473 passés, **zéro problème critique**. »
+- Ajouter : « 761 contrôles automatiques de cohérence tournent sur toute la base : chronologie, conservation des quantités, maillons orphelins. Résultat aujourd'hui : 750 passés, **zéro problème critique**. »
 
 ---
 
@@ -242,7 +242,7 @@ anomalies · noms d'utilisateurs · coûts · coordonnées GPS · documents inte
 | Architecture de traçabilité | | Écosystème de certification |
 | Journal d'audit | | Application mobile |
 | Moteur d'intégrité | | Multi-langue |
-| 414 tests automatisés | | Consignes ajustées à l'âge |
+| 640 tests automatisés | | Consignes ajustées à l'âge |
 
 **Notes orateur**
 - Dire, mot pour mot si besoin : « Nous ne prétendons pas avoir des capteurs dans des bâtiments. Nous démontrons que lorsqu'une mesure entre dans ce système, tout le reste de la chaîne existe déjà. »
@@ -299,9 +299,9 @@ Plus l'encart substitution :
 
 | Chiffre | Où le vérifier |
 |---|---|
-| 30 routes · 31 tables · 6 rôles · 5 règles · 6 KPI · 19 types de contrôle | code source |
-| 414 tests | `npm test` |
-| 477 contrôles exécutés, 473 passés, 0 critique | `/integrite` |
+| 104 routes · 79 tables · 10 rôles · 22 règles · 6 KPI · 19 types de contrôle | code source |
+| 640 tests | `npm test` |
+| 761 contrôles exécutés, 750 passés, 0 critique | `/integrite` |
 | 12 000 → 11 920 sujets · 1,15 kg à j26 | page Lot |
 | aliment +25,3 % · croissance −32,8 % | page Alerte |
 | 13 708 → 9 596 (70 %) → 8 636 (90 %) | page Traçabilité |

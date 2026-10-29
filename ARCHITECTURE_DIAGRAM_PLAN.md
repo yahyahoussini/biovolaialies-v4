@@ -46,7 +46,7 @@ Cinq couches empilées, flèches vers le bas uniquement.
 │  Seul point à changer pour SQLite → Postgres      │
 └───────────────────┬──────────────────────────────┘
 ┌─ BASE ────────────▼──────────────────────────────┐
-│  SQLite / libSQL · 31 tables                      │
+│  SQLite / libSQL · 79 tables                      │
 └──────────────────────────────────────────────────┘
 ```
 
@@ -181,7 +181,7 @@ Avec les quantités réelles du scénario héros — pas des nombres ronds inven
 ```
 
 Annoter : *bilan matière exact à chaque étape · graphe calculé depuis les relations, jamais
-codé en dur · 477 contrôles de cohérence, 0 critique*.
+codé en dur · 761 contrôles de cohérence, 0 critique*.
 
 ---
 

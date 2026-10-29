@@ -154,7 +154,7 @@ BU-2026-001 → COL-2026-001 → AB-2026-001 → TR-2026-001
 
 Le graphe est calculé, jamais codé en dur. Des contrôles de cohérence vérifient
 chronologie, conservation des quantités et absence de maillon orphelin :
-**473 contrôles passés sur 477, zéro problème critique**.
+**750 contrôles passés sur 761, zéro problème critique**.
 
 ## 12. Passeport numérique QR
 
@@ -234,7 +234,7 @@ La traçabilité cesse d'être une contrainte réglementaire pour devenir un act
 | « Les données sont réelles ? » | Non, elles sont simulées et étiquetées comme telles dans l'interface. Mais elles sont calibrées sur le standard Ross 308 — poids, ingestion, indice de consommation, rendements d'abattage et de découpe. L'architecture, elle, est réelle et testée. |
 | « Vos chiffres tiennent-ils la route zootechniquement ? » | Oui, et c'est vérifiable : bilan matière exact à chaque étape (13 708 → 9 596 + 4 112 → 8 636 + 960), rendements 70 % et 90 %, indice de consommation dans la plage réelle 1,4–2,1, aucune valeur biologiquement impossible. |
 | « Pourquoi le passeport dit non vérifié ? » | Parce que les données sont simulées. Le statut public reflète l'état réel — nous n'affichons pas une certification que nous ne pouvons pas justifier. |
-| « Pourquoi 4 avertissements d'intégrité ? » | Volontaires : des imperfections de qualité laissées dans le jeu de données pour montrer que le moteur les trouve. Zéro problème critique — un tableau à 100 % signifierait que le contrôle ne cherche rien. |
+| « Pourquoi 11 avertissements d'intégrité ? » | Attendus : une imperfection de qualité laissée volontairement dans le jeu de données, et dix appareils du registre que la simulation laisse hors ligne. Zéro problème critique — un tableau à 100 % signifierait que le contrôle ne cherche rien. |
 | « Pourquoi un KPI est vide ? » | Le système refuse de calculer un indicateur qu'il ne peut pas justifier avec les données disponibles. |
 | « Combien de temps pour un déploiement réel ? » | Nous ne l'avons pas chiffré. Le premier jalon technique est le branchement d'un capteur physique sur la source de mesure existante. |
 | « Ça passe à l'échelle ? » | Non mesuré à ce jour. La couche dépôt est isolée pour permettre le passage à Postgres, mais nous n'avons pas conduit de test de charge. |

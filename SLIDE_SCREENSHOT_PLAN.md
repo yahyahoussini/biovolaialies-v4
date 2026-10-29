@@ -56,7 +56,7 @@ l'image.
 | C11 | Lot — onglet *Données* + provenance | Resp. ferme | Le panneau de provenance ouvert |
 | C12 | Lot — onglet *Événements* | Resp. ferme | L'événement `ALERT_ACTION` après la prise en compte |
 | C13 | Journal d'audit | Auditeur | Colonnes acteur / avant / après / motif |
-| C14 | Centre d'intégrité | Auditeur | Score **473/477, 0 critique** |
+| C14 | Centre d'intégrité | Auditeur | Score **750/761, 0 critique** |
 | C15 | Sélecteur de rôle — vue Technicien | Technicien | Sidebar à **4 modules seulement** |
 | C16 | Commandes présentateur | Administrateur | 13/13 conforme + les panneaux de contrôle |
 

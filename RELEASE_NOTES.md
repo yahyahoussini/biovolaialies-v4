@@ -1,6 +1,7 @@
 # BIOVOLAILLES — Release Notes (MVP Release Candidate)
 
-**Version:** MVP RC · **Date:** 2026-08-18 · **Status:** ready for external demonstration
+**Version:** MVP RC (2026-08-18), since extended to the fifteen development lots of document 3 ·
+**Last verified:** 2026-10-29 (§9) · **Status:** ready for external demonstration
 
 BIOVOLAILLES is a functional Agritech MVP: a digital operating, intelligence and traceability
 platform for poultry production. It is not a dashboard bolted onto a spreadsheet, and it is
@@ -31,13 +32,15 @@ something is simulated or absent, this document says so plainly.
 | Product lineage: collection → slaughter → transformation → product → destination | Implemented |
 | Public QR traceability passport with a single curated boundary | Implemented |
 | Audit log of every mutation (actor, before/after, reason) | Implemented |
-| Integrity engine — 477 automated checks (T01–T27) | Implemented |
+| Integrity engine — 761 automated checks of 19 types (T01–T27) | Implemented |
 | Demo reset + system health screen | Implemented |
 | French UI throughout, WCAG AA contrast, keyboard navigable | Implemented |
 
-**Scale of the seeded dataset:** 1 organization · 3 cooperatives · 7 producers · 8 farms ·
-12 buildings · 12 lots · 6 users · 525 IoT measurements · 9 anomalies/alerts · 1 complete
-farm-to-product chain · 2 public QR passports.
+**Scale of the seeded dataset (2026-10-29):** 1 organization · 3 cooperatives · 7 producers ·
+11 farms · 18 buildings · 28 lots · 15 users (10 role accounts, 5 partner farmers) · 13 269 raw
+sensor readings (525 on the hero building) and 25 317 aggregates · 16 anomalies, 16 alerts ·
+2 products · 3 active public QR passports · 2 751 hash-chained ledger events · 106 purchasing
+articles.
 
 ## 2. What is simulated
 
@@ -52,20 +55,25 @@ farm-to-product chain · 2 public QR passports.
   same as invented: a poultry engineer can check these numbers against the breed tables.
 - **The downstream chain.** Collection, slaughter, transformation, product and destination
   records are seeded demonstration data.
+- **The gateway telemetry, the egg-marking line and the incubator logs.** The farm and hatchery
+  gateways, the marking line controller and the exported incubator logs are played by simulators
+  that go through the same ingestion services a real device would.
 
 Because the data is simulated, the public passport honestly reports **"Traçabilité non
 vérifiée"**. The public verification status is computed from real system state, not decoration.
 
 ## 3. What is NOT implemented
 
-- Physical IoT hardware integration (the measurement *source* is the only swap point)
+- Physical IoT hardware: the gateway ingestion API, the MQTT bridge and the incubator file import
+  exist, but no physical sensor, gateway or machine has been connected; every reading is simulated
 - Machine learning or statistical anomaly models — detection is explicit rules, by design
 - Industrial or multi-tenant deployment; no load testing has been performed
 - Full cooperative rollout
 - Certification / document entity (passport certifications are therefore always empty)
-- Mobile application
+- A native mobile application: the offline field app (`/terrain`) runs in the phone's browser,
+  with no app-store version
 - Languages other than French
-- Rate limiting on the public passport route
+- Rate limiting on the lot and product passport route (the egg page has its own)
 - Age-adjusted environmental setpoints. `TEMPERATURE_OUT_OF_RANGE` is an absolute safety
   envelope (18-33 degC, tolerable at any age), not a brooding-to-finishing setpoint curve, so
   it cannot flag "28 degC is too warm for a five-week flock". Stated as such in the rule text.
@@ -103,14 +111,14 @@ vérifiée"**. The public verification status is computed from real system state
 | Limitation | Impact |
 |---|---|
 | The FCR (feed conversion) KPI reports "Donnée insuffisante" on the hero lot | Deliberate: the engine refuses to publish an indicator it cannot justify. 5 of 6 KPIs compute. |
-| The seeded scenario is anchored to fixed dates: telemetry and the hero lots around 2026-08-16, the production flow (field app, health, marking, laboratory) up to 2026-10-28 | Guarantees determinism, but the dataset visibly ages as real time passes ("nothing entered today", telemetry offline). Re-dating means moving about 180 date literals and the codes built from them (OEB-20261018, MQ-FA-…) through one scenario clock; not done yet. |
+| The seeded scenario is anchored to fixed dates: telemetry and the hero lots around 2026-08-16, the production flow (field app, health, marking, laboratory) up to 2026-10-28 | Guarantees determinism, but the dataset ages as real time passes. Closed lots are read at their closing, and in a demo database the integrity and operations screens judge freshness against its newest reading; active lots still show "nothing entered today". Re-dating means moving about 180 date literals and the codes built from them (OEB-20261018, MQ-FA-…) through one scenario clock; not done yet. |
 | The hero farm shows "0 active lots" | Correct, not a bug — the hero lot is `CLOTURE`, which is *why* it has a product and a passport. See `DEMO_RUNBOOK.md` §2 for how to open the demo. |
 | `notFound()` pages return HTTP 200 with correct "Introuvable" content | Next.js streams after the shell starts; content and UX are correct, the status code is not. |
 | `npm run db:reset` fails with `EBUSY` while the server is running | Windows file lock. Use the in-app reset during a demo. Documented. |
 | A demo reset invalidates all open sessions | The users table is recreated. Log in again. Documented. |
 | Client JS is ~680–735 KB uncompressed per route | Acceptable for an authenticated internal tool; not optimised to a public-site budget. |
-| `/integrite` takes ~1 s | It runs 477 real checks across the whole database. Admin screen, not a hot path. |
-| Integrity reports 4 warnings | Deliberate — quality defects are seeded so the engine has something true to find. **Zero critical issues.** |
+| `/integrite` takes ~1.5 s | It runs 761 real checks across the whole database. Admin screen, not a hot path. |
+| Integrity reports 11 warnings | Expected — one quality defect seeded so the engine has something true to find, and ten register devices the simulation leaves offline (cameras, GSM alarms, mechanical thermostats, access control, one degraded sensor). **Zero critical issues.** |
 | The hero lot's feed conversion ratio is ~2.0 (poor) | Deliberate and coherent: the lot is flagged for eating 25% above pattern while its growth falls 33% short. A good FCR would contradict its own alert. |
 
 ## 5. How to start the application
@@ -142,8 +150,11 @@ The in-app reset is guarded three ways: `DEMO_MODE` must be on, the caller needs
 `EDIT`/`SETTINGS` permission, and the database must contain the seeded demo admin — so it
 cannot be pointed at a non-demo database.
 
-Both paths run the *same* `seedDatabase()`, so both produce an identical scenario. Verified
-byte-identical across three consecutive reseeds, including the QR tokens.
+Both paths run the *same* `seedDatabase()`, so both produce the same scenario: two consecutive
+resets give the same lots, users, anomalies, marking runs (down to the unreadable eggs) and
+sensor values (`services/demo/reset.test.ts`), and two independent snapshot builds give the same
+number of rows in every table. Internal ids, and the time stamped on seed-time audit entries,
+differ.
 
 **Public passport URLs are stable across resets** (a printed QR keeps working):
 
@@ -154,7 +165,7 @@ Internal UUIDs (lot, farm, device URLs) **do** change on reseed — navigate by 
 
 ## 7. Demo accounts
 
-All six share the password `Demo1234!`. Internal document — do not distribute publicly.
+All demo accounts share the password `Demo1234!`. Internal document — do not distribute publicly.
 
 | Role | Email | Scope |
 |---|---|---|
@@ -165,6 +176,12 @@ All six share the password `Demo1234!`. Internal document — do not distribute 
 | Technicien | `technicien@biovolailles.demo` | Ferme Al Baraka |
 | Auditeur | `auditeur@biovolailles.demo` | Global, read-only |
 | Responsable qualité | `qualite@biovolailles.demo` | Global — releases quality holds |
+| Direction | `direction@biovolailles.demo` | Global |
+| Responsable couvoir | `couvoir@biovolailles.demo` | The hatchery |
+| Vétérinaire | `veterinaire@biovolailles.demo` | Global |
+
+Five partner-farmer accounts (`partenaire.fassi`, `partenaire.elamrani`, `partenaire.cherkaoui`,
+`partenaire.ouazzani`, `aide.ouazzani`, all `@biovolailles.demo`) carry the production flow.
 
 Role switching from the top bar performs a **real re-authentication**, not a UI toggle.
 
@@ -181,20 +198,28 @@ Dashboard → Farm → Building → Lot → IoT → Performance/KPI
 
 Verified end to end against a production server, for every role.
 
-## 9. Verification summary for this release candidate
+## 9. Verification summary (2026-10-29)
+
+Measured on a fresh clone of the branch and on a production build serving the demo snapshot.
 
 | Gate | Result |
 |---|---|
+| `npm ci` on a fresh clone | Pass (the lockfile was re-synced that day: `npm ci` had been refusing it) |
 | `npm run lint` | Pass, 0 problems |
 | `npm run typecheck` | Pass |
-| `npm test` | 414 passing / 53 files |
-| `npm run build` | Pass, 30 routes |
-| `npm run check:contrast` | 21/21 WCAG pairings pass |
-| Security matrix (cross-scope, mutations, admin surfaces, public isolation) | 31/31 pass |
-| Integrity | 473/477 checks · **0 critical** · 4 deliberate warnings |
-| System health screen | 13/13 OK |
-| Determinism | Identical across 3 consecutive reseeds |
-| Production dependency audit | 0 vulnerabilities |
+| `npm test` | 640 passing / 87 files |
+| `npm run build` | Pass, 104 routes |
+| `npm run check:contrast` | 32/32 WCAG pairings pass |
+| Role pass, production build | 10 roles · 226 menu pages · 0 failures · 0 browser errors; the 3 admin pages refused to all 9 other roles (27/27) |
+| Public pages at phone width | site, lot passport, product passport, egg page: 200, no horizontal overflow |
+| Integrity | 750/761 checks · **0 critical** · 11 expected warnings |
+| System health screen | 13/13 Conforme · hero lot 5/6 KPIs |
+| Operations page | 8 normal · 1 to watch (the demo's open alerts) · 0 blocking |
+| Determinism | 2 consecutive resets identical (test) · 2 independent snapshot builds with the same rows in every table |
+| Production dependency audit | 0 vulnerabilities (dev tooling: 4 moderate, all in drizzle-kit's bundled esbuild) |
+
+The cross-scope security matrix (31/31 at the release candidate) was not re-run as such; the role
+pass and the isolation tests (`services/identity/isolation.test.ts`) cover its ground.
 
 ## 10. What this product may and may not claim
 
