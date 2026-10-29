@@ -170,6 +170,28 @@ describe("runIntegrityChecks", () => {
     expect(report.issues.some((i) => i.code === "T21_DEVICE_STALE_OFFLINE" && i.entityId === device.id)).toBe(true);
   });
 
+  it("T21 — judges a frozen demonstration database against its newest reading, not against today", async () => {
+    const admin = await createTestSession("SUPER_ADMIN", "GLOBAL", null, "IC7F");
+    const { building } = await seedHierarchy("IC7F");
+    // Two online devices: one read at the database's newest instant, one gone quiet three hours before.
+    const readAt = async (code: string, capturedAt: string) => {
+      const device = await repositories.devices.create({ buildingId: building.id, code, type: "CAPTEUR_MULTI", status: "ONLINE", installedAt: "2026-01-01T00:00:00.000Z", lastCommunicationAt: capturedAt, batteryLevel: 50, signalQuality: 80 });
+      const sensor = await repositories.sensors.create({ deviceId: device.id, sensorType: "TEMPERATURE", unit: "C", status: "ONLINE", configuration: null });
+      await repositories.measurements.create({ sensorId: sensor.id, deviceId: device.id, buildingId: building.id, lotId: null, value: 24, unit: "C", capturedAt, sourceType: "SIMULATEUR", sourceId: null, actorId: null, dataStatus: "SIMULATION", measurementMethod: null, documentId: null, validationStatus: null });
+      return device.id;
+    };
+    const live = await readAt("DEV-IC7F-LIVE", "2026-10-01T12:00:00.000Z");
+    const quiet = await readAt("DEV-IC7F-QUIET", "2026-10-01T09:00:00.000Z");
+    const flagged = async (frozen: boolean) => (await runIntegrityChecks(admin, frozen)).issues.filter((i) => i.code === "T21_DEVICE_STALE_OFFLINE").map((i) => i.entityId);
+
+    // Against today, both readings are weeks old.
+    expect(await flagged(false)).toEqual(expect.arrayContaining([live, quiet]));
+    // Frozen at its newest reading, only the device that went quiet is.
+    const frozen = await flagged(true);
+    expect(frozen).toContain(quiet);
+    expect(frozen).not.toContain(live);
+  });
+
   it("T24 — flags two lots sharing the same business code", async () => {
     const admin = await createTestSession("SUPER_ADMIN", "GLOBAL", null, "IC8");
     const { building: buildingA } = await seedHierarchy("IC8A");

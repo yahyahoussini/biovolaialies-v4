@@ -9,6 +9,7 @@ import type { AlertSeverity, DataStatus, MeasurementSourceType, Role, ScopeType 
 import { AuthorizationError } from "../../domain/shared/errors";
 import { can } from "../../domain/shared/permissions";
 import { isGlobalScope } from "../../domain/shared/scope";
+import { env } from "../../lib/env";
 import { ALERT_STATUS_LABEL, DATA_STATUS_LABEL } from "../../lib/status-colors";
 import { ROLE_LABEL } from "../../lib/labels";
 import type { AuditLogEntry } from "../../domain/audit/types";
@@ -372,13 +373,16 @@ async function checkAnomalyHasAlert(session: Session, now: string): Promise<Accu
 // T21 — device health, scope-wide (reuses domain/quality/iot-data-quality.ts)
 // ---------------------------------------------------------------------------
 
-async function checkDeviceHealth(session: Session, now: string): Promise<Accumulator> {
+async function checkDeviceHealth(session: Session, now: string, frozenDataset: boolean): Promise<Accumulator> {
   const issues: IntegrityIssue[] = [];
   const devices = await listDevicesInScope(session);
   const onlineBuildingIds = [...new Set(devices.filter((d) => d.status === "ONLINE").map((d) => d.buildingId))];
   const latestArr = await Promise.all(onlineBuildingIds.map((id) => repositories.measurements.latestByBuilding(id)));
   const latestByBuilding = new Map(onlineBuildingIds.map((id, i) => [id, latestArr[i]]));
-  const nowDate = new Date(now);
+  // A demonstration database is frozen at its scenario date: a reading is judged against the newest
+  // one it holds, as on the operations page, not against today.
+  const newest = frozenDataset ? latestArr.flat().reduce<string | null>((max, m) => (max === null || m.capturedAt > max ? m.capturedAt : max), null) : null;
+  const nowDate = new Date(newest ?? now);
   // A machine read from its exported log has no live link to judge: it is never "online", by design.
   const judged = devices.filter((d) => !(d.catalogRef && d.type !== "PASSERELLE" && !d.gatewayId));
 
@@ -545,7 +549,7 @@ function mergeInto(target: Accumulator, ...parts: Accumulator[]): void {
  * §10-§11). Every issue is derived fresh from live database state — nothing here is a stored,
  * mutable row, so the result always reflects reality at the moment it's computed.
  */
-export async function runIntegrityChecks(session: Session): Promise<IntegrityReport> {
+export async function runIntegrityChecks(session: Session, frozenDataset = env.DATABASE_SNAPSHOT || env.DEMO_MODE): Promise<IntegrityReport> {
   if (!can(session, "VIEW", "INTEGRITY")) {
     throw new AuthorizationError("Vous n'avez pas les droits pour consulter le centre d'intégrité.");
   }
@@ -572,7 +576,7 @@ export async function runIntegrityChecks(session: Session): Promise<IntegrityRep
     checkAlertActionAudit(lots, auditedAlertIds, now),
     checkAlertLifecycleAudit(alertsWithContext, auditedAlertIds, now),
     checkAnomalyHasAlert(session, now),
-    checkDeviceHealth(session, now),
+    checkDeviceHealth(session, now, frozenDataset),
   ]);
   mergeInto(acc, alertActionAudit, alertLifecycleAudit, anomalyAlert, deviceHealth);
 
