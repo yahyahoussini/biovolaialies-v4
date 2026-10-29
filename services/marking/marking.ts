@@ -889,12 +889,14 @@ export const simulateSchema = z.object({
 
 /**
  * Same answer for the same egg every time: the seed and a replayed demonstration stay reproducible.
- * FNV-1a alone gives neighbouring serials neighbouring values, so unreadable eggs would come in
- * clusters and stop a clean line; the murmur3 finaliser spreads them evenly.
+ * Keyed by the line's code and the egg's serial, which a reseed gives back, never by the run's
+ * random id, which it does not. FNV-1a alone gives neighbouring serials neighbouring values, so
+ * unreadable eggs would come in clusters and stop a clean line; the murmur3 finaliser spreads them
+ * evenly.
  */
-export function unreadable(runId: string, serial: number, rate: number): boolean {
+export function unreadable(lineCode: string, serial: number, rate: number): boolean {
   let h = 2166136261;
-  for (const c of `${runId}:${serial}`) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
+  for (const c of `${lineCode}:${serial}`) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
   h ^= h >>> 16;
   h = Math.imul(h, 0x85ebca6b);
   h ^= h >>> 13;
@@ -936,7 +938,7 @@ export async function simulateMarking(runId: string, input: unknown, session: Se
     const failed: number[] = [];
     for (let s = block.firstSerial; s <= block.lastSerial; s++) {
       const rate = data.clogAfter != null && done + (s - block.firstSerial) >= data.clogAfter ? data.clogRate : data.failRate;
-      if (unreadable(run.id, s, rate)) failed.push(s);
+      if (unreadable(line.code, s, rate)) failed.push(s);
     }
     const outcome = await recordReadBatch(run.id, { batchRef: `sim-r-${ref}`, firstSerial: block.firstSerial, lastSerial: block.lastSerial, readAt: at.toISOString(), failed }, session, USER, clock);
     printed += count;

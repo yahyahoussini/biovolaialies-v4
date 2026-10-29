@@ -101,9 +101,9 @@ describe("egg marking", () => {
 
   it("spreads the simulated unreadable eggs evenly instead of in bursts", () => {
     // 20 000 consecutive eggs at 0.4 %: about 80 unreadable, and never 5 in one window of 100.
-    // Without the finaliser, the last two runs below get 6 in one window.
-    for (const runId of ["1f0c6a52-run", "a3b9e2d0-77c1", "c0ffee00-beef"]) {
-      const failures = Array.from({ length: 20_000 }, (_, s) => unreadable(runId, s, 0.004));
+    // Without the finaliser, the three demonstration lines below get 5 to 7 in one window.
+    for (const lineCode of ["LM-FAS-01", "LM-ELA-01", "LM-REP-01"]) {
+      const failures = Array.from({ length: 20_000 }, (_, s) => unreadable(lineCode, s, 0.004));
       const total = failures.filter(Boolean).length;
       expect(total).toBeGreaterThan(50);
       expect(total).toBeLessThan(115);

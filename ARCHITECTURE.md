@@ -289,7 +289,7 @@ export interface SensorDataSource {
 }
 ```
 
-`data/seed/iot-simulator.ts` implements this with a deterministic generator seeded by `sensor.id + day` (diurnal curve per sensor type + bounded noise), including a few intentionally injected anomaly windows (e.g., a CO2 spike in one building on one day) so the anomaly/alert pipeline has something real to demonstrate. The seed script writes the output as genuine `measurements` rows through the normal repository — IoT data is not special-cased, it flows through the same `measurements` table and the same rules engine (§6, §intelligence) that real sensor ingestion would use.
+`services/iot/simulator.ts` implements this with a deterministic generator seeded by the device's code, the sensor type and the timestamp (diurnal curve per sensor type + bounded noise), so a reseed draws the same values, including a few intentionally injected anomaly windows (e.g., a CO2 spike in one building on one day) so the anomaly/alert pipeline has something real to demonstrate. The seed script writes the output as genuine `measurements` rows through the normal repository — IoT data is not special-cased, it flows through the same `measurements` table and the same rules engine (§6, §intelligence) that real sensor ingestion would use.
 
 Because everything downstream (rules engine, anomaly detection, dashboards) depends only on `SensorDataSource` and the `measurements` table, replacing the simulator with a real MQTT/gateway ingestion path later is: write a new `SensorDataSource` implementation that pushes rows via the same repository, no UI or intelligence code changes.
 

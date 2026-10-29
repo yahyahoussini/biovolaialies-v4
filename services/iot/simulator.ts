@@ -103,6 +103,8 @@ export class DeterministicSensorSimulator implements SensorDataSource {
 
     const measurements: NewMeasurement[] = [];
     const stepMs = intervalMinutes * 60_000;
+    // Noise keyed by what a reseed gives back (the device's code), never by the sensor's random id.
+    const seedKey = `${device.code}:${sensor.code ?? sensor.sensorType}`;
     for (let t = range.from.getTime(); t <= range.to.getTime(); t += stepMs) {
       const at = new Date(t);
       measurements.push({
@@ -110,7 +112,7 @@ export class DeterministicSensorSimulator implements SensorDataSource {
         deviceId: device.id,
         buildingId: device.buildingId,
         lotId: context.lotId,
-        value: generator(at, context, sensor.id),
+        value: generator(at, context, seedKey),
         unit: sensor.unit,
         capturedAt: at.toISOString(),
         sourceType: "SIMULATEUR",

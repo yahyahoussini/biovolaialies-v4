@@ -93,19 +93,40 @@ describe("resetDemoScenario — on the seeded scenario", () => {
   it("is deterministic — two consecutive resets yield the same scenario shape", async () => {
     const first = await resetDemoScenario(await adminSession());
     const snapshot = async () => {
-      const [lots, farms, buildings, users, anomalies] = await Promise.all([
+      const [lots, farms, buildings, users, anomalies, runs] = await Promise.all([
         repositories.lots.list(),
         repositories.farms.list(),
         repositories.buildings.list(),
         repositories.users.list(),
         repositories.anomalies.list(),
+        repositories.marking.listRuns(),
       ]);
+      // The simulated marking line too: the same eggs unreadable, so the same stops and trays.
+      const marking = await Promise.all(
+        runs.map(async (r) => ({
+          code: r.code,
+          status: r.status,
+          serials: [r.firstSerial, r.lastSerial],
+          unreadable: (await repositories.marking.listExceptions(r.id, "ILLISIBLE", 10_000)).map((e) => e.serial).sort((x, y) => x - y),
+          trays: (await repositories.marking.countTrays(r.id)).trays,
+        }))
+      );
+      // And the simulated sensor values, not only how many there are.
+      const readings: string[] = [];
+      for (const device of await repositories.devices.list()) {
+        for (const sensor of await repositories.sensors.listByDevice(device.id)) {
+          const values = (await repositories.measurements.listBySensor(sensor.id)).filter((m) => m.sourceType === "SIMULATEUR");
+          if (values.length) readings.push(`${device.code} ${sensor.sensorType} ×${values.length} Σ${values.reduce((sum, m) => sum + m.value, 0).toFixed(3)}`);
+        }
+      }
       return {
         lotCodes: lots.map((l) => l.code).sort(),
         farmNames: farms.map((f) => f.name).sort(),
         buildingCount: buildings.length,
         userEmails: users.map((u) => u.email).sort(),
         anomalyCount: anomalies.length,
+        marking: marking.sort((x, y) => x.code.localeCompare(y.code)),
+        readings: readings.sort(),
       };
     };
     const a = await snapshot();
