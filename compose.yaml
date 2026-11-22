@@ -1,21 +1,39 @@
 # BIOVOLAILLES on a VPS — see DEPLOY_VPS.md.
-#   docker compose up -d --build
-# The app listens on 127.0.0.1:3100 only; the VPS's reverse proxy (Nginx, Caddy, Traefik…) serves
-# it over HTTPS at the subdomain set in deploy/vps.env (APP_URL).
+#   Demonstration:       docker compose up -d --build
+#   Real installation:   docker compose --profile production up -d --build
+#                        (adds the scheduler: rules every 5 min, verified backup every night)
+# The app listens on 127.0.0.1:${HOST_PORT} only; the VPS's reverse proxy (Nginx, Caddy, Traefik…)
+# serves it over HTTPS at the subdomain set in deploy/vps.env (APP_URL). Two instances on one VPS
+# (demo + real) live in two folders, each with its own deploy/vps.env and a .env file setting
+# HOST_PORT, IMAGE_NAME and APP_URL — so rebuilding one never changes the other.
 services:
   app:
     build:
       context: .
       args:
         APP_URL: ${APP_URL:-https://biovolailles.brandhubos.cloud}
-    image: biovolailles:latest
-    container_name: biovolailles
+    image: ${IMAGE_NAME:-biovolailles}:latest
     restart: unless-stopped
     env_file: deploy/vps.env
     ports:
       - "127.0.0.1:${HOST_PORT:-3100}:3000"
     volumes:
       # The database lives outside the image: it survives rebuilds and updates.
+      - biovolailles-data:/data
+      - ./backups:/app/backups
+
+  scheduler:
+    image: ${IMAGE_NAME:-biovolailles}:latest
+    profiles: ["production"]
+    restart: unless-stopped
+    env_file: deploy/vps.env
+    entrypoint: ["npm", "run", "-s", "scheduler"]
+    environment:
+      BACKUP_DIR: /app/backups
+    depends_on:
+      app:
+        condition: service_healthy
+    volumes:
       - biovolailles-data:/data
       - ./backups:/app/backups
 

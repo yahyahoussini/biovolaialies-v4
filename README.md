@@ -56,7 +56,9 @@ it from scratch.
 | `npm run db:migrate` | Apply migrations to whatever `DATABASE_URL` points at               |
 | `npm run db:seed`    | Load the demo dataset                                               |
 | `npm run db:reset`   | Delete the local database file, re-migrate, re-seed (local only)    |
-| `npm run db:deploy`  | Migrate **and** seed a hosted database in one step (refuses `file:`) |
+| `npm run setup -- --email … --name "…"` | **Real installation**: migrate an empty database and create the first administrator (temporary password shown once), no demo data |
+| `npm run db:deploy`  | Migrate a hosted database (refuses `file:`); add `-- --demo` to also load the demo dataset |
+| `npm run scheduler`  | Jobs every 5 min + nightly verified backup, for a server without cron (the `scheduler` service in `compose.yaml`) |
 | `npm run db:backup`  | Consistent backup + manifest, then a test restore of it (EXPLOITATION.md §5) |
 | `npm run db:restore-check -- <file>` | Restore a backup into a scratch copy and prove it |
 | `npm run db:restore -- <file> --confirm` | Put a proven backup in place of the local file database (app stopped); the old one goes aside with its WAL files |
@@ -124,10 +126,12 @@ When the app must keep what people enter, point it at a hosted libSQL database
    $env:DATABASE_URL="libsql://biovolailles-<org>.turso.io"
    $env:DATABASE_AUTH_TOKEN="<token>"
    npm run db:deploy
+   npm run setup -- --email admin@exemple.ma --name "Prénom Nom"
    ```
 
-   `db:deploy` migrates and seeds in one step, prints the host first, and refuses a `file:` URL —
-   so it cannot quietly seed your laptop instead of the deployment.
+   `db:deploy` migrates, prints the host first, and refuses a `file:` URL — so it cannot quietly
+   touch your laptop instead of the deployment. `setup` then creates the first administrator; for a
+   demonstration database instead, run `npm run db:deploy -- --demo` and skip `setup`.
 4. Redeploy.
 
 A `file:` `DATABASE_URL` on Vercel fails the build with a clear message: the filesystem there is

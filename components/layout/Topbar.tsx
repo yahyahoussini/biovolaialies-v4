@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { LogOut } from "lucide-react";
 import { logoutAction } from "@/app/(app)/actions";
 import { MobileNav } from "@/components/layout/MobileNav";
@@ -65,10 +66,10 @@ export function Topbar({
 
         {roleSwitch ? <RoleSwitcher currentRole={role} /> : null}
 
-        <div className="hidden text-right leading-tight sm:block">
+        <Link href="/compte" className="hidden rounded-md px-1 text-right leading-tight hover:bg-background sm:block" title="Mon compte : mot de passe, double authentification">
           <p className="text-caption font-semibold text-text">{fullName}</p>
           <p className="text-micro text-secondary">{roleLabel}</p>
-        </div>
+        </Link>
 
         <form action={logoutAction}>
           <Button type="submit" variant="ghost" size="icon" className="size-9" title="Se déconnecter">

@@ -1,7 +1,9 @@
 # BIOVOLAILLES — Release Notes (MVP Release Candidate)
 
-**Version:** MVP RC (2026-08-18), since extended to the fifteen development lots of document 3 ·
-**Last verified:** 2026-10-29 (§9) · **Status:** ready for external demonstration
+**Version:** MVP RC (2026-08-18), since extended to the fifteen development lots of document 3, then
+made installable for real use (§0, 2026-11-22) · **Last verified:** 2026-11-22 (§0) ·
+**Status:** demonstration instance delivered; real installation ready for a supervised manual-entry
+pilot. Sensors, marking line and incubators still wait for their hardware acceptance (FAT/SAT).
 
 BIOVOLAILLES is a functional Agritech MVP: a digital operating, intelligence and traceability
 platform for poultry production. It is not a dashboard bolted onto a spreadsheet, and it is
@@ -10,6 +12,35 @@ to the QR code a consumer scans.
 
 Every figure in this document was measured against a production build of this codebase. Where
 something is simulated or absent, this document says so plainly.
+
+---
+
+## 0. 2026-11-22 — from demonstration to a real installation
+
+| Change | Where |
+|---|---|
+| Next.js 16.4.3 → 16.4.6: the seven advisories published against 16.0.0–16.4.4 | `package.json` |
+| Demo role switcher refused by the server outside demo mode (it let any signed-in user become the seeded administrator on a database holding the demo accounts) | `services/auth/demo-switch.ts` |
+| Sessions checked against the account on every request: disabling an account, resetting its password or changing its role ends its open sessions at once | `services/auth/session.ts` |
+| Accounts: temporary passwords only (an administrator never knows a password in use), forced change at first sign-in, password rules, self-service change, administrator resets | `/compte`, `/utilisateurs`, `services/identity/account-security.ts` |
+| Two-step login (TOTP, RFC 6238) with ten single-use recovery codes; mandatory for Administrateur, Responsable qualité and Direction on a real installation; secrets encrypted at rest | `/login/*`, `lib/totp.ts` |
+| Clean installation: `npm run setup` creates the database and the first administrator, no demo data; the demo seed refuses a production database; `db:deploy` migrates only unless `--demo` | `scripts/setup.ts` |
+| Farm structure: create and edit organisations, cooperatives, producers, farms and buildings; spreadsheet import, checked in full before anything is written, idempotent | `/structure`, `/structure/import` |
+| VPS hosting: Docker image, compose with a `production` profile (scheduler: jobs every 5 min, nightly verified backup, local retention) | `Dockerfile`, `compose.yaml`, `DEPLOY_VPS.md` |
+| Continuous integration: lint, types, tests, build, secret scan, Docker build on every push | `.github/workflows/ci.yml` |
+| Critical alert escalation levels 2–3 also e-mail (SMS and calls are not integrated) | `domain/telemetry/escalation.ts` |
+| Request limit on the public lot and product passports (60 per minute per device) | `app/(public)/tracabilite/[token]` |
+| Legal pages filled from `LEGAL_*` server variables; server errors logged as JSON and e-mailed (`ERRORS_NOTIFY_TO`) | `lib/legal.ts`, `instrumentation.ts` |
+| Morocco moved to UTC+0 for good on 2026-09-20: no hard-coded offset left; the operations page flags a server whose time-zone data predates it | `lib/dates.ts`, `services/ops/status.ts` |
+
+Verified 2026-11-22 on this branch: lint 0 problems · typecheck pass on a fresh clone · **657 tests /
+90 files** · production build **111 routes** · production dependency audit **0 vulnerabilities** ·
+secret scan of the history: no leak · in a browser, on a production server with an empty database:
+setup → temporary password → forced change → two-step set-up and recovery codes → import of the
+structure → new user with a temporary password → sign-in with a wrong code (refused) and with a
+recovery code (accepted); on the demo snapshot: role switcher, public passport, no browser error ·
+scheduler: one cycle of jobs and a backup restored and proven. **Not verified here:** the Docker image
+build itself (this environment's containers have no internet access for `npm ci`; CI builds it).
 
 ---
 
@@ -73,7 +104,6 @@ vérifiée"**. The public verification status is computed from real system state
 - A native mobile application: the offline field app (`/terrain`) runs in the phone's browser,
   with no app-store version
 - Languages other than French
-- Rate limiting on the lot and product passport route (the egg page has its own)
 - Age-adjusted environmental setpoints. `TEMPERATURE_OUT_OF_RANGE` is an absolute safety
   envelope (18-33 degC, tolerable at any age), not a brooding-to-finishing setpoint curve, so
   it cannot flag "28 degC is too warm for a five-week flock". Stated as such in the rule text.

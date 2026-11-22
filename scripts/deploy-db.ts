@@ -62,6 +62,13 @@ async function main(): Promise<void> {
 
   // Imported only now: this pulls in data/db/client.ts, whose module-scope singleton reads
   // DATABASE_URL — by this point it resolves to the same hosted database checked above.
+  if (!process.argv.includes("--demo")) {
+    console.log("\nMigrations only. A real installation continues with « npm run setup -- --email … --name … »;");
+    console.log("a demonstration database with « npm run db:deploy -- --demo ».\n");
+    client.close();
+    return;
+  }
+
   const { repositories } = await import("../data/repositories");
   const existing = await repositories.organizations.list();
   if (existing.length > 0) {

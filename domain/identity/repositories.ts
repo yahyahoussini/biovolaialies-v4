@@ -11,6 +11,7 @@ import type {
   Organization,
   Producer,
   User,
+  UserSecurityFields,
 } from "./types";
 import type { ScopeContext } from "../shared/scope";
 
@@ -62,6 +63,9 @@ export interface UserRepository {
   findByEmail(email: string): Promise<User | null>;
   list(): Promise<User[]>;
   create(input: NewUser): Promise<User>;
-  update(id: string, patch: Partial<Pick<User, "role" | "scopeType" | "scopeId" | "active">>): Promise<User>;
+  update(id: string, patch: Partial<Pick<User, "role" | "scopeType" | "scopeId" | "active" | "authVersion">>): Promise<User>;
+  /** Password, two-step login and session-version columns (services/identity/account-security.ts). */
+  updateSecurity(id: string, patch: Partial<Pick<User, "passwordHash" | UserSecurityFields>>): Promise<User>;
+  count(): Promise<number>;
   touchLastLogin(id: string, at: string): Promise<void>;
 }

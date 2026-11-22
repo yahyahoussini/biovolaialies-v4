@@ -21,13 +21,14 @@ const formSchema = z.object({
   email: z.string().trim().email("Email invalide."),
   fullName: z.string().trim().min(1, "Requis."),
   role: z.enum(ROLE),
-  password: z.string().min(8, "8 caractères minimum."),
+  password: z.string().refine((v) => v === "" || v.length >= 8, "8 caractères minimum, ou laisser vide."),
 });
 type FormValues = z.infer<typeof formSchema>;
 
 export function UserCreateDialog({ scopeTargets }: { scopeTargets: ScopeTargets }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [created, setCreated] = useState<{ userId: string; temporaryPassword: string } | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [scopeType, setScopeType] = useState<ScopeType>("GLOBAL");
   const [scopeId, setScopeId] = useState("");
@@ -54,10 +55,14 @@ export function UserCreateDialog({ scopeTargets }: { scopeTargets: ScopeTargets 
       setFormError(result.error?.message ?? "Impossible de créer l'utilisateur.");
       return;
     }
-    setOpen(false);
     reset();
     setScopeType("GLOBAL");
     setScopeId("");
+    if (result.data!.temporaryPassword) {
+      setCreated({ userId: result.data!.userId, temporaryPassword: result.data!.temporaryPassword });
+      return;
+    }
+    setOpen(false);
     router.push(`/utilisateurs/${result.data!.userId}`);
   }
 
@@ -74,6 +79,25 @@ export function UserCreateDialog({ scopeTargets }: { scopeTargets: ScopeTargets 
           <DialogTitle>Créer un utilisateur</DialogTitle>
           <DialogDescription>Compte, rôle et périmètre d&apos;accès.</DialogDescription>
         </DialogHeader>
+        {created ? (
+          <div className="flex flex-col gap-4">
+            <p className="text-sm text-text">
+              Compte créé. Mot de passe provisoire, affiché une seule fois — à remettre à la personne, qui le remplacera par le sien à sa première connexion :
+            </p>
+            <p className="rounded-md border border-border bg-background p-3 text-center font-mono text-lg text-text">{created.temporaryPassword}</p>
+            <Button
+              type="button"
+              onClick={() => {
+                const target = created.userId;
+                setCreated(null);
+                setOpen(false);
+                router.push(`/utilisateurs/${target}`);
+              }}
+            >
+              J&apos;ai noté le mot de passe
+            </Button>
+          </div>
+        ) : (
         <form className="flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)} noValidate>
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
@@ -94,7 +118,7 @@ export function UserCreateDialog({ scopeTargets }: { scopeTargets: ScopeTargets 
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="password">
-              Mot de passe initial
+              Mot de passe provisoire (laisser vide pour le générer)
             </Label>
             <Input id="password" type="password" {...register("password")} />
             {errors.password ? <p className="text-xs text-critical-strong">{errors.password.message}</p> : null}
@@ -162,6 +186,7 @@ export function UserCreateDialog({ scopeTargets }: { scopeTargets: ScopeTargets 
             Créer l&apos;utilisateur
           </Button>
         </form>
+        )}
       </DialogContent>
     </Dialog>
   );

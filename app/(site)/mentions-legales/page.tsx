@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
-import { LegalPage, ToComplete } from "@/components/site/LegalPage";
+import { connection } from "next/server";
+import { LegalPage, LegalValue } from "@/components/site/LegalPage";
 
 export const metadata: Metadata = { title: "Mentions légales" };
 
-export default function LegalNoticePage() {
+export default async function LegalNoticePage() {
+  // The LEGAL_* values are read when the page is served, not frozen into the build.
+  await connection();
   return (
     <LegalPage title="Mentions légales" updated="octobre 2026">
       <section>
@@ -13,29 +16,29 @@ export default function LegalNoticePage() {
         </p>
         <ul>
           <li>
-            Siège social : <ToComplete>adresse du siège</ToComplete>
+            Siège social : <LegalValue field="ADDRESS">adresse du siège</LegalValue>
           </li>
           <li>
-            Registre du commerce : <ToComplete>ville et numéro RC</ToComplete>
+            Registre du commerce : <LegalValue field="RC">ville et numéro RC</LegalValue>
           </li>
           <li>
-            Identifiant commun de l&apos;entreprise (ICE) : <ToComplete>numéro ICE</ToComplete>
+            Identifiant commun de l&apos;entreprise (ICE) : <LegalValue field="ICE">numéro ICE</LegalValue>
           </li>
           <li>
-            Capital social : <ToComplete>montant</ToComplete>
+            Capital social : <LegalValue field="CAPITAL">montant</LegalValue>
           </li>
           <li>
-            Directeur de la publication : <ToComplete>nom et fonction</ToComplete>
+            Directeur de la publication : <LegalValue field="DIRECTOR">nom et fonction</LegalValue>
           </li>
           <li>
-            Contact : <ToComplete>adresse e-mail et téléphone</ToComplete>
+            Contact : <LegalValue field="CONTACT">adresse e-mail et téléphone</LegalValue>
           </li>
         </ul>
       </section>
       <section>
         <h2>Hébergement</h2>
         <p>
-          <ToComplete>nom, adresse et contact de l&apos;hébergeur retenu</ToComplete>
+          <LegalValue field="HOST">nom, adresse et contact de l&apos;hébergeur retenu</LegalValue>
         </p>
       </section>
       <section>

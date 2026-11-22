@@ -9,6 +9,7 @@ import { z } from "zod";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent } from "@/components/ui/Card";
 import { FieldMessage, Input, Label } from "@/components/ui/Input";
+import { signInStepPath } from "@/lib/sign-in-steps";
 import { loginAction } from "./actions";
 
 const loginSchema = z.object({
@@ -33,7 +34,7 @@ export function LoginForm({ next }: { next: string }) {
       setFormError(result.error?.message ?? "Connexion impossible.");
       return;
     }
-    router.push(next);
+    router.push(signInStepPath(result.next ?? "DONE", next));
     router.refresh();
   }
 

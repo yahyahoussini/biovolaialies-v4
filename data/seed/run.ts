@@ -11,4 +11,11 @@ config({ path: ".env" });
 // pulled in via data/db/client.ts) before the config() call above had a chance to run.
 // A dynamic import() is a runtime expression, not a hoisted declaration, so it genuinely
 // runs after config() here.
+// The demonstration dataset (shared public password, fictitious farms) never goes into a real
+// installation by accident: in production it needs demo mode, or an explicit --allow-demo.
+if (process.env.NODE_ENV === "production" && process.env.DEMO_MODE !== "true" && !process.argv.includes("--allow-demo")) {
+  console.error("\nRefusé : base de production sans DEMO_MODE=true. Une installation réelle commence par « npm run setup ».\n");
+  process.exit(1);
+}
+
 void import("./seed");

@@ -1,5 +1,7 @@
+import { randomBytes } from "node:crypto";
 import { z } from "../../lib/zod";
 import { repositories } from "../../data/repositories";
+import { generateTemporaryPassword } from "../../domain/identity/password-policy";
 import type { User } from "../../domain/identity/types";
 import { ROLE, SCOPE_TYPE, type Role, type ScopeType } from "../../domain/shared/enums";
 import { AuthorizationError, ConflictError, NotFoundError, ValidationError } from "../../domain/shared/errors";
@@ -74,11 +76,21 @@ export const createUserInputSchema = z.object({
   role: z.enum(ROLE),
   scopeType: z.enum(SCOPE_TYPE),
   scopeId: z.string().trim().min(1).optional().nullable(),
-  password: z.string().min(8, "8 caractères minimum.").max(200),
+  /** Optional: left empty, a temporary password is generated and shown once. Either way the user replaces it at the first sign-in. */
+  password: z.string().max(200).optional().or(z.literal("")),
 });
 export type CreateUserInput = z.infer<typeof createUserInputSchema>;
 
 export async function createUser(input: unknown, session: Session): Promise<User> {
+  return (await createUserAccount(input, session)).user;
+}
+
+/**
+ * Creates an account. The administrator never keeps a working password: whether typed or generated,
+ * it is temporary, and the user chooses their own at the first sign-in (users.must_change_password).
+ * The generated one is returned once, for the administrator to hand over.
+ */
+export async function createUserAccount(input: unknown, session: Session): Promise<{ user: User; temporaryPassword: string | null }> {
   if (!can(session, "CREATE", "USERS")) {
     throw new AuthorizationError("Vous n'avez pas les droits pour créer un utilisateur.");
   }
@@ -92,9 +104,14 @@ export async function createUser(input: unknown, session: Session): Promise<User
   const scopeId = data.scopeId ?? null;
   await assertScopeTargetExists(data.scopeType, scopeId);
 
+  const typed = data.password ? data.password : null;
+  if (typed && typed.length < 8) throw new ValidationError("8 caractères minimum pour un mot de passe provisoire.");
+  const temporaryPassword = typed ? null : generateTemporaryPassword((n) => randomBytes(n));
+
   const user = await repositories.users.create({
     email: data.email,
-    passwordHash: hashPassword(data.password),
+    passwordHash: hashPassword(typed ?? temporaryPassword!),
+    mustChangePassword: true,
     fullName: data.fullName,
     role: data.role,
     scopeType: data.scopeType,
@@ -114,7 +131,7 @@ export async function createUser(input: unknown, session: Session): Promise<User
     relatedEventId: null,
   });
 
-  return user;
+  return { user, temporaryPassword };
 }
 
 export async function updateUserRole(userId: string, role: Role, session: Session, reason?: string): Promise<User> {
@@ -124,7 +141,7 @@ export async function updateUserRole(userId: string, role: Role, session: Sessio
   const user = await getUserOrThrow(userId);
   if (user.role === role) return user;
 
-  const updated = await repositories.users.update(userId, { role });
+  const updated = await repositories.users.update(userId, { role, authVersion: user.authVersion + 1 });
 
   await recordAudit({
     actorId: session.userId,
@@ -157,7 +174,7 @@ export async function updateUserScope(
 
   await assertScopeTargetExists(scopeType, normalizedScopeId);
 
-  const updated = await repositories.users.update(userId, { scopeType, scopeId: normalizedScopeId });
+  const updated = await repositories.users.update(userId, { scopeType, scopeId: normalizedScopeId, authVersion: user.authVersion + 1 });
 
   await recordAudit({
     actorId: session.userId,
@@ -184,7 +201,7 @@ export async function setUserActive(userId: string, active: boolean, session: Se
   const user = await getUserOrThrow(userId);
   if (user.active === active) return user;
 
-  const updated = await repositories.users.update(userId, { active });
+  const updated = await repositories.users.update(userId, { active, authVersion: user.authVersion + 1 });
 
   await recordAudit({
     actorId: session.userId,

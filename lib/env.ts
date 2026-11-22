@@ -113,6 +113,8 @@ const envSchema = z
     LEADS_NOTIFY_FROM: z.string().min(3).optional(),
     /** Optional HMAC key for signing ledger anchors; falls back to SESSION_SECRET. */
     LEDGER_ANCHOR_KEY: z.string().min(32).optional(),
+    /** Key that encrypts two-step login secrets (services/auth/mfa-secret.ts); falls back to SESSION_SECRET. Set it on a real installation so SESSION_SECRET can be rotated. */
+    MFA_ENCRYPTION_KEY: z.string().min(32).optional(),
     /** Sender of alert e-mails (Resend). With RESEND_API_KEY set, alert recipients are e-mailed; otherwise the notification is recorded as not configured. */
     ALERTS_NOTIFY_FROM: z.string().min(3).optional(),
     /** Shared secret the scheduler sends (Authorization: Bearer …) to run the telemetry jobs route. Without it the route is closed. */
@@ -183,3 +185,11 @@ export const env = {
   /** True when the deployment should run from the bundled demo snapshot instead of DATABASE_URL. */
   DATABASE_SNAPSHOT: usesBundledSnapshot,
 };
+
+/**
+ * A demonstration installation — demo mode, or the bundled demo snapshot — where every account and
+ * its password are public: the demo role switcher exists, and two-step login is not demanded.
+ */
+export function isDemoInstallation(): boolean {
+  return env.DEMO_MODE || env.DATABASE_SNAPSHOT;
+}

@@ -3,7 +3,7 @@ import { ROLE, type Role } from "../../domain/shared/enums";
 import { err, type Result } from "../../domain/shared/result";
 import type { ClientInfo } from "./journal";
 import { login, type LoginSuccess } from "./login";
-import { env } from "../../lib/env";
+import { isDemoInstallation } from "../../lib/env";
 
 /**
  * The switcher exists only where every demo account and its shared password are public anyway:
@@ -11,7 +11,7 @@ import { env } from "../../lib/env";
  * user become the seeded administrator, so it is refused here, whatever the interface shows.
  */
 export function demoRoleSwitchAllowed(): boolean {
-  return env.DEMO_MODE || env.DATABASE_SNAPSHOT;
+  return isDemoInstallation();
 }
 
 /**

@@ -1,6 +1,6 @@
-import { eq } from "drizzle-orm";
+import { count, eq } from "drizzle-orm";
 import type { UserRepository } from "../../domain/identity/repositories";
-import type { NewUser, User } from "../../domain/identity/types";
+import type { NewUser, User, UserSecurityFields } from "../../domain/identity/types";
 import { db } from "../db/client";
 import { users } from "../db/schema";
 
@@ -27,9 +27,19 @@ export class DrizzleUserRepository implements UserRepository {
     return row;
   }
 
-  async update(id: string, patch: Partial<Pick<User, "role" | "scopeType" | "scopeId" | "active">>): Promise<User> {
+  async update(id: string, patch: Partial<Pick<User, "role" | "scopeType" | "scopeId" | "active" | "authVersion">>): Promise<User> {
     const [row] = await db.update(users).set(patch).where(eq(users.id, id)).returning();
     return row;
+  }
+
+  async updateSecurity(id: string, patch: Partial<Pick<User, "passwordHash" | UserSecurityFields>>): Promise<User> {
+    const [row] = await db.update(users).set(patch).where(eq(users.id, id)).returning();
+    return row;
+  }
+
+  async count(): Promise<number> {
+    const [row] = await db.select({ n: count() }).from(users);
+    return row?.n ?? 0;
   }
 
   async touchLastLogin(id: string, at: string): Promise<void> {

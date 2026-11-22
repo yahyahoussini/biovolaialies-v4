@@ -36,6 +36,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           canAccessModule(session, "COOPERATIVES") && { label: "Coopératives", href: "/cooperatives", icon: "cooperatives" },
           canAccessModule(session, "PRODUCERS") && { label: "Producteurs", href: "/producteurs", icon: "producers" },
           canAccessModule(session, "FARMS") && { label: "Fermes", href: "/fermes", icon: "farms" },
+          canAccessModule(session, "FARMS") && { label: "Structure des élevages", href: "/structure", icon: "organizations" },
           canAccessModule(session, "HATCHERY") && { label: "Couvoir & amont", href: "/couvoir", icon: "hatchery" },
           canAccessModule(session, "LOTS") && { label: "Lots", href: "/lots", icon: "lots" },
           canAccessModule(session, "LOTS") && { label: "Lignes & phases", href: "/lignes", icon: "lines" },

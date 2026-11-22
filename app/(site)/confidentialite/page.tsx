@@ -1,16 +1,19 @@
 import type { Metadata } from "next";
-import { LegalPage, ToComplete } from "@/components/site/LegalPage";
+import { connection } from "next/server";
+import { LegalPage, LegalValue } from "@/components/site/LegalPage";
 
 export const metadata: Metadata = { title: "Politique de confidentialité" };
 
-export default function PrivacyPage() {
+export default async function PrivacyPage() {
+  // The LEGAL_* values are read when the page is served, not frozen into the build.
+  await connection();
   return (
     <LegalPage title="Politique de confidentialité" updated="octobre 2026">
       <section>
         <h2>Responsable du traitement</h2>
         <p>
-          BIOVOLAILLES UNION SARL (BVU Tech), <ToComplete>adresse du siège</ToComplete>. Contact pour toute question
-          relative à vos données : <ToComplete>adresse e-mail dédiée</ToComplete>.
+          BIOVOLAILLES UNION SARL (BVU Tech), <LegalValue field="ADDRESS">adresse du siège</LegalValue>. Contact pour toute question
+          relative à vos données : <LegalValue field="PRIVACY_EMAIL">adresse e-mail dédiée</LegalValue>.
         </p>
       </section>
       <section>
@@ -19,7 +22,7 @@ export default function PrivacyPage() {
           Les traitements sont réalisés conformément à la loi n° 09-08 relative à la protection des personnes physiques à
           l&apos;égard du traitement des données à caractère personnel et à ses textes d&apos;application. Les formalités
           auprès de la Commission nationale de contrôle de la protection des données à caractère personnel (CNDP) :{" "}
-          <ToComplete>référence de déclaration ou d&apos;autorisation</ToComplete>.
+          <LegalValue field="CNDP_REF">référence de déclaration ou d&apos;autorisation</LegalValue>.
         </p>
       </section>
       <section>
@@ -46,13 +49,13 @@ export default function PrivacyPage() {
           Les données sont accessibles aux seules personnes de BVU Tech habilitées au suivi commercial. Elles ne sont ni
           vendues ni cédées. Les prestataires techniques (hébergement, et le cas échéant envoi d&apos;e-mails de
           notification interne) n&apos;y accèdent que pour l&apos;exécution de leur service :{" "}
-          <ToComplete>liste des prestataires et pays d&apos;hébergement</ToComplete>.
+          <LegalValue field="PROCESSORS">liste des prestataires et pays d&apos;hébergement</LegalValue>.
         </p>
       </section>
       <section>
         <h2>Durée de conservation</h2>
         <p>
-          <ToComplete>durée retenue, par exemple trois ans après le dernier contact</ToComplete>. Au-delà, les données
+          <LegalValue field="LEAD_RETENTION">durée retenue, par exemple trois ans après le dernier contact</LegalValue>. Au-delà, les données
           sont supprimées ou anonymisées.
         </p>
       </section>
@@ -61,7 +64,7 @@ export default function PrivacyPage() {
         <p>
           Conformément à la loi n° 09-08, vous disposez d&apos;un droit d&apos;accès, de rectification et
           d&apos;opposition au traitement de vos données. Vous pouvez l&apos;exercer en écrivant à{" "}
-          <ToComplete>adresse e-mail dédiée</ToComplete>, en précisant l&apos;adresse utilisée lors de votre demande.
+          <LegalValue field="PRIVACY_EMAIL">adresse e-mail dédiée</LegalValue>, en précisant l&apos;adresse utilisée lors de votre demande.
         </p>
       </section>
     </LegalPage>

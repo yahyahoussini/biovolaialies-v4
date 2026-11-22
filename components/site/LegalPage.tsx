@@ -1,3 +1,4 @@
+import { legalValue, type LegalField } from "@/lib/legal";
 import type { ReactNode } from "react";
 
 export function LegalPage({ title, updated, children }: { title: string; updated: string; children: ReactNode }) {
@@ -15,4 +16,10 @@ export function LegalPage({ title, updated, children }: { title: string; updated
 /** Visibly marks information only the company itself can supply — never invented here. */
 export function ToComplete({ children }: { children: ReactNode }) {
   return <mark className="rounded bg-bvu-lime/60 px-1 font-semibold text-bvu-dark">[À compléter : {children}]</mark>;
+}
+
+/** A company detail of the legal pages: its LEGAL_* value when set on the server, otherwise "À compléter". */
+export function LegalValue({ field, children }: { field: LegalField; children: ReactNode }) {
+  const value = legalValue(field);
+  return value ? <>{value}</> : <ToComplete>{children}</ToComplete>;
 }

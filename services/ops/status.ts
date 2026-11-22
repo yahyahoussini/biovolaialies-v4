@@ -5,7 +5,9 @@ import { verifyChain } from "../../domain/ledger/hash-chain";
 import { AuthorizationError } from "../../domain/shared/errors";
 import { can } from "../../domain/shared/permissions";
 import { RAW_RETENTION_DAYS } from "../../domain/telemetry/aggregate";
+import { moroccoTimeZoneDataIsCurrent } from "../../lib/dates";
 import { env } from "../../lib/env";
+import { missingLegalFields } from "../../lib/legal";
 import type { Session } from "../auth/session";
 
 /**
@@ -109,9 +111,25 @@ export async function operationsStatus(session: Session, now = new Date()): Prom
   const stale = open.filter((a) => now.getTime() - Date.parse(a.raisedAt) > DAY);
   add("alerts", "Alertes non prises en compte", stale.length ? "WARN" : "OK", open.length ? `${open.length} ouverte(s), dont ${stale.length} depuis plus de 24 h.` : "Aucune.");
 
+  add(
+    "timezone",
+    "Fuseau horaire du serveur",
+    moroccoTimeZoneDataIsCurrent() ? "OK" : "FAIL",
+    moroccoTimeZoneDataIsCurrent()
+      ? "Données à jour : le Maroc est à UTC+0 depuis le 20/09/2026."
+      : "Les données de fuseau horaire du serveur ignorent le passage du Maroc à UTC+0 (20/09/2026) : toutes les heures sont affichées une heure trop tard. Mettre Node.js à jour (image Docker reconstruite)."
+  );
+
   if (env.NODE_ENV === "production" && !env.DATABASE_SNAPSHOT && !env.DEMO_MODE) {
-    const missing = [!env.LEDGER_ANCHOR_KEY && "LEDGER_ANCHOR_KEY (ancres du journal)", !env.CRON_SECRET && "CRON_SECRET (tâches planifiées par route)"].filter(Boolean);
-    add("secrets", "Secrets de production", missing.length ? "WARN" : "OK", missing.length ? `Non configuré(s) : ${missing.join(", ")}.` : "Clés d'ancrage et de planification configurées.");
+    const missing = [
+      !env.LEDGER_ANCHOR_KEY && "LEDGER_ANCHOR_KEY (ancres du journal)",
+      !env.MFA_ENCRYPTION_KEY && "MFA_ENCRYPTION_KEY (double authentification : sans elle, changer SESSION_SECRET la casse)",
+      // On a VPS the scheduler service runs the jobs itself; the route, and its key, serve Vercel.
+      process.env.VERCEL && !env.CRON_SECRET && "CRON_SECRET (tâches planifiées par route)",
+    ].filter(Boolean);
+    add("secrets", "Secrets de production", missing.length ? "WARN" : "OK", missing.length ? `Non configuré(s) : ${missing.join(", ")}.` : "Clés de production configurées.");
+    const legal = missingLegalFields();
+    add("legal", "Mentions légales", legal.length ? "WARN" : "OK", legal.length ? `${legal.length} information(s) à compléter sur le site public (variables ${legal.map((f) => `LEGAL_${f}`).join(", ")}).` : "Toutes renseignées.");
   } else {
     add("secrets", "Secrets de production", "OK", "Démonstration ou développement : les clés de production ne sont pas exigées.");
   }

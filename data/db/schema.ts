@@ -162,6 +162,22 @@ export const users = sqliteTable("users", {
   active: integer("active", { mode: "boolean" }).notNull().default(true),
   lastLoginAt: text("last_login_at"),
   createdAt: createdAt(),
+  /** Set when an administrator chose the password (creation, reset): it is replaced at the next sign-in. */
+  mustChangePassword: integer("must_change_password", { mode: "boolean" }).notNull().default(false),
+  passwordChangedAt: text("password_changed_at"),
+  /**
+   * Bumped whenever the sessions already open must stop working: password changed or reset,
+   * two-step login enabled or reset, account disabled, role or scope changed. Each session carries
+   * the value it was opened with (services/auth/session.ts).
+   */
+  authVersion: integer("auth_version").notNull().default(0),
+  /** Two-step login (TOTP, RFC 6238): the shared secret, encrypted (services/auth/mfa-secret.ts). Present but not yet enabled while enrolling. */
+  totpSecret: text("totp_secret"),
+  totpEnabledAt: text("totp_enabled_at"),
+  /** Last 30-second step accepted: the same code is never accepted twice. */
+  totpLastStep: integer("totp_last_step"),
+  /** JSON array of { hash, usedAt }: ten single-use recovery codes, hashed like passwords. */
+  recoveryCodes: text("recovery_codes"),
 });
 
 // ---------------------------------------------------------------------------

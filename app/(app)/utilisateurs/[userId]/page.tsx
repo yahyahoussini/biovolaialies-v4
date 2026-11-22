@@ -5,7 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { repositories } from "@/data/repositories";
 import { ROLE_LABEL } from "@/lib/labels";
 import { requireModuleAccess } from "@/services/auth/guard";
+import { securitySummary } from "@/services/identity/account-security";
 import { describeScopeTarget } from "@/services/identity/user-management";
+import { UserSecurityPanel } from "./UserSecurityPanel";
 import { UserEditForm } from "./UserEditForm";
 
 export default async function UserDetailPage({ params }: PageProps<"/utilisateurs/[userId]">) {
@@ -22,6 +24,7 @@ export default async function UserDetailPage({ params }: PageProps<"/utilisateur
   if (!user) notFound();
 
   const scopeLabel = await describeScopeTarget(user.scopeType, user.scopeId);
+  const security = securitySummary(user);
   const scopeTargets = {
     ORGANIZATION: organizations.map((o) => ({ id: o.id, label: o.name })),
     COOPERATIVE: cooperatives.map((c) => ({ id: c.id, label: c.name })),
@@ -52,6 +55,19 @@ export default async function UserDetailPage({ params }: PageProps<"/utilisateur
             <p className="text-xs text-secondary">Dernière activité</p>
             <p className="text-text">{user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString("fr-FR") : "Jamais connecté"}</p>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Sécurité du compte</CardTitle>
+          <CardDescription>
+            {security.mustChangePassword ? "Mot de passe provisoire, à changer à la prochaine connexion. " : ""}
+            Double authentification : {security.mfaEnabled ? `activée (${security.recoveryCodesLeft} code(s) de secours restant(s))` : "non activée"}.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <UserSecurityPanel userId={user.id} isSelf={user.id === session.userId} mfaEnabled={security.mfaEnabled} />
         </CardContent>
       </Card>
 
