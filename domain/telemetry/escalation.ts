@@ -16,8 +16,10 @@ export interface EscalationStep {
 export const ESCALATION_POLICY: Record<"WARNING" | "CRITICAL", EscalationStep[]> = {
   CRITICAL: [
     { level: 1, afterMinutes: 0, roles: ["TECHNICIAN", "FARM_MANAGER"], channels: ["SMS", "EMAIL"] },
-    { level: 2, afterMinutes: 15, roles: ["PRODUCER", "COOP_MANAGER"], channels: ["APPEL", "SMS"] },
-    { level: 3, afterMinutes: 60, roles: ["SUPER_ADMIN"], channels: ["APPEL", "SMS"] },
+    // E-mail rides along with SMS and calls: until an SMS / voice provider is integrated it is the only
+    // channel the software can actually deliver, and an escalation must reach somebody.
+    { level: 2, afterMinutes: 15, roles: ["PRODUCER", "COOP_MANAGER"], channels: ["APPEL", "SMS", "EMAIL"] },
+    { level: 3, afterMinutes: 60, roles: ["SUPER_ADMIN"], channels: ["APPEL", "SMS", "EMAIL"] },
   ],
   WARNING: [
     { level: 1, afterMinutes: 0, roles: ["TECHNICIAN", "FARM_MANAGER"], channels: ["EMAIL"] },

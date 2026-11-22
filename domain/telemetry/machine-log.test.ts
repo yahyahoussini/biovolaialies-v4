@@ -17,15 +17,32 @@ describe("incubator log import", () => {
   it("reads Moroccan local time, Ramadan included, and reports every line it cannot read", () => {
     const { profile } = guessProfile(french);
     const log = parseLog(french, profile);
+    // 22/09/2026 is after Morocco moved to UTC+0 for good: legal time is UTC.
     expect(log.rows.map((r) => [r.at, r.values.TEMPERATURE_MACHINE])).toEqual([
-      ["2026-09-22T09:00:00.000Z", 37.6],
-      ["2026-09-22T09:05:00.000Z", 37.7],
+      ["2026-09-22T10:00:00.000Z", 37.6],
+      ["2026-09-22T10:05:00.000Z", 37.7],
     ]);
     expect(log.errors.map((e) => e.line)).toEqual([4, 5, 6]);
     expect(log.errors[1].message).toMatch(/ERR/);
     expect(log.errors[2].message).toMatch(/Horodatage illisible/);
+    const summer = parseLog("Date;Heure;T air (°C)\n22/08/2026;10:00;37,5", profile);
+    expect(summer.rows[0].at).toBe("2026-08-22T09:00:00.000Z");
     const ramadan = parseLog("Date;Heure;T air (°C)\n01/03/2026;10:00;37,5", profile);
     expect(ramadan.rows[0].at).toBe("2026-03-01T10:00:00.000Z");
+  });
+
+  it("follows Morocco to UTC+0 on 20 September 2026, through the hour lived twice that night", () => {
+    // At 02:00 legal time the clock went back to 01:00 (UTC+1 → UTC+0), and it stays there.
+    const times = ["00:59", "01:00", "01:30", "01:59", "01:00", "01:30", "01:59", "02:00"];
+    const text = ["Date;Heure;T air (°C)", ...times.map((t, i) => `20/09/2026;${t};37,${i}`)].join("\n");
+    const { profile } = guessProfile(text);
+    const log = parseLog(text, profile);
+    expect(log.errors).toEqual([]);
+    expect(log.rows.map((r) => r.at.slice(11, 16))).toEqual(["23:59", "00:00", "00:30", "00:59", "01:00", "01:30", "01:59", "02:00"]);
+    // Outside Ramadan the next summer, legal time is still UTC; a clock left on UTC+1 is an hour ahead.
+    const next = "Date;Heure;T air (°C)\n15/06/2027;12:00;37,5";
+    expect(parseLog(next, profile).rows[0].at).toBe("2027-06-15T12:00:00.000Z");
+    expect(parseLog(next, { ...profile, timeZone: "Etc/GMT-1" }).rows[0].at).toBe("2027-06-15T11:00:00.000Z");
   });
 
   it("takes an ISO export as written, and tells a month-first file from its days", () => {

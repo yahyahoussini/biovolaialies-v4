@@ -1,0 +1,2 @@
+organisation;type_organisation;cooperative;region_cooperative;producteur;telephone_producteur;email_producteur;ferme;ville;region_ferme;latitude;longitude;batiment_code;batiment_nom;capacite;type_zone
+EXEMPLE Organisation;Interne;EXEMPLE Coopérative;Fès-Meknès;EXEMPLE Producteur;06 00 00 00 00;contact@example.com;EXEMPLE Ferme;Meknès;Fès-Meknès;;;EX-B01;Poulailler 1;5000;Élevage

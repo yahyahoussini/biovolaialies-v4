@@ -1,0 +1,2 @@
+numero_lot;batiment_code;espece;souche;population_initiale;date_demarrage_prevue;statut_donnees;effectif_actuel;remarques
+EXEMPLE-LOT-001;EX-B01;Poulet de chair;Ross 308;5000;01/12/2026;Réel;4950;Effectif actuel au jour de l'envoi

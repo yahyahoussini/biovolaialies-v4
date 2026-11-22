@@ -13,6 +13,7 @@ export function Topbar({
   role,
   isDemoSwitch,
   demoMode,
+  roleSwitch,
   scope,
   sections,
 }: {
@@ -22,6 +23,8 @@ export function Topbar({
   isDemoSwitch: boolean;
   /** Environment-level flag (lib/env.ts). Keeps the whole dataset visibly labelled as a demonstration — phase-10 brief §21. */
   demoMode: boolean;
+  /** Whether the demo role switcher is offered (services/auth/demo-switch.ts refuses it otherwise). */
+  roleSwitch: boolean;
   scope: ScopeDescriptor;
   /** Passed through to the mobile drawer, which renders the same nav as the desktop rail. */
   sections: NavSection[];
@@ -60,7 +63,7 @@ export function Topbar({
           </span>
         ) : null}
 
-        <RoleSwitcher currentRole={role} />
+        {roleSwitch ? <RoleSwitcher currentRole={role} /> : null}
 
         <div className="hidden text-right leading-tight sm:block">
           <p className="text-caption font-semibold text-text">{fullName}</p>

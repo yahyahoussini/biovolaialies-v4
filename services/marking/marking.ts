@@ -37,6 +37,7 @@ import { farmDay } from "../../domain/sanitary/health";
 import { AuthorizationError, ConflictError, NotFoundError, ValidationError } from "../../domain/shared/errors";
 import { can } from "../../domain/shared/permissions";
 import { isGlobalScope } from "../../domain/shared/scope";
+import { moroccoDayStart } from "../../lib/dates";
 import { withLock } from "../../lib/keyed-lock";
 import { publicEggUrl } from "../../lib/public-url";
 import { recordAudit } from "../audit/record";
@@ -758,7 +759,7 @@ export async function getMarkingOverview(session: Session, now = new Date()): Pr
     };
   });
 
-  const since = new Date(`${farmDay(now.toISOString())}T00:00:00+01:00`).toISOString();
+  const since = moroccoDayStart(now);
   const today = await repositories.marking.sumReadsSince(since);
   const horizon = now.getTime() - 30 * 86_400_000;
   const lotById = new Map(lots.map((l) => [l.id, l]));

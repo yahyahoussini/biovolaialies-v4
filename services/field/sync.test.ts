@@ -9,6 +9,10 @@ import { dispatchTransfer } from "../production/transfers";
 import type { Session } from "../auth/session";
 import { buildFieldSnapshot } from "./snapshot";
 import { resolveMortalityDiscrepancy, syncFieldOps } from "./sync";
+import { moroccoDate } from "../../lib/dates";
+
+/** A Moroccan calendar day `n` days ago: inside the 30-day window in which a manager may still settle it. */
+const daysAgo = (n: number) => moroccoDate(new Date(Date.now() - n * 86_400_000));
 
 async function world(suffix: string) {
   await ensureDefaultLines();
@@ -98,7 +102,7 @@ describe("field sync", () => {
 
   it("keeps two people's different counts, shows the latest, and waits for a manager", async () => {
     const w = await world("conflict");
-    const day = "2026-10-21";
+    const day = daysAgo(3);
     await syncFieldOps({ ops: [phone(w.workerA)("MORTALITE", { count: 5 }, { lotId: w.lot.id, capturedAt: `${day}T07:00:00.000Z` })] }, w.workerA);
     const fromB = phone(w.workerB)("MORTALITE", { count: 8, cause: "Coup de chaleur" }, { lotId: w.lot.id, capturedAt: `${day}T09:00:00.000Z` });
     const { results } = await syncFieldOps({ ops: [fromB] }, w.workerB);
@@ -121,7 +125,7 @@ describe("field sync", () => {
 
   it("gives birds back only through a manager's counter-entry", async () => {
     const w = await world("lower");
-    const day = "2026-10-22";
+    const day = daysAgo(4);
     const op = phone(w.workerA);
     await syncFieldOps({ ops: [op("MORTALITE", { count: 9 }, { lotId: w.lot.id, capturedAt: `${day}T07:00:00.000Z` })] }, w.workerA);
     const { results } = await syncFieldOps({ ops: [op("MORTALITE", { count: 6 }, { lotId: w.lot.id, capturedAt: `${day}T16:00:00.000Z` })] }, w.workerA);

@@ -1,0 +1,12 @@
+.git
+node_modules
+.next
+backups
+coverage
+*.tsbuildinfo
+next-env.d.ts
+data/db/*.db
+data/db/*.db-*
+.env*
+!.env.example
+deploy/vps.env

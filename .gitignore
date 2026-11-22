@@ -49,3 +49,6 @@ next-env.d.ts
 
 # database backups (npm run db:backup) — keep them off the server, never in git
 /backups/
+
+# VPS environment file (holds SESSION_SECRET) — see deploy/vps.env.example
+/deploy/vps.env

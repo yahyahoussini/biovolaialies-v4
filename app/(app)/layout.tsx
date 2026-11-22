@@ -1,3 +1,4 @@
+import { demoRoleSwitchAllowed } from "@/services/auth/demo-switch";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { repositories } from "@/data/repositories";
@@ -117,6 +118,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           role={session.role}
           isDemoSwitch={session.isDemoSwitch}
           demoMode={env.DEMO_MODE}
+          roleSwitch={demoRoleSwitchAllowed()}
           scope={scope}
           sections={visibleSections}
         />

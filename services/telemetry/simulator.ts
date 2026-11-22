@@ -56,7 +56,7 @@ function hash(input: string): number {
 }
 /** Deterministic noise in [-a, a]. */
 const noise = (key: string, t: number, a: number) => ((hash(`${key}:${t}`) % 10000) / 10000 - 0.5) * 2 * a;
-/** Local hour (Morocco, UTC+1 outside Ramadan) as a fraction. */
+/** Local hour as a fraction, at the fixed UTC+1 the seeded scenario (August 2026) was lived in — a simulation shortcut, not legal time (UTC+0 since 20/09/2026). */
 const localHour = (t: number) => (((t + HOUR) % DAY) + DAY) % DAY / HOUR;
 const isDay = (t: number) => localHour(t) >= 6 && localHour(t) < 20;
 const r1 = (v: number) => Math.round(v * 10) / 10;

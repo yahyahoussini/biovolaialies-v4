@@ -12,6 +12,8 @@ libSQL/SQLite, Tailwind CSS v4, and `iron-session` cookie auth.
   recall, hash-chained ledger, API v1, equipment register, and how each maps to the client's specification.
 - **[EXPLOITATION.md](EXPLOITATION.md)** — manuel d'exploitation (en français) : variables, mise en service
   d'une version, tâches planifiées, sauvegardes vérifiées et restauration, surveillance, incidents.
+- **[DEPLOY_VPS.md](DEPLOY_VPS.md)** — déploiement sur un VPS avec Docker (`Dockerfile`, `compose.yaml`),
+  derrière un reverse proxy HTTPS ; instance de démonstration et étapes de l'installation réelle.
 
 ---
 

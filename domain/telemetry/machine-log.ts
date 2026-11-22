@@ -14,15 +14,17 @@ export const TIME_FORMATS = ["ISO", "JJ/MM/AAAA HH:MM", "AAAA-MM-JJ HH:MM", "MM/
 export type TimeFormat = (typeof TIME_FORMATS)[number];
 
 /**
- * The clock the machine writes in. Morocco moves to UTC+0 during Ramadan; a machine set once and
- * never touched stays on UTC+1 all year, and its Ramadan lines would be an hour off if read as
- * legal time. Which one an incubator uses is asked on site, not assumed.
+ * The clock the machine writes in. Moroccan legal time was UTC+1 (UTC+0 during Ramadan) until
+ * 20 September 2026 and has been UTC+0 all year since; the platform's time-zone data knows both
+ * periods. A machine set to UTC+1 once and never touched writes an hour ahead of legal time since
+ * that date (and did during each Ramadan before it). Which one an incubator uses is asked on site,
+ * not assumed.
  */
 export const LOG_TIME_ZONES = ["Africa/Casablanca", "Etc/GMT-1", "UTC"] as const;
 export type LogTimeZone = (typeof LOG_TIME_ZONES)[number];
 export const LOG_TIME_ZONE_LABEL: Record<LogTimeZone, string> = {
-  "Africa/Casablanca": "Heure légale du Maroc (UTC+0 au Ramadan)",
-  "Etc/GMT-1": "UTC+1 fixe (horloge réglée une fois, jamais changée)",
+  "Africa/Casablanca": "Heure légale du Maroc (UTC+0 depuis le 20/09/2026)",
+  "Etc/GMT-1": "UTC+1 fixe (horloge réglée une fois, jamais remise à l'heure)",
   UTC: "UTC",
 };
 
@@ -164,8 +166,9 @@ const DAY_MS = 86_400_000;
 
 /**
  * The instants a wall-clock time stands for in a zone, earliest first: usually one; two in the hour
- * repeated when the clock goes back (Morocco, the Sunday before Ramadan: 03:00 becomes 02:00); none
- * in the hour skipped when it goes forward again after Ramadan. The zone data knows the dates.
+ * repeated when the clock goes back (Morocco, the Sunday before each Ramadan until 2026: 03:00
+ * becomes 02:00; and for good on 20 September 2026: 02:00 becomes 01:00); none in the hour skipped
+ * when it went forward again after Ramadan. The zone data knows the dates.
  */
 export function zonedCandidates(y: number, mo: number, d: number, h: number, mi: number, s: number, timeZone: string): number[] {
   const wall = Date.UTC(y, mo - 1, d, h, mi, s);

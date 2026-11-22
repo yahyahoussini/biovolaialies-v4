@@ -1,0 +1,23 @@
+# BIOVOLAILLES on a VPS — see DEPLOY_VPS.md.
+#   docker compose up -d --build
+# The app listens on 127.0.0.1:3100 only; the VPS's reverse proxy (Nginx, Caddy, Traefik…) serves
+# it over HTTPS at the subdomain set in deploy/vps.env (APP_URL).
+services:
+  app:
+    build:
+      context: .
+      args:
+        APP_URL: ${APP_URL:-https://biovolailles.brandhubos.cloud}
+    image: biovolailles:latest
+    container_name: biovolailles
+    restart: unless-stopped
+    env_file: deploy/vps.env
+    ports:
+      - "127.0.0.1:${HOST_PORT:-3100}:3000"
+    volumes:
+      # The database lives outside the image: it survives rebuilds and updates.
+      - biovolailles-data:/data
+      - ./backups:/app/backups
+
+volumes:
+  biovolailles-data:
