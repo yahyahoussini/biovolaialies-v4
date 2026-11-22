@@ -72,8 +72,9 @@ Avec `partenaire.fassi@biovolailles.demo` ou l'Administrateur : `/marquage`. La 
 4. **La plateforme n'est pas le système de sécurité de l'élevage** : en cas d'urgence (chaleur, panne de
    ventilation), c'est l'alarme GSM autonome qui prévient.
 
-## Prochaine version — pilote sur données réelles
+## Version pilote — sur l'instance réelle, pas sur la démonstration
 
 Changement de mot de passe et connexion en deux étapes (« Mon compte »), réinitialisation par
-l'administrateur, création et import de votre structure d'élevages : ces fonctions ne font pas partie de
-cette livraison. Voir la [note de livraison](README.md).
+l'administrateur, création et import de votre structure d'élevages : ces fonctions sont développées et
+s'utilisent sur l'instance réelle, installée séparément de la démonstration. Voir la
+[note de livraison](README.md).

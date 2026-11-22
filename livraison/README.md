@@ -46,16 +46,23 @@
 - **Ce que vous saisissez pendant la formation peut être effacé** : l'instance de démonstration est
   réinitialisable à tout moment.
 
-## Pas encore inclus — prochaine version : pilote sur données réelles
+## Version pilote sur données réelles — développée, à installer
+
+Prête dans le logiciel, elle s'installe sur une instance séparée de la démonstration (DEPLOY_VPS.md §7) :
 
 - Installation propre, sans aucune donnée de démonstration, avec votre premier compte administrateur.
-- « Mon compte » : changement de mot de passe et connexion en deux étapes (application d'authentification),
-  obligatoire pour les rôles Administrateur, Responsable qualité et Direction.
-- Réinitialisation d'un mot de passe ou de la connexion en deux étapes par l'administrateur.
+- « Mon compte » : changement de mot de passe et connexion en deux étapes (application d'authentification,
+  dix codes de secours), obligatoire pour les rôles Administrateur, Responsable qualité et Direction.
+- Comptes créés par l'administrateur avec un mot de passe provisoire, remplacé par la personne à sa
+  première connexion ; réinitialisation du mot de passe ou de la connexion en deux étapes.
 - « Structure des élevages » : création de vos organisations, coopératives, producteurs, fermes et
-  bâtiments, et import depuis un tableur (modèle à remplir dans `modeles/`).
-- Envoi des alertes par e-mail (fournisseur à configurer). SMS et appels : non intégrés ; l'alarme GSM
-  autonome reste le canal d'urgence.
+  bâtiments, et import depuis un tableur (modèle `modeles/structure-elevages.csv`).
+- Sauvegarde vérifiée chaque nuit et tâches planifiées automatiques ; alertes par e-mail une fois le
+  fournisseur d'e-mail configuré.
+
+## Pas encore inclus
+
+- SMS et appels : non intégrés ; l'alarme GSM autonome reste le canal d'urgence.
 - Raccordement des capteurs, de la ligne de marquage et des incubateurs : seulement après les essais au banc
   (FAT) puis sur site (SAT) de chaque équipement.
 - Déclaration auprès de la CNDP (loi 09-08) et mentions légales complètes du site.
@@ -64,7 +71,8 @@
 
 1. **Vous :** nous renvoyer vos décisions ([01-decisions-client.md](01-decisions-client.md)) et les modèles
    remplis (`modeles/`) avant le [À COMPLÉTER : date].
-2. **BVU Tech :** livrer la version pilote (installation propre, comptes sécurisés, structure de vos élevages).
+2. **BVU Tech :** installer la version pilote (installation propre, comptes sécurisés) et y importer la
+   structure de vos élevages.
 3. **Ensemble :** démarrer le pilote sur une ferme, en saisie manuelle uniquement, registres papier tenus en
    parallèle ([02-checklist-pilote.md](02-checklist-pilote.md)).
 
